@@ -417,7 +417,7 @@ const VoiceAssistant = ({ lang, user, onBack }: any) => {
 
       if (retryCountRef.current >= 5) {
           setStatus('error');
-          setErrorMessage('Network error. Please try again.');
+          setErrorMessage('Network unstable. Stopped.');
           shouldStayConnectedRef.current = false; 
           return;
       }
@@ -482,7 +482,7 @@ const VoiceAssistant = ({ lang, user, onBack }: any) => {
     const apiKey = getGenAIKey();
     if (!apiKey) {
       setStatus('error');
-      setErrorMessage("API Key Not Found. Check environment settings.");
+      setErrorMessage("API Key Not Found.");
       return;
     }
 
@@ -535,7 +535,6 @@ const VoiceAssistant = ({ lang, user, onBack }: any) => {
         config: { 
             responseModalities: [Modality.AUDIO], 
             speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Puck' } } },
-            // Using empty objects is critical for enabling transcription without model errors
             inputAudioTranscription: {}, 
             outputAudioTranscription: {},
             systemInstruction: "You are AI Krushi Mitra. Speak Marathi or English based on user. Keep answers concise.",
@@ -570,14 +569,16 @@ const VoiceAssistant = ({ lang, user, onBack }: any) => {
               if (userTranscript) {
                   setTranscripts(prev => [...prev, { role: 'user', text: userTranscript }]);
               }
-              const modelTranscript = msg.serverContent?.outputTranscription?.text;
-              if (msg.serverContent?.turnComplete && modelTranscript) {
-                   // Can add model transcript logic here if needed
-              }
            },
-           onclose: () => {
-               console.log("Session Closed");
-               if (shouldStayConnectedRef.current) handleAutoReconnect();
+           onclose: (e) => {
+               console.log("Session Closed", e);
+               // Only reconnect if the user didn't intentionally stop AND it wasn't a clean close
+               if (shouldStayConnectedRef.current && e.code !== 1000) {
+                   handleAutoReconnect();
+               } else {
+                   setStatus('idle');
+                   shouldStayConnectedRef.current = false;
+               }
            },
            onerror: (err) => {
                console.error("Session Error:", err);
