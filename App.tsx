@@ -24,6 +24,18 @@ const triggerHaptic = () => {
 };
 
 // --- HELPERS ---
+
+// High-performance Base64 Encoder to prevent main-thread blocking during audio streaming
+function arrayBufferToBase64(buffer: ArrayBuffer) {
+  let binary = '';
+  const bytes = new Uint8Array(buffer);
+  const len = bytes.byteLength;
+  for (let i = 0; i < len; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary);
+}
+
 function decode(base64: string) {
   const binaryString = atob(base64);
   const len = binaryString.length;
@@ -31,12 +43,7 @@ function decode(base64: string) {
   for (let i = 0; i < len; i++) bytes[i] = binaryString.charCodeAt(i);
   return bytes;
 }
-function encode(bytes: Uint8Array) {
-  let binary = '';
-  const len = bytes.byteLength;
-  for (let i = 0; i < len; i++) binary += String.fromCharCode(bytes[i]);
-  return btoa(binary);
-}
+
 async function decodeAudioData(data: Uint8Array, ctx: AudioContext, sampleRate: number, numChannels: number): Promise<AudioBuffer> {
   const dataInt16 = new Int16Array(data.buffer);
   const frameCount = dataInt16.length / numChannels;
@@ -80,7 +87,7 @@ function downsampleTo16k(inputData: Float32Array, inputSampleRate: number): Int1
 function createPCMChunk(data: Float32Array, sampleRate: number): GenAIBlob {
   const int16 = downsampleTo16k(data, sampleRate);
   return { 
-    data: encode(new Uint8Array(int16.buffer)), 
+    data: arrayBufferToBase64(int16.buffer), 
     mimeType: "audio/pcm;rate=16000" // Always 16kHz
   };
 }
