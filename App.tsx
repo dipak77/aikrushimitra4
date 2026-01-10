@@ -46,11 +46,42 @@ async function decodeAudioData(data: Uint8Array, ctx: AudioContext, sampleRate: 
   }
   return buffer;
 }
-function createPCMChunk(data: Float32Array): GenAIBlob {
-  const l = data.length;
-  const int16 = new Int16Array(l);
-  for (let i = 0; i < l; i++) int16[i] = data[i] * 32768;
-  return { data: encode(new Uint8Array(int16.buffer)), mimeType: 'audio/pcm;rate=16000' };
+
+// Resample audio to 16kHz before sending to model
+function downsampleTo16k(inputData: Float32Array, inputSampleRate: number): Int16Array {
+  if (inputSampleRate === 16000) {
+    const result = new Int16Array(inputData.length);
+    for (let i = 0; i < inputData.length; i++) {
+        const s = Math.max(-1, Math.min(1, inputData[i]));
+        result[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+    }
+    return result;
+  }
+
+  const ratio = inputSampleRate / 16000;
+  const newLength = Math.round(inputData.length / ratio);
+  const result = new Int16Array(newLength);
+  
+  for (let i = 0; i < newLength; i++) {
+    const originalIndex = i * ratio;
+    const index1 = Math.floor(originalIndex);
+    const index2 = Math.min(index1 + 1, inputData.length - 1);
+    const fraction = originalIndex - index1;
+    
+    // Linear interpolation
+    const val = inputData[index1] * (1 - fraction) + inputData[index2] * fraction;
+    const s = Math.max(-1, Math.min(1, val));
+    result[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+  }
+  return result;
+}
+
+function createPCMChunk(data: Float32Array, sampleRate: number): GenAIBlob {
+  const int16 = downsampleTo16k(data, sampleRate);
+  return { 
+    data: encode(new Uint8Array(int16.buffer)), 
+    mimeType: "audio/pcm;rate=16000" // Always 16kHz
+  };
 }
 
 // --- MOCK DATA ---
@@ -150,14 +181,14 @@ const MobileNav = ({ view, setView }: { view: ViewState, setView: (v: ViewState)
   );
 };
 
-// 3. Main Dashboard (Premium Layout)
+// 3. Main Dashboard
 const Dashboard = ({ lang, user, onNavigate }: any) => {
   const t = TRANSLATIONS[lang];
   return (
     <div className="h-full w-full overflow-y-auto overflow-x-hidden hide-scrollbar pb-32 lg:pl-32 lg:pt-6 lg:pr-6 overscroll-y-contain scroll-smooth">
       <div className="w-full max-w-7xl mx-auto px-4 py-4 space-y-6 pt-safe-top">
         
-        {/* Header - Premium */}
+        {/* Header */}
         <header className="flex justify-between items-start animate-enter mt-2">
            <div>
               <div className="flex items-center gap-2 mb-2 glass-panel w-fit px-3 py-1 rounded-full bg-slate-800/50">
@@ -181,30 +212,24 @@ const Dashboard = ({ lang, user, onNavigate }: any) => {
            </button>
         </header>
 
-        {/* Bento Grid Layout - Premium Cards */}
+        {/* Bento Grid Layout */}
         <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 auto-rows-auto">
            
-           {/* Weather Card (Hero) */}
+           {/* Weather Card */}
            <div onClick={() => { onNavigate('WEATHER'); triggerHaptic(); }} className="col-span-1 md:col-span-2 row-span-2 relative group cursor-pointer overflow-hidden rounded-[2.5rem] border border-white/10 text-white shadow-2xl shadow-purple-900/20 animate-enter delay-100 transition-all active:scale-[0.98]">
-              {/* Card Background */}
               <div className="absolute inset-0 bg-gradient-to-br from-indigo-900/80 to-purple-900/80 backdrop-blur-xl"></div>
               <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-overlay"></div>
-              
-              {/* 3D Sun */}
               <div className="absolute -top-10 -right-10 w-48 h-48 bg-amber-400/30 rounded-full blur-[60px] animate-pulse"></div>
               <div className="absolute top-4 right-4 float-3d">
                   <Sun size={64} className="text-amber-300 drop-shadow-[0_0_30px_rgba(251,191,36,0.6)]" fill="rgba(251,191,36,0.5)"/>
               </div>
-
               <div className="relative p-6 z-10 min-h-[180px] flex flex-col justify-between h-full">
                  <div className="glass-panel w-fit px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 bg-black/20 border-white/10">
                     <MapPin size={10} className="text-cyan-300"/> {user.village}
                  </div>
-                 
                  <div className="mt-4">
                     <h2 className="text-7xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-b from-white to-white/60 drop-shadow-lg">28°</h2>
                     <p className="text-lg font-medium text-indigo-200 -mt-2 mb-4">Sunny & Clear</p>
-                    
                     <div className="grid grid-cols-2 gap-3">
                        <div className="glass-panel p-2 rounded-xl flex items-center gap-2 bg-white/5">
                           <Wind size={16} className="text-cyan-300"/> 
@@ -235,7 +260,7 @@ const Dashboard = ({ lang, user, onNavigate }: any) => {
               </div>
            </div>
 
-           {/* Crop Doctor - Compact Horizontal */}
+           {/* Crop Doctor */}
            <div onClick={() => { onNavigate('DISEASE_DETECTOR'); triggerHaptic(); }} className="col-span-1 row-span-1 glass-panel rounded-[2.5rem] p-5 relative overflow-hidden cursor-pointer group animate-enter delay-300 active:scale-[0.98] transition-all bg-gradient-to-r from-emerald-900/40 to-teal-900/40 border border-emerald-500/20 flex items-center justify-between">
               <div className="absolute -left-4 -bottom-4 w-24 h-24 bg-emerald-500/20 blur-2xl rounded-full"></div>
               <div className="flex flex-col justify-center pl-1 z-10">
@@ -250,7 +275,7 @@ const Dashboard = ({ lang, user, onNavigate }: any) => {
               </div>
            </div>
 
-            {/* Market (Wide) */}
+            {/* Market */}
             <div onClick={() => { onNavigate('MARKET'); triggerHaptic(); }} className="col-span-1 md:col-span-2 lg:col-span-1 row-span-1 glass-panel rounded-[2.5rem] p-5 relative overflow-hidden cursor-pointer group animate-enter delay-300 active:scale-[0.98] transition-all flex flex-col justify-center bg-slate-900/40 border border-white/10">
               <div className="flex justify-between items-center mb-3">
                  <h3 className="text-base font-black text-white flex items-center gap-2">
@@ -286,10 +311,7 @@ const Dashboard = ({ lang, user, onNavigate }: any) => {
                  <div onClick={triggerHaptic} key={s.id} className="snap-center shrink-0 w-[85vw] md:w-[280px] h-36 rounded-[2.5rem] relative overflow-hidden cursor-pointer group active:scale-[0.98] transition-all shadow-lg shadow-black/30 border border-white/10">
                     <div className={`absolute inset-0 bg-gradient-to-br ${s.grad} opacity-90`}></div>
                     <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-overlay"></div>
-                    
-                    {/* Decorative Circle */}
                     <div className="absolute -bottom-8 -right-8 w-32 h-32 bg-white/10 rounded-full blur-xl"></div>
-                    
                     <div className="absolute inset-0 p-6 flex flex-col justify-between text-white z-10">
                        <div className="flex justify-between items-start">
                           <div className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/10">
@@ -315,7 +337,8 @@ const Dashboard = ({ lang, user, onNavigate }: any) => {
 // 4. Immersive "Orb" Voice Assistant (Fullscreen Mobile 100dvh)
 const VoiceAssistant = ({ lang, user, onBack }: any) => {
   const t = TRANSLATIONS[lang];
-  const [status, setStatus] = useState<'idle' | 'connecting' | 'connected'>('idle');
+  const [status, setStatus] = useState<'idle' | 'connecting' | 'connected' | 'error'>('idle');
+  const [errorMessage, setErrorMessage] = useState('');
   
   const sessionRef = useRef<any>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -330,6 +353,7 @@ const VoiceAssistant = ({ lang, user, onBack }: any) => {
   }, []);
 
   const cleanup = () => {
+    console.log("Cleaning up voice session...");
     if(sessionRef.current) {
         sessionRef.current.close();
         sessionRef.current = null;
@@ -369,15 +393,33 @@ const VoiceAssistant = ({ lang, user, onBack }: any) => {
 
   const connect = async () => {
     if(status === 'connecting' || status === 'connected') return;
+    
+    // Resume audio context if it exists and is suspended (User Interaction Policy)
+    if(audioContextRef.current?.state === 'suspended') {
+        await audioContextRef.current.resume();
+    }
+    if(inputAudioContextRef.current?.state === 'suspended') {
+        await inputAudioContextRef.current.resume();
+    }
+
     triggerHaptic();
     setStatus('connecting');
+    setErrorMessage('');
+
     try {
+      // 1. Setup Input Audio (Microphone)
       const stream = await navigator.mediaDevices.getUserMedia({ 
-          audio: { sampleRate: 16000, echoCancellation: true, noiseSuppression: true, autoGainControl: true } 
+          audio: { 
+             echoCancellation: true, 
+             noiseSuppression: true, 
+             autoGainControl: true,
+             channelCount: 1 
+          } 
       });
       
+      // 2. Setup Output Audio Context
       const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-      const ctx = new AudioContextClass({ sampleRate: 24000 });
+      const ctx = new AudioContextClass({ sampleRate: 24000 }); // Output rate fixed for model
       audioContextRef.current = ctx;
       nextStartTimeRef.current = ctx.currentTime;
       
@@ -386,15 +428,26 @@ const VoiceAssistant = ({ lang, user, onBack }: any) => {
       analyserRef.current = analyser;
       analyser.connect(ctx.destination);
       
-      const inputCtx = new AudioContextClass({ sampleRate: 16000 });
+      // 3. Setup Input Audio Processing
+      const inputCtx = new AudioContextClass(); // Let browser decide input sample rate
       inputAudioContextRef.current = inputCtx;
       const inputSource = inputCtx.createMediaStreamSource(stream);
       const processor = inputCtx.createScriptProcessor(4096, 1, 1);
       
+      const actualSampleRate = inputCtx.sampleRate;
+      console.log(`Microphone Sample Rate: ${actualSampleRate}Hz`);
+
       inputSource.connect(processor);
-      processor.connect(inputCtx.destination);
       
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
+      // Create a GainNode with 0 gain to prevent feedback/output to speakers from the processor
+      const muteGain = inputCtx.createGain();
+      muteGain.gain.value = 0;
+      processor.connect(muteGain);
+      muteGain.connect(inputCtx.destination);
+      
+      // 4. Initialize Gemini Live Session
+      // Explicitly using 'v1beta' to match working curl requests for this model
+      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string, apiVersion: 'v1beta' });
       const sessionPromise = ai.live.connect({
         model: 'gemini-2.5-flash-native-audio-preview-12-2025',
         config: { 
@@ -404,6 +457,7 @@ const VoiceAssistant = ({ lang, user, onBack }: any) => {
         },
         callbacks: {
            onopen: () => { 
+              console.log("Session Opened");
               setStatus('connected'); 
               triggerHaptic();
               visualize(); 
@@ -411,6 +465,7 @@ const VoiceAssistant = ({ lang, user, onBack }: any) => {
            onmessage: async (msg) => {
               const audioData = msg.serverContent?.modelTurn?.parts?.[0]?.inlineData?.data;
               if (audioData) {
+                 // Decode and schedule audio playback
                  const buffer = await decodeAudioData(decode(audioData), ctx, 24000, 1);
                  const source = ctx.createBufferSource();
                  source.buffer = buffer;
@@ -424,21 +479,36 @@ const VoiceAssistant = ({ lang, user, onBack }: any) => {
                  nextStartTimeRef.current += buffer.duration;
               }
            },
-           onclose: () => cleanup(),
-           onerror: (err) => cleanup()
+           onclose: (e) => {
+               console.log("Session Closed", e);
+               cleanup();
+           },
+           onerror: (err) => {
+               console.error("Session Error", err);
+               setErrorMessage(err.message || 'Connection failed.');
+               cleanup();
+               setStatus('error');
+           }
         }
       });
       
       sessionRef.current = await sessionPromise;
       
+      // 5. Stream Audio Data
       processor.onaudioprocess = (e) => {
          if(!sessionRef.current) return;
          const inputData = e.inputBuffer.getChannelData(0);
-         const blob = createPCMChunk(inputData);
+         // IMPORTANT: Pass actual sample rate so API knows how to process it
+         const blob = createPCMChunk(inputData, actualSampleRate); 
          sessionRef.current.sendRealtimeInput({ media: blob });
       };
 
-    } catch(e) { cleanup(); }
+    } catch(e: any) { 
+        console.error("Connect Failed", e);
+        setErrorMessage(e.message || 'Could not access microphone or network.');
+        cleanup();
+        setStatus('error');
+    }
   };
 
   return (
@@ -452,8 +522,8 @@ const VoiceAssistant = ({ lang, user, onBack }: any) => {
        <div className="absolute top-0 w-full p-6 pt-safe-top flex justify-between items-center z-50">
           <button onClick={() => { onBack(); triggerHaptic(); }} className="w-12 h-12 rounded-full glass-panel flex items-center justify-center text-white hover:bg-white/10 transition-all active:scale-90"><ArrowLeft/></button>
           <div className="flex items-center gap-2 px-4 py-2 rounded-full glass-panel">
-             <div className={`w-2 h-2 rounded-full ${status === 'connected' ? 'bg-cyan-400 animate-pulse shadow-[0_0_8px_#22d3ee]' : 'bg-red-500'}`}></div>
-             <span className="text-xs font-bold text-white uppercase tracking-widest">{status === 'connected' ? 'Live' : 'Offline'}</span>
+             <div className={`w-2 h-2 rounded-full ${status === 'connected' ? 'bg-cyan-400 animate-pulse shadow-[0_0_8px_#22d3ee]' : (status === 'error' ? 'bg-yellow-500' : 'bg-red-500')}`}></div>
+             <span className="text-xs font-bold text-white uppercase tracking-widest">{status === 'connected' ? 'Live' : status}</span>
           </div>
        </div>
 
@@ -478,11 +548,14 @@ const VoiceAssistant = ({ lang, user, onBack }: any) => {
        {/* Text */}
        <div className="mb-safe-bottom pb-12 text-center z-10 px-8 animate-enter delay-100">
           <h2 className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-b from-white to-slate-400 mb-4 tracking-tight">
-             {status === 'connected' ? "I'm listening..." : t.voice_title}
+             {status === 'connected' ? "I'm listening..." : (status === 'error' ? "Connection Lost" : t.voice_title)}
           </h2>
           <p className="text-slate-400 text-lg max-w-xs mx-auto leading-relaxed">
-             {status === 'connected' ? "Go ahead, ask me anything." : t.voice_desc}
+             {errorMessage ? <span className="text-red-400">{errorMessage}</span> : (status === 'connected' ? "Go ahead, ask me anything." : t.voice_desc)}
           </p>
+          {status === 'error' && (
+              <Button variant="secondary" onClick={connect} className="mt-4">Retry Connection</Button>
+          )}
        </div>
     </div>
   );
