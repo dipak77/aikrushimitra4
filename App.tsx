@@ -7,7 +7,7 @@ import {
   Landmark, ChevronRight, CheckCircle2, Loader2,  
   Bell, FileText, Smartphone, CloudRain, Thermometer, UserCircle,
   Share2, Save, MoreHorizontal, LayoutDashboard, WifiOff, RefreshCw,
-  Power, MicOff, Activity
+  Power, MicOff, Activity, LogOut
 } from 'lucide-react';
 import { Button } from './components/Button';
 import { analyzeCropDisease } from './services/geminiService';
@@ -142,7 +142,7 @@ const Sidebar = ({ view, setView, lang }: { view: ViewState, setView: (v: ViewSt
   );
 };
 
-// 2. Mobile Floating Dock (Premium Glass)
+// 2. Mobile Floating Dock (Premium Glass) - FIX: Added !overflow-visible to fix button clipping
 const MobileNav = ({ view, setView }: { view: ViewState, setView: (v: ViewState) => void }) => {
   const navItems = [
     { id: 'DASHBOARD', icon: LayoutDashboard },
@@ -153,14 +153,17 @@ const MobileNav = ({ view, setView }: { view: ViewState, setView: (v: ViewState)
   ];
 
   return (
-    <div className="lg:hidden fixed bottom-0 inset-x-0 z-[100] flex justify-center pointer-events-none px-4 mb-safe-bottom pt-6 bg-gradient-to-t from-[#020617] via-[#020617]/90 to-transparent">
-      <div className="glass-panel pointer-events-auto p-1.5 rounded-[2.5rem] flex items-center gap-1 shadow-[0_0_30px_rgba(0,0,0,0.5)] border border-white/10 w-full max-w-[350px] justify-between h-[4.5rem] bg-slate-900/80">
+    <div className="lg:hidden fixed bottom-0 inset-x-0 z-[150] flex justify-center pointer-events-none px-4 pb-safe-bottom">
+      {/* Background scrim for contrast */}
+      <div className="absolute inset-0 bg-gradient-to-t from-[#020617] via-[#020617]/95 to-transparent h-[150%] bottom-0 -z-10"></div>
+      
+      <div className="glass-panel !overflow-visible pointer-events-auto p-1.5 rounded-[2.5rem] flex items-center gap-1 shadow-[0_10px_30px_rgba(0,0,0,0.6)] border border-white/10 w-full max-w-[350px] justify-between h-[4.5rem] bg-[#0f172a]/90 backdrop-blur-2xl mb-4 relative">
         {navItems.map((item) => {
            const isActive = view === item.id;
            if (item.main) {
              return (
                <button key={item.id} onClick={() => { setView(item.id as ViewState); triggerHaptic(); }} 
-                 className="relative -top-8 w-16 h-16 bg-gradient-to-tr from-fuchsia-500 to-purple-600 rounded-full text-white flex items-center justify-center shadow-[0_10px_25px_rgba(192,38,211,0.5)] border-4 border-[#020617] active:scale-95 transition-all group overflow-hidden shrink-0 z-10">
+                 className="relative -top-9 w-16 h-16 bg-gradient-to-tr from-fuchsia-500 to-purple-600 rounded-full text-white flex items-center justify-center shadow-[0_10px_25px_rgba(192,38,211,0.5)] border-4 border-[#020617] active:scale-95 transition-all group overflow-hidden shrink-0 z-50">
                   <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.4),transparent)]"></div>
                   <Mic size={28} className="relative z-10 drop-shadow-md" />
                   <div className="absolute inset-0 bg-white/30 rounded-full scale-0 group-active:scale-150 transition-transform opacity-50"></div>
@@ -628,9 +631,15 @@ const VoiceAssistant = ({ lang, user, onBack }: any) => {
        <div className="absolute top-[-20%] left-[-20%] w-[80vw] h-[80vw] bg-purple-600/20 blur-[100px] rounded-full"></div>
        <div className="absolute bottom-[-20%] right-[-20%] w-[80vw] h-[80vw] bg-cyan-600/20 blur-[100px] rounded-full"></div>
 
-       {/* Top Bar */}
-       <div className="absolute top-0 w-full p-6 pt-safe-top flex justify-between items-center z-50">
-          <button onClick={handleBack} className="w-12 h-12 rounded-full glass-panel flex items-center justify-center text-white hover:bg-white/10 transition-all active:scale-90"><ArrowLeft/></button>
+       {/* Top Bar with Enhanced Back Button */}
+       <div className="absolute top-0 w-full p-4 pt-4 pt-safe-top flex justify-between items-center z-[210]">
+          <button 
+             onClick={handleBack} 
+             className="flex items-center gap-2 pl-4 pr-5 py-3 rounded-full bg-black/40 backdrop-blur-md border border-white/20 text-white hover:bg-white/10 transition-all active:scale-95 shadow-lg shadow-black/30"
+          >
+             <Home size={20} className="text-cyan-300"/>
+             <span className="font-bold text-sm tracking-wide">Dashboard</span>
+          </button>
           
           {/* Status Badge */}
           {status !== 'idle' && (
@@ -707,22 +716,28 @@ const VoiceAssistant = ({ lang, user, onBack }: any) => {
           </div>
        </div>
 
-       {/* Status Text */}
-       <div className="mb-safe-bottom pb-12 text-center z-10 px-8 animate-enter delay-100 h-32">
-          <h2 className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-b from-white to-slate-400 mb-4 tracking-tight">
+       {/* Status Text & Secondary Exit */}
+       <div className="mb-safe-bottom pb-8 text-center z-10 px-8 animate-enter delay-100 h-40 flex flex-col items-center justify-end">
+          <h2 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-b from-white to-slate-400 mb-2 tracking-tight">
              {status === 'connected' ? "I'm listening..." : 
               status === 'reconnecting' ? "Signal Weak..." :
               status === 'offline' ? "No Internet" :
               status === 'error' ? "Connection Failed" : 
               status === 'connecting' ? "Connecting..." : t.voice_title}
           </h2>
-          <p className="text-slate-400 text-lg max-w-xs mx-auto leading-relaxed">
+          <p className="text-slate-400 text-base max-w-xs mx-auto leading-relaxed mb-6">
              {errorMessage ? <span className="text-red-400">{errorMessage}</span> : 
               status === 'reconnecting' ? "Boosting signal..." :
               status === 'offline' ? "Waiting for network..." :
               status === 'connected' ? "Go ahead, ask me anything." : 
               status === 'idle' ? t.voice_desc : "Establishing secure link..."}
           </p>
+
+          {/* Secondary Exit Button */}
+          <button onClick={handleBack} className="flex items-center gap-2 px-6 py-3 rounded-full bg-white/5 border border-white/10 text-slate-300 hover:bg-white/10 hover:text-white transition-all active:scale-95">
+             <LogOut size={16} />
+             <span className="font-bold text-xs uppercase tracking-wider">Exit Voice Mode</span>
+          </button>
        </div>
     </div>
   );
