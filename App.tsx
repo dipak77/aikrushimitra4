@@ -6,7 +6,8 @@ import {
   Wind, Camera, X, Wheat, Sun, MapPin, Clock, ArrowUpRight, 
   Landmark, ChevronRight, CheckCircle2, Loader2,  
   Bell, FileText, Smartphone, CloudRain, Thermometer, UserCircle,
-  Share2, Save, MoreHorizontal, LayoutDashboard
+  Share2, Save, MoreHorizontal, LayoutDashboard, WifiOff, RefreshCw,
+  Power, MicOff, Activity
 } from 'lucide-react';
 import { Button } from './components/Button';
 import { analyzeCropDisease } from './services/geminiService';
@@ -337,178 +338,287 @@ const Dashboard = ({ lang, user, onNavigate }: any) => {
 // 4. Immersive "Orb" Voice Assistant (Fullscreen Mobile 100dvh)
 const VoiceAssistant = ({ lang, user, onBack }: any) => {
   const t = TRANSLATIONS[lang];
-  const [status, setStatus] = useState<'idle' | 'connecting' | 'connected' | 'error'>('idle');
+  // Extended state for robustness
+  const [status, setStatus] = useState<'idle' | 'connecting' | 'connected' | 'reconnecting' | 'error' | 'offline'>('idle');
   const [errorMessage, setErrorMessage] = useState('');
+  const [transcripts, setTranscripts] = useState<{role: 'user'|'model', text: string}[]>([]);
   
-  const sessionRef = useRef<any>(null);
-  const audioContextRef = useRef<AudioContext | null>(null);
-  const inputAudioContextRef = useRef<AudioContext | null>(null);
+  // Robust Session Management & "Intent" Tracking
+  const shouldStayConnectedRef = useRef(false); // The user's intent to be in the session
+  const sessionPromiseRef = useRef<Promise<any> | null>(null);
+  const activeSessionRef = useRef<any>(null); 
+  
+  // Audio Nodes (Split Contexts)
+  const inputContextRef = useRef<AudioContext | null>(null);
+  const outputContextRef = useRef<AudioContext | null>(null);
+  const mediaStreamRef = useRef<MediaStream | null>(null);
+  const processorRef = useRef<ScriptProcessorNode | null>(null);
+  
+  const reconnectTimeoutRef = useRef<any>(null);
+  const retryCountRef = useRef(0);
+  
   const nextStartTimeRef = useRef<number>(0);
   const orbRef = useRef<HTMLDivElement>(null);
-  const analyserRef = useRef<AnalyserNode | null>(null);
   const animationFrameRef = useRef<number>(0);
-  
-  useEffect(() => { 
-      return () => cleanup(); 
-  }, []);
+  const lastVolumeRef = useRef(0); 
 
-  const cleanup = () => {
-    console.log("Cleaning up voice session...");
-    if(sessionRef.current) {
-        sessionRef.current.close();
-        sessionRef.current = null;
+  // Auto-scroll for transcript
+  const transcriptEndRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    transcriptEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [transcripts]);
+
+  // Cleanup Function
+  const cleanup = (fullyStop: boolean = false) => {
+    console.log("Cleaning up session...");
+    
+    if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
+    
+    if (processorRef.current) {
+        processorRef.current.disconnect();
+        processorRef.current.onaudioprocess = null;
+        processorRef.current = null;
     }
-    if(audioContextRef.current) {
-        audioContextRef.current.close();
-        audioContextRef.current = null;
+    
+    if (mediaStreamRef.current) {
+        mediaStreamRef.current.getTracks().forEach(track => track.stop());
+        mediaStreamRef.current = null;
     }
-    if(inputAudioContextRef.current) {
-        inputAudioContextRef.current.close();
-        inputAudioContextRef.current = null;
+    
+    if (inputContextRef.current) {
+        inputContextRef.current.close();
+        inputContextRef.current = null;
     }
-    if(animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current);
+
+    if (outputContextRef.current) {
+        outputContextRef.current.close();
+        outputContextRef.current = null;
     }
-    setStatus('idle');
+
+    if (activeSessionRef.current) {
+        try { activeSessionRef.current.close(); } catch(e) {}
+        activeSessionRef.current = null;
+    }
+    sessionPromiseRef.current = null;
+    
+    if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
+
+    if (fullyStop) {
+        shouldStayConnectedRef.current = false;
+        setStatus('idle');
+    }
   };
 
-  const visualize = () => {
-      if(!analyserRef.current || !orbRef.current) return;
-      const dataArray = new Uint8Array(analyserRef.current.frequencyBinCount);
-      analyserRef.current.getByteFrequencyData(dataArray);
+  const handleAutoReconnect = () => {
+      if (!shouldStayConnectedRef.current) return;
+
+      if (retryCountRef.current >= 5) {
+          setStatus('error');
+          setErrorMessage('Network error. Please try again.');
+          shouldStayConnectedRef.current = false; 
+          return;
+      }
       
-      let sum = 0;
-      for(let i = 0; i < dataArray.length; i++) sum += dataArray[i];
-      const avg = sum / dataArray.length;
+      setStatus('reconnecting');
+      const delay = Math.min(1000 * Math.pow(2, retryCountRef.current), 10000); 
       
-      const scale = 1 + (avg / 40); 
-      const opacity = 0.5 + (avg / 255);
+      reconnectTimeoutRef.current = setTimeout(() => {
+          retryCountRef.current++;
+          connect();
+      }, delay);
+  };
+
+  // Visualizer handles both Input and Output streams
+  const visualize = (inputAnalyser: AnalyserNode, outputAnalyser: AnalyserNode) => {
+      if(!orbRef.current) return;
+      
+      // Get Input Level
+      const inputData = new Uint8Array(inputAnalyser.frequencyBinCount);
+      inputAnalyser.getByteFrequencyData(inputData);
+      let inputSum = 0;
+      for(let i = 0; i < inputData.length; i++) inputSum += inputData[i];
+      const inputAvg = inputSum / inputData.length;
+
+      // Get Output Level
+      const outputData = new Uint8Array(outputAnalyser.frequencyBinCount);
+      outputAnalyser.getByteFrequencyData(outputData);
+      let outputSum = 0;
+      for(let i = 0; i < outputData.length; i++) outputSum += outputData[i];
+      const outputAvg = outputSum / outputData.length;
+
+      // Combine for single visual
+      const maxAvg = Math.max(inputAvg, outputAvg);
+      const normalized = maxAvg / 255;
+
+      // Smooth Animation
+      const speed = 0.2; 
+      lastVolumeRef.current = lastVolumeRef.current + (normalized - lastVolumeRef.current) * speed;
+      const vol = lastVolumeRef.current;
+
+      const scale = 1 + (vol * 0.8); 
+      const opacity = 0.3 + (vol * 0.7);
+      const glowSize = 20 + (vol * 60);
+      const glowAlpha = 0.3 + (vol * 0.5);
       
       orbRef.current.style.transform = `scale(${scale})`;
       orbRef.current.style.opacity = `${opacity}`;
-      orbRef.current.style.boxShadow = `0 0 ${avg * 2}px rgba(34, 211, 238, 0.6)`; 
+      orbRef.current.style.boxShadow = `
+          0 0 ${glowSize}px rgba(34, 211, 238, ${glowAlpha}),
+          inset 0 0 ${20 + vol * 20}px rgba(168, 85, 247, ${vol * 0.4})
+      `;
 
-      animationFrameRef.current = requestAnimationFrame(visualize);
+      animationFrameRef.current = requestAnimationFrame(() => visualize(inputAnalyser, outputAnalyser));
   };
 
   const connect = async () => {
-    if(status === 'connecting' || status === 'connected') return;
-    
-    // Resume audio context if it exists and is suspended (User Interaction Policy)
-    if(audioContextRef.current?.state === 'suspended') {
-        await audioContextRef.current.resume();
-    }
-    if(inputAudioContextRef.current?.state === 'suspended') {
-        await inputAudioContextRef.current.resume();
+    if (!navigator.onLine) {
+        setStatus('offline');
+        return;
     }
 
-    triggerHaptic();
-    setStatus('connecting');
+    cleanup(false); 
+    shouldStayConnectedRef.current = true; 
     setErrorMessage('');
+    setStatus(retryCountRef.current > 0 ? 'reconnecting' : 'connecting');
 
     try {
-      // 1. Setup Input Audio (Microphone)
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-          audio: { 
-             echoCancellation: true, 
-             noiseSuppression: true, 
-             autoGainControl: true,
-             channelCount: 1 
-          } 
-      });
+      // 1. Setup Audio Input (Microphone) - Prefer 16kHz
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
+      mediaStreamRef.current = stream;
       
-      // 2. Setup Output Audio Context
       const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-      const ctx = new AudioContextClass({ sampleRate: 24000 }); // Output rate fixed for model
-      audioContextRef.current = ctx;
-      nextStartTimeRef.current = ctx.currentTime;
-      
-      const analyser = ctx.createAnalyser();
-      analyser.fftSize = 64;
-      analyserRef.current = analyser;
-      analyser.connect(ctx.destination);
-      
-      // 3. Setup Input Audio Processing
-      const inputCtx = new AudioContextClass(); // Let browser decide input sample rate
-      inputAudioContextRef.current = inputCtx;
-      const inputSource = inputCtx.createMediaStreamSource(stream);
-      const processor = inputCtx.createScriptProcessor(4096, 1, 1);
-      
-      const actualSampleRate = inputCtx.sampleRate;
-      console.log(`Microphone Sample Rate: ${actualSampleRate}Hz`);
+      const inputCtx = new AudioContextClass({ sampleRate: 16000 });
+      await inputCtx.resume();
+      inputContextRef.current = inputCtx;
 
-      inputSource.connect(processor);
+      // 2. Setup Audio Output (Speaker) - 24kHz for Model
+      const outputCtx = new AudioContextClass({ sampleRate: 24000 });
+      await outputCtx.resume();
+      outputContextRef.current = outputCtx;
+      nextStartTimeRef.current = outputCtx.currentTime;
+
+      // 3. Audio Nodes & Graph
+      const source = inputCtx.createMediaStreamSource(stream);
+      const processor = inputCtx.createScriptProcessor(4096, 1, 1);
+      processorRef.current = processor;
       
-      // Create a GainNode with 0 gain to prevent feedback/output to speakers from the processor
-      const muteGain = inputCtx.createGain();
-      muteGain.gain.value = 0;
-      processor.connect(muteGain);
-      muteGain.connect(inputCtx.destination);
+      const inputAnalyser = inputCtx.createAnalyser();
+      inputAnalyser.fftSize = 256;
+      inputAnalyser.smoothingTimeConstant = 0.5;
+
+      const outputAnalyser = outputCtx.createAnalyser();
+      outputAnalyser.fftSize = 256;
+      outputAnalyser.smoothingTimeConstant = 0.5;
+
+      // Connect Input Graph
+      source.connect(inputAnalyser);
+      source.connect(processor);
+      processor.connect(inputCtx.destination);
       
-      // 4. Initialize Gemini Live Session
-      // Explicitly using 'v1beta' to match working curl requests for this model
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string, apiVersion: 'v1beta' });
+      // Start Visualizer
+      visualize(inputAnalyser, outputAnalyser);
+
+      // 4. Gemini Connection
+      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
       const sessionPromise = ai.live.connect({
         model: 'gemini-2.5-flash-native-audio-preview-12-2025',
         config: { 
             responseModalities: [Modality.AUDIO], 
             speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Puck' } } },
-            systemInstruction: `You are AI Krushi Mitra, a friendly and helpful Indian farming assistant.`
+            // Using empty objects is critical for enabling transcription without model errors
+            inputAudioTranscription: {}, 
+            outputAudioTranscription: {},
+            systemInstruction: { parts: [{ text: "You are AI Krushi Mitra. Speak Marathi or English based on user. Keep answers concise." }] }
         },
         callbacks: {
            onopen: () => { 
               console.log("Session Opened");
+              retryCountRef.current = 0; 
               setStatus('connected'); 
               triggerHaptic();
-              visualize(); 
            },
            onmessage: async (msg) => {
+              // Handle Audio Output
               const audioData = msg.serverContent?.modelTurn?.parts?.[0]?.inlineData?.data;
               if (audioData) {
-                 // Decode and schedule audio playback
-                 const buffer = await decodeAudioData(decode(audioData), ctx, 24000, 1);
-                 const source = ctx.createBufferSource();
-                 source.buffer = buffer;
-                 source.connect(analyser);
+                 const buffer = await decodeAudioData(decode(audioData), outputCtx, 24000, 1);
+                 const sourceNode = outputCtx.createBufferSource();
+                 sourceNode.buffer = buffer;
                  
-                 const currentTime = ctx.currentTime;
-                 if (nextStartTimeRef.current < currentTime) {
-                     nextStartTimeRef.current = currentTime;
-                 }
-                 source.start(nextStartTimeRef.current);
+                 // Connect to Output Graph
+                 sourceNode.connect(outputAnalyser);
+                 sourceNode.connect(outputCtx.destination);
+                 
+                 const currentTime = outputCtx.currentTime;
+                 if (nextStartTimeRef.current < currentTime) nextStartTimeRef.current = currentTime;
+                 sourceNode.start(nextStartTimeRef.current);
                  nextStartTimeRef.current += buffer.duration;
               }
+
+              // Handle Transcription
+              const userTranscript = msg.serverContent?.inputTranscription?.text;
+              if (userTranscript) {
+                  setTranscripts(prev => [...prev, { role: 'user', text: userTranscript }]);
+              }
+              const modelTranscript = msg.serverContent?.outputTranscription?.text;
+              if (msg.serverContent?.turnComplete && modelTranscript) {
+                   // Can add model transcript logic here if needed
+              }
            },
-           onclose: (e) => {
-               console.log("Session Closed", e);
-               cleanup();
+           onclose: () => {
+               console.log("Session Closed");
+               if (shouldStayConnectedRef.current) handleAutoReconnect();
            },
            onerror: (err) => {
-               console.error("Session Error", err);
-               setErrorMessage(err.message || 'Connection failed.');
-               cleanup();
-               setStatus('error');
+               console.error("Session Error:", err);
+               if (shouldStayConnectedRef.current) handleAutoReconnect();
            }
         }
       });
       
-      sessionRef.current = await sessionPromise;
+      sessionPromiseRef.current = sessionPromise;
+      sessionPromise.then(sess => {
+          activeSessionRef.current = sess;
+      }).catch(e => {
+          console.error("Connection Failed:", e);
+          handleAutoReconnect();
+      });
       
-      // 5. Stream Audio Data
+      // 5. Send Audio Logic
       processor.onaudioprocess = (e) => {
-         if(!sessionRef.current) return;
          const inputData = e.inputBuffer.getChannelData(0);
-         // IMPORTANT: Pass actual sample rate so API knows how to process it
-         const blob = createPCMChunk(inputData, actualSampleRate); 
-         sessionRef.current.sendRealtimeInput({ media: blob });
+         // Use the input context's sample rate to downsample correctly
+         const blob = createPCMChunk(inputData, inputCtx.sampleRate); 
+         
+         if (sessionPromiseRef.current) {
+             sessionPromiseRef.current.then(session => {
+                 if (session === activeSessionRef.current && shouldStayConnectedRef.current) {
+                    session.sendRealtimeInput({ media: blob });
+                 }
+             }).catch(() => {});
+         }
       };
 
     } catch(e: any) { 
-        console.error("Connect Failed", e);
-        setErrorMessage(e.message || 'Could not access microphone or network.');
-        cleanup();
+        console.error("Setup Failed", e);
+        setErrorMessage(e.message || "Failed to connect microphone");
         setStatus('error');
     }
+  };
+
+  const handleToggle = () => {
+      triggerHaptic();
+      if (status === 'idle' || status === 'error') {
+          setTranscripts([]);
+          connect();
+      } else {
+          cleanup(true);
+      }
+  };
+
+  const handleBack = () => {
+      cleanup(true);
+      onBack();
   };
 
   return (
@@ -520,17 +630,49 @@ const VoiceAssistant = ({ lang, user, onBack }: any) => {
 
        {/* Top Bar */}
        <div className="absolute top-0 w-full p-6 pt-safe-top flex justify-between items-center z-50">
-          <button onClick={() => { onBack(); triggerHaptic(); }} className="w-12 h-12 rounded-full glass-panel flex items-center justify-center text-white hover:bg-white/10 transition-all active:scale-90"><ArrowLeft/></button>
-          <div className="flex items-center gap-2 px-4 py-2 rounded-full glass-panel">
-             <div className={`w-2 h-2 rounded-full ${status === 'connected' ? 'bg-cyan-400 animate-pulse shadow-[0_0_8px_#22d3ee]' : (status === 'error' ? 'bg-yellow-500' : 'bg-red-500')}`}></div>
-             <span className="text-xs font-bold text-white uppercase tracking-widest">{status === 'connected' ? 'Live' : status}</span>
-          </div>
+          <button onClick={handleBack} className="w-12 h-12 rounded-full glass-panel flex items-center justify-center text-white hover:bg-white/10 transition-all active:scale-90"><ArrowLeft/></button>
+          
+          {/* Status Badge */}
+          {status !== 'idle' && (
+              <div className={clsx("flex items-center gap-2 px-4 py-2 rounded-full glass-panel transition-colors duration-500", 
+                 status === 'connected' ? "border-cyan-500/30 bg-cyan-900/20" : 
+                 status === 'reconnecting' ? "border-yellow-500/30 bg-yellow-900/20" :
+                 status === 'offline' ? "border-red-500/30 bg-red-900/20" : 
+                 status === 'error' ? "border-red-500/30 bg-red-900/20" : "bg-white/5"
+              )}>
+                 <div className={clsx("w-2 h-2 rounded-full transition-all", 
+                    status === 'connected' ? "bg-cyan-400 animate-pulse shadow-[0_0_8px_#22d3ee]" : 
+                    status === 'reconnecting' ? "bg-yellow-400 animate-ping" : 
+                    (status === 'offline' || status === 'error') ? "bg-red-500" : "bg-slate-500"
+                 )}></div>
+                 <span className="text-xs font-bold text-white uppercase tracking-widest">
+                     {status === 'connected' ? 'Live' : status === 'reconnecting' ? 'Reconnecting...' : status}
+                 </span>
+              </div>
+          )}
        </div>
 
-       {/* The ORB - Central Hero */}
-       <div className="relative z-10 flex-1 flex items-center justify-center w-full">
-          <div className="relative w-72 h-72 flex items-center justify-center">
-             {status === 'connected' && (
+       {/* Contextual Memory / Transcript UI */}
+       <div className="absolute top-24 inset-x-0 bottom-1/2 overflow-y-auto hide-scrollbar px-6 z-20 flex flex-col gap-3 mask-image-gradient pb-8">
+           {status === 'connected' && transcripts.length === 0 && (
+               <div className="text-center text-slate-500 text-sm mt-10 animate-pulse">Start speaking...</div>
+           )}
+           {transcripts.map((msg, i) => (
+               <div key={i} className={clsx("p-3 rounded-2xl backdrop-blur-md border border-white/5 max-w-[85%] text-sm font-medium animate-enter shadow-lg", 
+                   msg.role === 'user' ? "self-end bg-cyan-500/10 text-cyan-100 rounded-tr-sm border-cyan-500/20" : "self-start bg-purple-500/10 text-purple-100 rounded-tl-sm border-purple-500/20"
+               )}>
+                   {msg.text}
+               </div>
+           ))}
+           <div ref={transcriptEndRef} />
+       </div>
+
+       {/* The ORB - Central Interaction Area */}
+       <div className="relative z-30 flex-1 flex items-center justify-center w-full mt-32">
+          <div className="relative w-80 h-80 flex items-center justify-center">
+             
+             {/* Visualizer Orb (Only when active) */}
+             {(status === 'connected' || status === 'reconnecting') && (
                 <>
                    <div className="absolute inset-0 rounded-full border border-cyan-500/30 scale-[1.3] animate-[spin_10s_linear_infinite]"></div>
                    <div className="absolute inset-0 rounded-full border border-purple-500/20 scale-[1.6] animate-[spin_15s_linear_infinite_reverse]"></div>
@@ -538,148 +680,171 @@ const VoiceAssistant = ({ lang, user, onBack }: any) => {
                 </>
              )}
              
-             <button onClick={status === 'connected' ? cleanup : connect} className="relative z-20 w-40 h-40 rounded-full bg-black/50 border border-white/10 flex items-center justify-center shadow-[0_0_50px_rgba(79,70,229,0.3)] group transition-all duration-500 active:scale-95 touch-manipulation backdrop-blur-xl">
-                <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-cyan-500/20 to-purple-500/20 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                {status === 'connecting' ? <Loader2 size={48} className="text-cyan-500 animate-spin"/> : <Mic size={48} className={`transition-colors ${status === 'connected' ? 'text-cyan-400 drop-shadow-[0_0_20px_rgba(34,211,238,1)]' : 'text-slate-400 group-hover:text-white'}`}/>}
+             {/* Main Trigger Button */}
+             <button onClick={handleToggle} 
+                className={clsx("relative z-40 w-48 h-48 rounded-full flex items-center justify-center shadow-[0_0_50px_rgba(79,70,229,0.3)] transition-all duration-500 active:scale-95 touch-manipulation backdrop-blur-xl border-4",
+                   status === 'idle' ? "bg-gradient-to-tr from-cyan-600 to-blue-600 border-white/20 animate-pulse" : 
+                   status === 'connected' ? "bg-black/80 border-cyan-500/50" :
+                   status === 'reconnecting' ? "bg-black/80 border-yellow-500/50" : "bg-black/50 border-white/10"
+                )}>
+                
+                {status === 'connecting' || status === 'reconnecting' ? (
+                    <RefreshCw size={64} className={clsx("animate-spin", status === 'reconnecting' ? "text-yellow-400" : "text-cyan-500")}/>
+                ) : status === 'idle' ? (
+                    <div className="flex flex-col items-center">
+                        <Mic size={64} className="text-white drop-shadow-md mb-2"/>
+                        <span className="text-xs font-black uppercase tracking-widest text-white/80">Tap to Start</span>
+                    </div>
+                ) : (status === 'offline' || status === 'error') ? (
+                    <WifiOff size={64} className="text-red-400"/>
+                ) : (
+                    <div className="flex flex-col items-center">
+                        <Mic size={56} className="text-cyan-400 drop-shadow-[0_0_20px_rgba(34,211,238,1)] mb-2"/>
+                        <span className="text-[10px] font-bold text-cyan-200">Tap to Stop</span>
+                    </div>
+                )}
              </button>
           </div>
        </div>
 
-       {/* Text */}
-       <div className="mb-safe-bottom pb-12 text-center z-10 px-8 animate-enter delay-100">
+       {/* Status Text */}
+       <div className="mb-safe-bottom pb-12 text-center z-10 px-8 animate-enter delay-100 h-32">
           <h2 className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-b from-white to-slate-400 mb-4 tracking-tight">
-             {status === 'connected' ? "I'm listening..." : (status === 'error' ? "Connection Lost" : t.voice_title)}
+             {status === 'connected' ? "I'm listening..." : 
+              status === 'reconnecting' ? "Signal Weak..." :
+              status === 'offline' ? "No Internet" :
+              status === 'error' ? "Connection Failed" : 
+              status === 'connecting' ? "Connecting..." : t.voice_title}
           </h2>
           <p className="text-slate-400 text-lg max-w-xs mx-auto leading-relaxed">
-             {errorMessage ? <span className="text-red-400">{errorMessage}</span> : (status === 'connected' ? "Go ahead, ask me anything." : t.voice_desc)}
+             {errorMessage ? <span className="text-red-400">{errorMessage}</span> : 
+              status === 'reconnecting' ? "Boosting signal..." :
+              status === 'offline' ? "Waiting for network..." :
+              status === 'connected' ? "Go ahead, ask me anything." : 
+              status === 'idle' ? t.voice_desc : "Establishing secure link..."}
           </p>
-          {status === 'error' && (
-              <Button variant="secondary" onClick={connect} className="mt-4">Retry Connection</Button>
-          )}
        </div>
     </div>
   );
 };
 
-// 5. Crop Doctor (Camera View)
-const DiseaseDetector = ({ lang, onBack }: any) => {
-  const t = TRANSLATIONS[lang];
-  const [img, setImg] = useState<string | null>(null);
-  const [analyzing, setAnalyzing] = useState(false);
-  const [result, setResult] = useState<string | null>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  const handleFile = (e: any) => {
-     if(e.target.files?.[0]) {
-        const reader = new FileReader();
-        reader.onload = (ev) => {
-           setImg(ev.target?.result as string);
-           setAnalyzing(true);
-           triggerHaptic();
-           analyzeCropDisease(ev.target?.result as string, lang).then(res => {
-              setResult(res);
-              setAnalyzing(false);
-              triggerHaptic();
-           });
-        }
-        reader.readAsDataURL(e.target.files[0]);
-     }
-  };
-
-  return (
-    <div className="h-[100dvh] bg-black text-white flex flex-col overflow-hidden fixed inset-0 z-[200] w-full">
-       <div className="p-5 pt-safe-top flex justify-between items-center z-20 bg-gradient-to-b from-black/80 to-transparent absolute top-0 w-full pointer-events-none">
-          <button onClick={() => { onBack(); triggerHaptic(); }} className="w-12 h-12 rounded-full glass-panel flex items-center justify-center active:scale-90 transition-all pointer-events-auto"><ArrowLeft/></button>
-          <span className="font-mono text-[10px] text-emerald-400 tracking-[0.2em] uppercase glass-panel px-4 py-1.5 rounded-full">AI SCANNER</span>
-          <div className="w-12"></div>
-       </div>
-
-       <div className="flex-1 relative flex flex-col items-center justify-center bg-black">
-          {!img ? (
-             <div onClick={() => { inputRef.current?.click(); triggerHaptic(); }} className="w-full h-full flex flex-col items-center justify-center cursor-pointer active:opacity-90 transition-opacity relative group">
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(16,185,129,0.1),transparent)] opacity-40 group-hover:opacity-60 transition-opacity"></div>
-                {/* Guidelines */}
-                <div className="absolute w-64 h-64 border border-white/20 rounded-3xl">
-                    <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-emerald-500 -mt-1 -ml-1 rounded-tl-xl"></div>
-                    <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-emerald-500 -mt-1 -mr-1 rounded-tr-xl"></div>
-                    <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-emerald-500 -mb-1 -ml-1 rounded-bl-xl"></div>
-                    <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-emerald-500 -mb-1 -mr-1 rounded-br-xl"></div>
-                </div>
-
-                <div className="text-center z-10 relative mt-80">
-                   <p className="font-bold text-2xl mb-2 drop-shadow-md tracking-tight">{t.take_photo}</p>
-                   <p className="text-white/60 text-sm drop-shadow-md">Tap screen to capture</p>
-                </div>
-
-                <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={handleFile}/>
-             </div>
-          ) : (
-             <div className="w-full h-full relative flex flex-col">
-                <div className="relative flex-1 overflow-hidden bg-black">
-                   <img src={img} className="w-full h-full object-contain" />
-                   {analyzing && (
-                      <div className="absolute inset-0 bg-black/60 backdrop-blur-md flex flex-col items-center justify-center z-20">
-                         <div className="w-full h-1 bg-emerald-500 absolute top-1/2 animate-[scan_2s_ease-in-out_infinite] shadow-[0_0_30px_#10b981]"></div>
-                         <div className="bg-black/40 px-6 py-3 rounded-2xl backdrop-blur-xl border border-white/10 flex flex-col items-center mt-32">
-                             <Loader2 className="animate-spin text-emerald-400 mb-2" size={32}/>
-                             <p className="font-mono text-emerald-400 text-xs tracking-widest">ANALYZING CROP...</p>
-                         </div>
-                      </div>
-                   )}
-                   <button onClick={() => { setImg(null); setResult(null); triggerHaptic(); }} className="absolute top-24 right-5 bg-black/50 p-3 rounded-full text-white backdrop-blur-md z-30 border border-white/20"><X/></button>
-                </div>
-                
-                {result && !analyzing && (
-                   <div className="absolute bottom-0 inset-x-0 bg-[#0a0a0a]/95 backdrop-blur-2xl rounded-t-[2.5rem] p-6 border-t border-white/10 animate-enter max-h-[70vh] overflow-y-auto pb-safe-bottom shadow-[0_-20px_60px_rgba(0,0,0,0.8)] z-30">
-                      <div className="w-12 h-1 bg-white/20 rounded-full mx-auto mb-6"></div>
-                      <div className="flex items-center gap-3 mb-6">
-                         <div className="w-12 h-12 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-400">
-                             <CheckCircle2 size={24}/>
-                         </div>
-                         <div>
-                             <h3 className="font-black text-xl text-white">Analysis Report</h3>
-                             <p className="text-emerald-400 text-xs font-bold uppercase">Confidence: 98%</p>
-                         </div>
-                      </div>
-                      <div className="bg-white/5 rounded-2xl p-5 border border-white/5 mb-6">
-                          <p className="text-slate-300 leading-relaxed whitespace-pre-wrap text-sm">{result}</p>
-                      </div>
-                      <div className="grid grid-cols-2 gap-3">
-                         <Button variant="secondary" onClick={triggerHaptic} icon={<Share2 size={18}/>}>Share</Button>
-                         <Button variant="glow" onClick={triggerHaptic} icon={<Save size={18}/>}>Save</Button>
-                      </div>
-                   </div>
-                )}
-             </div>
-          )}
-          
-          {/* Shutter Button (Bottom Fixed) */}
-          {!img && (
-              <div className="absolute bottom-10 inset-x-0 flex justify-center z-20 pb-safe-bottom pointer-events-none">
-                  <button onClick={() => { inputRef.current?.click(); triggerHaptic(); }} className="w-20 h-20 rounded-full border-4 border-white flex items-center justify-center bg-white/10 backdrop-blur-sm active:scale-90 transition-transform pointer-events-auto shadow-[0_0_30px_rgba(255,255,255,0.2)]">
-                      <div className="w-16 h-16 bg-white rounded-full"></div>
-                  </button>
-              </div>
-          )}
-       </div>
-    </div>
-  );
-};
-
-// 6. Simple Page Layout
-const SimpleView = ({ title, children, onBack }: any) => (
-  <div className="h-full w-full flex flex-col lg:pl-32 lg:pt-6 lg:pr-6">
-     <div className="px-5 py-4 pt-safe-top flex items-center gap-4 sticky top-0 z-20 bg-[#020617]/80 backdrop-blur-xl border-b border-white/5">
-        <button onClick={() => { onBack(); triggerHaptic(); }} className="w-10 h-10 rounded-full glass-panel flex items-center justify-center active:scale-90 transition-all text-white"><ArrowLeft size={20}/></button>
-        <h1 className="text-xl font-black text-white tracking-tight">{title}</h1>
-     </div>
-     <div className="flex-1 overflow-y-auto hide-scrollbar p-5 pb-32 max-w-5xl mx-auto w-full">
+// 5. Simple View Wrapper
+const SimpleView = ({ title, children, onBack }: { title: string, children?: React.ReactNode, onBack: () => void }) => (
+  <div className="h-full w-full overflow-y-auto hide-scrollbar pb-32 lg:pl-32 lg:pt-6 lg:pr-6 overscroll-y-contain scroll-smooth z-10 relative">
+     <div className="max-w-3xl mx-auto px-4 pt-safe-top">
+        <header className="flex items-center gap-4 py-6 mb-4 sticky top-0 z-50 bg-gradient-to-b from-[#020617] to-transparent">
+           <button onClick={() => { onBack(); triggerHaptic(); }} className="w-10 h-10 rounded-full glass-panel flex items-center justify-center text-slate-300 hover:bg-white/10 active:scale-90 transition-transform"><ArrowLeft size={20}/></button>
+           <h1 className="text-2xl font-black text-white tracking-tight drop-shadow-md">{title}</h1>
+        </header>
         {children}
      </div>
   </div>
 );
 
-// --- APP ROOT ---
+// 6. Disease Detector Component
+const DiseaseDetector = ({ lang, onBack }: { lang: Language, onBack: () => void }) => {
+  const t = TRANSLATIONS[lang];
+  const [image, setImage] = useState<string | null>(null);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [result, setResult] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+         if (ev.target?.result) setImage(ev.target.result as string);
+      };
+      reader.readAsDataURL(e.target.files[0]);
+    }
+  };
+
+  const analyze = async () => {
+    if (!image) return;
+    setAnalyzing(true);
+    const res = await analyzeCropDisease(image, lang);
+    setResult(res || "Error analyzing image.");
+    setAnalyzing(false);
+  };
+
+  const reset = () => {
+    setImage(null);
+    setResult(null);
+  };
+
+  return (
+    <SimpleView title={t.scan_title} onBack={onBack}>
+       <div className="flex flex-col gap-6 animate-enter pb-20">
+          {/* Image Area */}
+          <div className="aspect-square w-full md:aspect-video rounded-[2.5rem] glass-panel border border-white/10 relative overflow-hidden flex flex-col items-center justify-center bg-slate-900/40 group shadow-2xl">
+             {image ? (
+               <div className="relative w-full h-full">
+                 <img src={image} alt="Crop" className="w-full h-full object-cover" />
+                 {!analyzing && !result && (
+                     <button onClick={reset} className="absolute top-4 right-4 w-8 h-8 rounded-full bg-black/50 text-white flex items-center justify-center backdrop-blur-md">
+                        <X size={16} />
+                     </button>
+                 )}
+               </div>
+             ) : (
+               <div className="text-center p-6 relative z-10">
+                  <div onClick={() => fileInputRef.current?.click()} className="w-24 h-24 bg-gradient-to-tr from-cyan-500/20 to-blue-500/20 rounded-full flex items-center justify-center mx-auto mb-6 border border-white/10 cursor-pointer group-hover:scale-110 transition-transform shadow-[0_0_30px_rgba(6,182,212,0.15)] relative overflow-hidden">
+                     <div className="absolute inset-0 bg-cyan-400/20 rounded-full animate-ping opacity-0 group-hover:opacity-100"></div>
+                     <Camera size={36} className="text-cyan-300 relative z-10 drop-shadow-md"/>
+                  </div>
+                  <p className="text-slate-300 font-bold text-sm mb-6 max-w-[200px] mx-auto leading-relaxed">{t.scan_desc}</p>
+                  <Button onClick={() => fileInputRef.current?.click()} variant="primary" icon={<Camera size={18}/>} className="shadow-cyan-500/20">
+                     {t.take_photo}
+                  </Button>
+                  <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFile} capture="environment" />
+               </div>
+             )}
+          </div>
+
+          {/* Controls / Result */}
+          {image && !analyzing && !result && (
+             <div className="flex gap-3 animate-enter">
+                <Button onClick={reset} variant="secondary" fullWidth className="py-4">Retake</Button>
+                <Button onClick={analyze} variant="primary" fullWidth icon={<ScanLine size={18}/>} className="py-4 shadow-emerald-500/20 from-emerald-600 to-teal-600">Analyze Disease</Button>
+             </div>
+          )}
+
+          {analyzing && (
+             <div className="glass-panel p-10 rounded-[2rem] flex flex-col items-center justify-center text-center animate-enter border border-cyan-500/20 bg-cyan-900/5">
+                <div className="relative mb-6">
+                    <div className="absolute inset-0 bg-cyan-500 blur-xl opacity-20 animate-pulse"></div>
+                    <Loader2 size={48} className="text-cyan-400 animate-spin relative z-10"/>
+                </div>
+                <p className="font-bold text-xl text-white animate-pulse">{t.analyzing}</p>
+                <p className="text-slate-400 text-sm mt-2">Checking for symptoms...</p>
+             </div>
+          )}
+
+          {result && (
+             <div className="glass-panel p-6 rounded-[2rem] border border-emerald-500/20 bg-gradient-to-b from-emerald-900/10 to-transparent animate-enter shadow-2xl shadow-emerald-900/10">
+                <div className="flex items-center gap-3 mb-6 pb-4 border-b border-white/5">
+                   <div className="w-12 h-12 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white shadow-lg shadow-emerald-500/20">
+                      <CheckCircle2 size={24}/>
+                   </div>
+                   <div>
+                       <h3 className="text-xl font-black text-white">{t.analysis_report}</h3>
+                       <p className="text-emerald-400 text-xs font-bold uppercase tracking-wider">AI Diagnosis Complete</p>
+                   </div>
+                </div>
+                <div className="prose prose-invert prose-lg max-w-none">
+                   <p className="whitespace-pre-wrap leading-relaxed text-slate-200 font-medium">{result}</p>
+                </div>
+                <div className="mt-8 pt-6 border-t border-white/10 flex flex-col gap-3">
+                   <Button variant="primary" fullWidth icon={<Share2 size={18}/>}>{t.share_expert}</Button>
+                   <Button onClick={reset} variant="ghost" fullWidth>Scan Another Crop</Button>
+                </div>
+             </div>
+          )}
+       </div>
+    </SimpleView>
+  );
+};
+
 const App = () => {
   const [view, setView] = useState<ViewState>('DASHBOARD');
   const [lang, setLang] = useState<Language>('mr');
