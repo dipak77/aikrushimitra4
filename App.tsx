@@ -142,7 +142,7 @@ const Sidebar = ({ view, setView, lang }: { view: ViewState, setView: (v: ViewSt
   );
 };
 
-// 2. Mobile Floating Dock (Premium Glass) - FIX: Added !overflow-visible to fix button clipping
+// 2. Mobile Floating Dock (Premium Glass)
 const MobileNav = ({ view, setView }: { view: ViewState, setView: (v: ViewState) => void }) => {
   const navItems = [
     { id: 'DASHBOARD', icon: LayoutDashboard },
@@ -201,7 +201,7 @@ const Dashboard = ({ lang, user, onNavigate }: any) => {
               </div>
               <h1 className="text-3xl font-black text-white tracking-tight drop-shadow-sm leading-tight mt-1">
                  {t.welcome_title} <br/>
-                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-400 drop-shadow-[0_0_10px_rgba(6,182,212,0.3)]">{user.name.split(' ')[0]}</span>
+                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-blue-400 to-fuchsia-400 drop-shadow-[0_0_10px_rgba(6,182,212,0.3)]">{user.name.split(' ')[0]}</span>
               </h1>
               <p className="text-slate-400 font-medium text-xs mt-2 flex items-center gap-1.5">
                  <Clock size={12}/> {formatDate()}
@@ -221,7 +221,7 @@ const Dashboard = ({ lang, user, onNavigate }: any) => {
            
            {/* Weather Card */}
            <div onClick={() => { onNavigate('WEATHER'); triggerHaptic(); }} className="col-span-1 md:col-span-2 row-span-2 relative group cursor-pointer overflow-hidden rounded-[2.5rem] border border-white/10 text-white shadow-2xl shadow-purple-900/20 animate-enter delay-100 transition-all active:scale-[0.98]">
-              <div className="absolute inset-0 bg-gradient-to-br from-indigo-900/80 to-purple-900/80 backdrop-blur-xl"></div>
+              <div className="absolute inset-0 bg-gradient-to-br from-indigo-700 via-purple-800 to-indigo-900 backdrop-blur-xl"></div>
               <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-overlay"></div>
               <div className="absolute -top-10 -right-10 w-48 h-48 bg-amber-400/30 rounded-full blur-[60px] animate-pulse"></div>
               <div className="absolute top-4 right-4 float-3d">
