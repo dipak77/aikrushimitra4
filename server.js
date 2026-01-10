@@ -8,7 +8,7 @@ const app = express();
 const PORT = process.env.PORT || 8080;
 
 // Helper to get API Key safely
-const getApiKey = () => process.env.API_KEY || 'AIzaSyApknBXyPyJvGg10tiDGQVOrH6fKng4oco';
+const getApiKey = () => process.env.API_KEY || 'AIzaSyBay_ndkcD4SNKVJy-ggAzMDlQjoXCiVBU';
 
 // Determine environment
 const isProduction = process.env.NODE_ENV === 'production';
