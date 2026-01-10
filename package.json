@@ -20,6 +20,8 @@
     "@vitejs/plugin-react": "^4.2.1",
     "typescript": "^5.4.5",
     "@types/react": "^18.3.3",
-    "@types/react-dom": "^18.3.0"
+    "@types/react-dom": "^18.3.0",
+    "clsx": "^2.1.1",
+    "tailwind-merge": "^2.3.0"
   }
 }
