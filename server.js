@@ -1,18 +1,21 @@
 import express from 'express';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
 const PORT = process.env.PORT || 8080;
 
+// Helper to get API Key safely
+const getApiKey = () => process.env.API_KEY || '';
+
 // Determine environment
-// Cloud Run sets NODE_ENV=production automatically.
 const isProduction = process.env.NODE_ENV === 'production';
 
 async function startServer() {
   if (!isProduction) {
-    // Development: Use Vite middleware for Hot Module Replacement (HMR)
+    // Development: Use Vite middleware
     console.log("Starting in DEVELOPMENT mode with Vite Middleware...");
     const { createServer } = await import('vite');
     const vite = await createServer({
@@ -21,16 +24,30 @@ async function startServer() {
     });
     app.use(vite.middlewares);
   } else {
-    // Production: Serve static assets built by 'npm run build'
+    // Production: Serve static assets
     console.log("Starting in PRODUCTION mode serving ./dist folder...");
     
-    // Serve static files from the dist directory
-    app.use(express.static(path.resolve(__dirname, 'dist')));
+    app.use(express.static(path.resolve(__dirname, 'dist'), { index: false }));
 
-    // SPA Fallback: For any route not handled by static files, send index.html
-    // This allows React Router to handle client-side routing
+    // Intercept requests to index.html to inject Env Vars
     app.get('*', (req, res) => {
-      res.sendFile(path.resolve(__dirname, 'dist', 'index.html'));
+      const indexPath = path.resolve(__dirname, 'dist', 'index.html');
+      
+      fs.readFile(indexPath, 'utf8', (err, htmlData) => {
+        if (err) {
+          console.error('Error reading index.html', err);
+          return res.status(500).send('Error loading app');
+        }
+
+        // Inject the API KEY into the window.ENV object
+        // This replaces the placeholder or empty string in index.html
+        const injectedHtml = htmlData.replace(
+          'API_KEY: ""',
+          `API_KEY: "${getApiKey()}"`
+        );
+
+        res.send(injectedHtml);
+      });
     });
   }
 

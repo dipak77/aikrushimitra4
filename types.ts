@@ -62,3 +62,11 @@ export interface BlogPost {
   faqs?: FAQ[];
   relatedPosts?: string[];
 }
+
+declare global {
+  interface Window {
+    ENV: {
+      API_KEY: string;
+    }
+  }
+}

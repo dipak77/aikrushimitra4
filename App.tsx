@@ -10,7 +10,7 @@ import {
   Power, MicOff, Activity, LogOut
 } from 'lucide-react';
 import { Button } from './components/Button';
-import { analyzeCropDisease } from './services/geminiService';
+import { analyzeCropDisease, getGenAIKey } from './services/geminiService';
 import { GoogleGenAI, Modality, Blob as GenAIBlob } from '@google/genai';
 import { clsx } from 'clsx';
 
@@ -479,6 +479,13 @@ const VoiceAssistant = ({ lang, user, onBack }: any) => {
         return;
     }
 
+    const apiKey = getGenAIKey();
+    if (!apiKey) {
+      setStatus('error');
+      setErrorMessage("API Key Not Found. Check environment settings.");
+      return;
+    }
+
     cleanup(false); 
     shouldStayConnectedRef.current = true; 
     setErrorMessage('');
@@ -522,7 +529,7 @@ const VoiceAssistant = ({ lang, user, onBack }: any) => {
       visualize(inputAnalyser, outputAnalyser);
 
       // 4. Gemini Connection
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
+      const ai = new GoogleGenAI({ apiKey });
       const sessionPromise = ai.live.connect({
         model: 'gemini-2.5-flash-native-audio-preview-12-2025',
         config: { 
@@ -531,7 +538,7 @@ const VoiceAssistant = ({ lang, user, onBack }: any) => {
             // Using empty objects is critical for enabling transcription without model errors
             inputAudioTranscription: {}, 
             outputAudioTranscription: {},
-            systemInstruction: { parts: [{ text: "You are AI Krushi Mitra. Speak Marathi or English based on user. Keep answers concise." }] }
+            systemInstruction: "You are AI Krushi Mitra. Speak Marathi or English based on user. Keep answers concise.",
         },
         callbacks: {
            onopen: () => { 

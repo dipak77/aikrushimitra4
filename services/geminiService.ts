@@ -1,9 +1,20 @@
 
 import { GoogleGenAI } from "@google/genai";
 
+// Helper to get the key from either Runtime injection or Build time replacement
+export const getGenAIKey = () => {
+  if (typeof window !== 'undefined' && window.ENV?.API_KEY) {
+    return window.ENV.API_KEY;
+  }
+  return process.env.API_KEY as string;
+};
+
 // Function to analyze crop disease from image
 export const analyzeCropDisease = async (base64Image: string, lang: string) => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
+  const apiKey = getGenAIKey();
+  if (!apiKey) return lang === 'mr' ? "API Key सापडली नाही." : "API Key missing.";
+
+  const ai = new GoogleGenAI({ apiKey });
   try {
     const prompt = lang === 'mr' 
       ? "हे पीक ओळखा आणि एक अनुभवी गावचा जाणकार शेतकरी जसा सल्ला देईल तसा अस्सल ग्रामीण मराठमोळ्या भाषेत सांगा. 'आरं बघा, तुमच्या झाडाला हा असा त्रास झालाय...' अशा भाषेत सुरुवात करा. रोगाचे नाव, नक्की कारण आणि घरगुती जालीम उपाय सांगा. उत्तर खूप लांबलचक नसावे, जसे आपण समोरासमोर गप्पा मारतो तसे सांगा."
@@ -35,7 +46,10 @@ export const analyzeCropDisease = async (base64Image: string, lang: string) => {
 
 // Function to get general farming advice via text chat
 export const getAIFarmingAdvice = async (query: string, lang: string, cropContext: string) => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
+  const apiKey = getGenAIKey();
+  if (!apiKey) return "API Key Missing";
+
+  const ai = new GoogleGenAI({ apiKey });
   try {
     const systemInstruction = lang === 'mr' 
       ? `तुला 'AI कृषी मित्र' म्हणून बोलायचे आहे. तू रोबोट नाहीस, तर गावातील एक अनुभवी, कष्टाळू आणि प्रेमळ जाणकार शेतकरी आहेस. 
@@ -71,7 +85,10 @@ export const getAIFarmingAdvice = async (query: string, lang: string, cropContex
 
 // Function to get soil specific fertilizer recommendations
 export const getSoilAdvice = async (npk: {n: number, p: number, k: number}, crop: string, lang: string) => {
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
+    const apiKey = getGenAIKey();
+    if (!apiKey) return "API Key Missing";
+
+    const ai = new GoogleGenAI({ apiKey });
     try {
         const prompt = `Soil NPK is N:${npk.n}, P:${npk.p}, K:${npk.k}. Crop is ${crop}. 
         Give advice in native ${lang === 'mr' ? 'Rural Marathi' : 'Hindi/English'} tone. Explain simply like a village expert.`;
