@@ -1,0 +1,79 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --safe-top: env(safe-area-inset-top);
+  --safe-bottom: env(safe-area-inset-bottom);
+}
+
+body {
+  @apply bg-slate-950 text-slate-100;
+  overscroll-behavior-y: none;
+}
+
+.premium-bg {
+  @apply fixed inset-0 -z-50 overflow-hidden bg-slate-950;
+}
+
+.gradient-orb-1 {
+  @apply absolute top-[-10%] left-[-10%] w-[70vw] h-[70vw] rounded-full bg-indigo-900/30 blur-[100px] animate-pulse;
+}
+
+.gradient-orb-2 {
+  @apply absolute bottom-[-10%] right-[-10%] w-[70vw] h-[70vw] rounded-full bg-fuchsia-900/20 blur-[120px];
+}
+
+.gradient-orb-3 {
+  @apply absolute top-[40%] left-[30%] w-[50vw] h-[50vw] rounded-full bg-cyan-900/20 blur-[90px];
+}
+
+.curve-overlay {
+  @apply absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-overlay pointer-events-none;
+}
+
+.glass-panel {
+  @apply backdrop-blur-xl bg-white/5 border border-white/10 shadow-xl;
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.pt-safe-top {
+  padding-top: max(1rem, var(--safe-top));
+}
+
+.pb-safe-bottom {
+  padding-bottom: max(1rem, var(--safe-bottom));
+}
+
+.mb-safe-bottom {
+  margin-bottom: max(1rem, var(--safe-bottom));
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+}
+
+.float-3d {
+  animation: float 6s ease-in-out infinite;
+}
+
+@keyframes enter {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-enter {
+  animation: enter 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.mask-image-gradient {
+  mask-image: linear-gradient(to bottom, transparent, black 10%, black 90%, transparent);
+}
