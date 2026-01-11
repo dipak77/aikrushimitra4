@@ -103,3 +103,32 @@ export const getSoilAdvice = async (npk: {n: number, p: number, k: number}, crop
         return "Error fetching advice.";
     }
 }
+
+// Function to predict yield
+export const predictYield = async (data: any, lang: string) => {
+    const apiKey = getGenAIKey();
+    if (!apiKey) return "API Key Missing";
+
+    const ai = new GoogleGenAI({ apiKey });
+    try {
+        const prompt = `Predict crop yield for: 
+        Crop: ${data.crop}, 
+        Sowing Date: ${data.sowingDate}, 
+        Soil: ${data.soilType}, 
+        Irrigation: ${data.irrigation}, 
+        Area: ${data.area} Acres.
+        
+        Provide the answer in ${lang === 'mr' ? 'Marathi' : 'English'}.
+        Give expected yield range (in Quintals/Tons) and 3 short tips to maximize it.
+        Keep the tone encouraging and expert-like.`;
+        
+        const response = await ai.models.generateContent({
+            model: 'gemini-3-flash-preview',
+            contents: prompt
+        });
+        
+        return response.text;
+    } catch (e) {
+        return "Error predicting yield.";
+    }
+}

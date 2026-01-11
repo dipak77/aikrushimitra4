@@ -12,6 +12,7 @@ export type ViewState =
   | 'SOIL' 
   | 'IRRIGATION'
   | 'YIELD' 
+  | 'AREA_CALCULATOR'
   | 'VOICE_ASSISTANT'
   | 'MARKET'
   | 'SCHEMES'
