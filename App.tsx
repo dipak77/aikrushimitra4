@@ -18,9 +18,11 @@ import SchemeDetailView from './components/views/SchemeDetailView';
 import MarketView from './components/views/MarketView';
 import WeatherView from './components/views/WeatherView';
 import ProfileView from './components/views/ProfileView';
+import { SplashScreen } from './components/views/SplashScreen';
 
 const App = () => {
-  const [view, setView] = useState<ViewState>('DASHBOARD');
+  // Initialize with SPLASH screen
+  const [view, setView] = useState<ViewState>('SPLASH');
   const [lang, setLang] = useState<Language>('mr');
   
   // Changed default name from 'Suresh Patil' to 'Patil' as requested
@@ -36,6 +38,7 @@ const App = () => {
 
   const getView = () => {
     switch(view) {
+       case 'SPLASH': return <SplashScreen onComplete={() => setView('DASHBOARD')} />;
        case 'DASHBOARD': return <Dashboard lang={lang} user={user} onNavigate={setView} />;
        case 'VOICE_ASSISTANT': return <VoiceAssistant lang={lang} user={user} onBack={() => setView('DASHBOARD')} />;
        case 'DISEASE_DETECTOR': return <DiseaseDetector lang={lang} onBack={() => setView('DASHBOARD')} />;
@@ -57,8 +60,8 @@ const App = () => {
     }
   };
 
-  // Hide Sidebar/Nav for specific full-screen views
-  const isFullScreen = view === 'VOICE_ASSISTANT' || view === 'AREA_CALCULATOR';
+  // Hide Sidebar/Nav for specific full-screen views (including SPLASH)
+  const isFullScreen = view === 'VOICE_ASSISTANT' || view === 'AREA_CALCULATOR' || view === 'SPLASH';
 
   return (
     <div className="flex h-[100dvh] w-full font-sans bg-transparent text-slate-100 selection:bg-cyan-500/30">

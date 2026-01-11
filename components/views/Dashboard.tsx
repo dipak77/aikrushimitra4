@@ -72,25 +72,28 @@ const Dashboard = ({ lang, user, onNavigate }: { lang: Language, user: UserProfi
         {/* === BRAND HEADER START === */}
         <header className="flex justify-between items-center animate-enter mt-2">
            <div className="flex items-center gap-4">
-              {/* Logo Orb Animation */}
+              {/* Enhanced Orb Logo Animation */}
               <div className="relative w-14 h-14">
-                  <div className="absolute inset-0 rounded-full border-[1.5px] border-cyan-500/40 border-t-cyan-400 border-l-transparent animate-[spin_3s_linear_infinite]"></div>
-                  <div className="absolute inset-1 rounded-full border-[1.5px] border-emerald-500/40 border-b-emerald-400 border-r-transparent animate-[spin_4s_linear_infinite_reverse]"></div>
-                  <div className="absolute inset-2 bg-gradient-to-br from-cyan-900/50 to-emerald-900/50 rounded-full backdrop-blur-sm border border-white/10 flex items-center justify-center shadow-[0_0_15px_rgba(34,211,238,0.2)]">
-                      <Sprout size={20} className="text-cyan-300 drop-shadow-[0_0_5px_rgba(34,211,238,0.8)]" />
+                  {/* Saffron Ring */}
+                  <div className="absolute inset-0 rounded-full border-[1.5px] border-amber-500/40 border-t-amber-400 border-l-transparent animate-[spin_4s_linear_infinite]"></div>
+                  {/* Cyan Ring */}
+                  <div className="absolute inset-1 rounded-full border-[1.5px] border-cyan-500/40 border-b-cyan-400 border-r-transparent animate-[spin_3s_linear_infinite_reverse]"></div>
+                  {/* Emerald Core */}
+                  <div className="absolute inset-2 bg-gradient-to-br from-emerald-900/50 to-cyan-900/50 rounded-full backdrop-blur-sm border border-white/10 flex items-center justify-center shadow-[0_0_15px_rgba(16,185,129,0.3)]">
+                      <Sprout size={20} className="text-emerald-400 drop-shadow-[0_0_5px_rgba(52,211,153,0.8)]" />
                   </div>
               </div>
 
-              {/* Animated Text Title */}
+              {/* Animated Text Title with Tri-Color Gradient */}
               <div className="flex flex-col">
                   <h1 className="text-2xl font-black tracking-tight leading-none text-white relative">
-                      <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-emerald-300 to-cyan-400 bg-[length:200%_auto] animate-[text-shimmer_3s_linear_infinite]">
+                      <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-white to-amber-400 bg-[length:200%_auto] animate-[text-shimmer_4s_linear_infinite]">
                         AI Krushi
                       </span>{' '}
                       <span className="text-slate-100">Mitra</span>
                       <span className="absolute -top-1 -right-2 flex h-2 w-2">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-500"></span>
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
                       </span>
                   </h1>
                   <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mt-1">Smart Farming Assistant</p>
@@ -99,7 +102,7 @@ const Dashboard = ({ lang, user, onNavigate }: { lang: Language, user: UserProfi
            
            {/* Profile Button */}
            <button onClick={() => { onNavigate('PROFILE'); triggerHaptic(); }} className="relative group">
-              <div className="absolute inset-0 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full blur opacity-20 group-hover:opacity-40 transition-opacity"></div>
+              <div className="absolute inset-0 bg-gradient-to-r from-emerald-500 to-cyan-500 rounded-full blur opacity-20 group-hover:opacity-40 transition-opacity"></div>
               <div className="w-12 h-12 rounded-full glass-panel border border-white/20 flex items-center justify-center relative overflow-hidden">
                   <UserCircle className="text-slate-200 w-full h-full p-1" strokeWidth={1.5}/>
               </div>
@@ -172,15 +175,16 @@ const Dashboard = ({ lang, user, onNavigate }: { lang: Language, user: UserProfi
 
            {/* Voice Assistant Promo */}
            <div onClick={() => { onNavigate('VOICE_ASSISTANT'); triggerHaptic(); }} className="col-span-1 md:col-span-1 row-span-2 glass-panel rounded-[2.5rem] p-6 relative overflow-hidden cursor-pointer group animate-enter delay-200 active:scale-[0.98] transition-all border border-white/10 bg-slate-900/40">
-              <div className="absolute inset-0 bg-gradient-to-b from-cyan-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+              <div className="absolute inset-0 bg-gradient-to-b from-emerald-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
               <div className="relative z-20 h-full flex flex-col items-center justify-center text-center">
-                 <div className="w-20 h-20 rounded-full bg-gradient-to-tr from-cyan-500/20 to-blue-500/20 border border-white/10 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform shadow-[0_0_30px_rgba(6,182,212,0.15)] relative">
-                    <div className="absolute inset-0 rounded-full border border-cyan-400/30 animate-[spin_4s_linear_infinite]"></div>
-                    <Mic size={32} className="text-cyan-300 drop-shadow-[0_0_10px_rgba(6,182,212,0.8)]"/>
+                 <div className="w-20 h-20 rounded-full bg-gradient-to-tr from-emerald-500/20 to-cyan-500/20 border border-white/10 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform shadow-[0_0_30px_rgba(16,185,129,0.15)] relative">
+                    <div className="absolute inset-0 rounded-full border border-emerald-400/30 animate-[spin_4s_linear_infinite]"></div>
+                    <div className="absolute inset-2 rounded-full border border-cyan-400/30 animate-[spin_3s_linear_infinite_reverse]"></div>
+                    <Mic size={32} className="text-emerald-300 drop-shadow-[0_0_10px_rgba(52,211,153,0.8)]"/>
                  </div>
                  <h3 className="text-lg font-black mb-1">{t.menu_voice}</h3>
                  <p className="text-slate-400 text-xs leading-relaxed mb-4 px-2">Ask about crops or market in your language.</p>
-                 <button className="px-6 py-3 rounded-full bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-bold text-xs hover:from-cyan-400 hover:to-blue-500 transition-all shadow-lg shadow-cyan-500/30 w-full flex items-center justify-center gap-2">
+                 <button className="px-6 py-3 rounded-full bg-gradient-to-r from-emerald-500 to-cyan-600 text-white font-bold text-xs hover:from-emerald-400 hover:to-cyan-500 transition-all shadow-lg shadow-emerald-500/30 w-full flex items-center justify-center gap-2">
                     Start Talk <ArrowUpRight size={14}/>
                  </button>
               </div>
