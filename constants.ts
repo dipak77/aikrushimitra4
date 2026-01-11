@@ -36,9 +36,16 @@ export const TRANSLATIONS: Record<Language, any> = {
     schemes_desc: "शेतकऱ्यांसाठी विविध सरकारी योजनांची माहिती",
     scheme_benefit: "फायदा",
     scheme_deadline: "मुदत",
-    apply_btn: "अर्ज करा",
+    apply_btn: "सविस्तर माहिती",
     open_status: "सुरू आहे",
     closed_status: "बंद",
+
+    scheme_tabs_info: "माहिती",
+    scheme_tabs_docs: "कागदपत्रे",
+    scheme_tabs_process: "अर्ज प्रक्रिया",
+    scheme_eligibility: "पात्रता",
+    scheme_step_by_step: "अर्जाच्या पायऱ्या",
+    scheme_documents_req: "आवश्यक कागदपत्रे",
 
     market_title: "बाजार भाव",
     market_subtitle: "तुमच्या जवळील बाजार समित्यांचे भाव",
@@ -140,9 +147,16 @@ export const TRANSLATIONS: Record<Language, any> = {
     schemes_desc: "किसानों के लिए विभिन्न सरकारी योजनाओं की जानकारी",
     scheme_benefit: "लाभ",
     scheme_deadline: "समय सीमा",
-    apply_btn: "आवेदन करें",
+    apply_btn: "विस्तृत जानकारी",
     open_status: "खुला है",
     closed_status: "बंद",
+
+    scheme_tabs_info: "जानकारी",
+    scheme_tabs_docs: "दस्तावेज़",
+    scheme_tabs_process: "आवेदन प्रक्रिया",
+    scheme_eligibility: "पात्रता",
+    scheme_step_by_step: "आवेदन के चरण",
+    scheme_documents_req: "आवश्यक दस्तावेज़",
 
     market_title: "मंडी भाव",
     market_subtitle: "आपके नजदीकी मंडी के भाव",
@@ -244,9 +258,16 @@ export const TRANSLATIONS: Record<Language, any> = {
     schemes_desc: "Benefits and subsidies for farmers",
     scheme_benefit: "Benefit",
     scheme_deadline: "Deadline",
-    apply_btn: "Apply Now",
+    apply_btn: "View Details",
     open_status: "Open",
     closed_status: "Closed",
+
+    scheme_tabs_info: "Info",
+    scheme_tabs_docs: "Documents",
+    scheme_tabs_process: "Process",
+    scheme_eligibility: "Eligibility",
+    scheme_step_by_step: "How to Apply",
+    scheme_documents_req: "Required Documents",
 
     market_title: "Market Rates",
     market_subtitle: "Live prices from local Mandis",
@@ -314,4 +335,309 @@ export const TRANSLATIONS: Record<Language, any> = {
     author: "Author",
     date_format: "Date",
   }
+};
+
+export const SCHEMES_DATA = {
+  mr: [
+    {
+      id: 1,
+      title: 'प्रधानमंत्री किसान सन्मान निधी (PM-Kisan)',
+      subtitle: 'दरवर्षी ₹६००० ची आर्थिक मदत',
+      status: 'OPEN',
+      grad: 'from-green-600 to-emerald-700',
+      description: 'अल्प आणि अत्यल्प भूधारक शेतकऱ्यांचे उत्पन्न वाढवण्यासाठी भारत सरकारची ही महत्त्वाची योजना आहे. या अंतर्गत शेतकऱ्यांना दरवर्षी ६००० रुपये तीन समान हप्त्यांमध्ये (प्रत्येकी २०००) दिले जातात.',
+      benefits: [
+        'दरवर्षी ₹६००० थेट बँक खात्यात',
+        'हप्ता १: एप्रिल-जुलै (₹२०००)',
+        'हप्ता २: ऑगस्ट-नोव्हेंबर (₹२०००)',
+        'हप्ता ३: डिसेंबर-मार्च (₹२०००)',
+        'कोणत्याही मध्यस्थाची गरज नाही'
+      ],
+      eligibility: [
+        'स्वतःच्या नावावर शेतजमीन असावी',
+        'संस्थात्मक जमीनधारक पात्र नाहीत',
+        'कुटुंबातील पती, पत्नी आणि अल्पवयीन मुले',
+        'सरकारी नोकरी किंवा आयकर भरणारे अपात्र'
+      ],
+      documents: [
+        'आधार कार्ड',
+        'बँक पासबुक (आधार लिंक केलेले)',
+        '७/१२ उतारा आणि ८-अ',
+        'मोबाईल नंबर',
+        'पासपोर्ट साईझ फोटो'
+      ],
+      process: [
+        { title: 'नोंदणी', desc: 'pmkisan.gov.in वर जा आणि "New Farmer Registration" वर क्लिक करा.' },
+        { title: 'माहिती भरा', desc: 'आधार नंबर, राज्य आणि कॅप्चा कोड टाकून सर्च करा.' },
+        { title: 'जमीन तपशील', desc: 'तुमच्या जमिनीचा सर्वे नंबर, गट नंबर आणि क्षेत्र अचूक भरा.' },
+        { title: 'कागदपत्रे अपलोड', desc: '७/१२ उतारा आणि आधार कार्ड स्कॅन करून अपलोड करा.' },
+        { title: 'सबमिट', desc: 'फॉर्म सबमिट करा आणि रजिस्ट्रेशन नंबर लिहून ठेवा.' }
+      ]
+    },
+    {
+      id: 2,
+      title: 'प्रधानमंत्री पीक विमा योजना (PMFBY)',
+      subtitle: 'पिकांचे नैसर्गिक आपत्तीपासून संरक्षण',
+      status: 'OPEN',
+      grad: 'from-blue-600 to-indigo-700',
+      description: 'नैसर्गिक आपत्ती, कीड आणि रोगांमुळे पिकांचे नुकसान झाल्यास शेतकऱ्यांना आर्थिक मदत देण्यासाठी ही योजना आहे. अतिशय कमी प्रीमियमवर विमा संरक्षण मिळते.',
+      benefits: [
+        'खरीप पिकांसाठी फक्त २% प्रीमियम',
+        'रब्बी पिकांसाठी १.५% प्रीमियम',
+        'बागायती/नगदी पिकांसाठी ५% प्रीमियम',
+        'स्थानिक नैसर्गिक आपत्तीसाठी संरक्षण',
+        'काढणीपश्चात नुकसानीची भरपाई'
+      ],
+      eligibility: [
+        'सर्व शेतकरी (कर्जदार आणि बिगर कर्जदार)',
+        'भाडेतत्वावर शेती करणारे (काही अटी)',
+        'अधिसूचित पिके घेणारे शेतकरी'
+      ],
+      documents: [
+        '७/१२ उतारा',
+        'पीक पेरा दाखला (तलाठी स्वाक्षरी)',
+        'आधार कार्ड',
+        'बँक पासबुक',
+        'रद्द केलेला चेक'
+      ],
+      process: [
+        { title: 'बँक/CSC', desc: 'जवळच्या बँकेत किंवा CSC सेंटरवर जा.' },
+        { title: 'फॉर्म भरा', desc: 'विमा प्रस्ताव फॉर्म भरा आणि प्रीमियम जमा करा.' },
+        { title: 'ऑनलाइन', desc: 'pmfby.gov.in या पोर्टलवर स्वतः अर्ज करू शकता.' },
+        { title: 'नुकसान सूचना', desc: 'नुकसान झाल्यास ७२ तासांच्या आत विमा कंपनीला कळवणे अनिवार्य आहे (अॅपद्वारे).' }
+      ]
+    },
+    {
+      id: 3,
+      title: 'नमो शेतकरी महासन्मान निधी',
+      subtitle: 'राज्य सरकारकडून अतिरिक्त ₹६०००',
+      status: 'OPEN',
+      grad: 'from-orange-500 to-red-600',
+      description: 'महाराष्ट्र शासनाने पीएम किसान योजनेच्या धर्तीवर ही योजना सुरू केली आहे. पात्र शेतकऱ्यांना पीएम किसानचे ₹६००० आणि नमो योजनेचे ₹६००० असे एकूण ₹१२००० मिळतील.',
+      benefits: [
+        'वार्षिक ₹६००० अतिरिक्त मदत',
+        'पीएम किसानच्या लाभार्थ्यांनाच लाभ',
+        'स्वतंत्र अर्जाची गरज नाही',
+        'थेट बँक हस्तांतरण (DBT)'
+      ],
+      eligibility: [
+        'शेतकरी महाराष्ट्राचा रहिवासी असावा',
+        'पीएम किसान योजनेसाठी पात्र असावा',
+        'बँक खाते आधारशी लिंक असावे'
+      ],
+      documents: [
+        'पीएम किसान नोंदणी असणे आवश्यक',
+        'आधार कार्ड',
+        'ई-केवायसी (e-KYC) पूर्ण असणे अनिवार्य'
+      ],
+      process: [
+        { title: 'स्वतंत्र अर्ज नाही', desc: 'या योजनेसाठी वेगळा अर्ज करण्याची गरज नाही.' },
+        { title: 'e-KYC', desc: 'तुमची पीएम किसान e-KYC पूर्ण करा.' },
+        { title: 'आधार लिंक', desc: 'बँक खात्याला आधार आणि मोबाईल लिंक असल्याची खात्री करा.' },
+        { title: 'स्थिती तपासा', desc: 'अधिकृत पोर्टलवर बेनिफिशिअरी स्टेटस तपासा.' }
+      ]
+    },
+    {
+      id: 4,
+      title: 'कुसुम सोलार पंप योजना',
+      subtitle: 'सौर कृषी पंपासाठी ९०% सबसिडी',
+      status: 'OPEN',
+      grad: 'from-cyan-600 to-blue-600',
+      description: 'ज्या शेतकऱ्यांकडे वीज जोडणी नाही अशा शेतकऱ्यांना दिवसा सिंचन करता यावे यासाठी सौर कृषी पंप दिले जातात. यासाठी सरकार मोठ्या प्रमाणावर अनुदान देते.',
+      benefits: [
+        '९०% ते ९५% पर्यंत अनुदान',
+        'दिवसा वीज उपलब्ध',
+        'वीज बिलातून मुक्तता',
+        'पर्यावरण पूरक सिंचन'
+      ],
+      eligibility: [
+        'शेतकऱ्याकडे शाश्वत पाण्याचा स्त्रोत असावा (विहीर/बोअर)',
+        'पारंपारिक वीज कनेक्शन नसावे',
+        'जमीन स्वतःच्या नावावर असावी'
+      ],
+      documents: [
+        '७/१२ उतारा',
+        'आधार कार्ड',
+        'जातीचा दाखला (लागू असल्यास)',
+        'पासपोर्ट फोटो',
+        'विहीर/बोअर असल्याची हमी'
+      ],
+      process: [
+        { title: 'पोर्टल', desc: 'MAHAKUSUM किंवा अधिकृत सरकारी पोर्टलवर जा.' },
+        { title: 'रजिस्ट्रेशन', desc: 'मोबाईल नंबर आणि आधार वापरून लॉगिन करा.' },
+        { title: 'पैसे भरणा', desc: 'हिस्सा रक्कम (१०%) ऑनलाइन भरा.' },
+        { title: 'व्हेंडर निवड', desc: 'तुमच्या पसंतीची कंपनी निवडा.' },
+        { title: 'इन्स्टॉलेशन', desc: 'कंपनीचे लोक येऊन पंप बसवून देतील.' }
+      ]
+    }
+  ],
+  en: [
+    {
+      id: 1,
+      title: 'PM Kisan Samman Nidhi',
+      subtitle: '₹6000 Annual Support',
+      status: 'OPEN',
+      grad: 'from-green-600 to-emerald-700',
+      description: 'A central sector scheme to provide income support to all landholding farmers\' families in the country to supplement their financial needs for procuring various inputs related to agriculture.',
+      benefits: [
+        '₹6000 per year in 3 installments',
+        'Direct Bank Transfer (DBT)',
+        'No middlemen involved',
+        'Guaranteed income support'
+      ],
+      eligibility: [
+        'Must have cultivable land in own name',
+        'Institutional landholders not eligible',
+        'Income tax payers not eligible',
+        'Serving/Retired govt employees not eligible'
+      ],
+      documents: [
+        'Aadhar Card',
+        'Land Records (7/12, 8-A)',
+        'Bank Passbook',
+        'Mobile Number',
+        'Passport Size Photo'
+      ],
+      process: [
+        { title: 'Register', desc: 'Visit pmkisan.gov.in and select "New Farmer Registration".' },
+        { title: 'Fill Details', desc: 'Enter Aadhar, State, and other personal details.' },
+        { title: 'Land Data', desc: 'Enter Survey Number, Dag Number, and Area accurately.' },
+        { title: 'Upload', desc: 'Scan and upload land records and Aadhar.' },
+        { title: 'Submit', desc: 'Submit form and note down the registration ID.' }
+      ]
+    },
+    {
+      id: 2,
+      title: 'Pradhan Mantri Fasal Bima Yojana',
+      subtitle: 'Crop Insurance Scheme',
+      status: 'OPEN',
+      grad: 'from-blue-600 to-indigo-700',
+      description: 'Provides insurance coverage and financial support to the farmers in the event of failure of any of the notified crops as a result of natural calamities, pests & diseases.',
+      benefits: [
+        'Low premium (2% Kharif, 1.5% Rabi)',
+        'Full sum insured provided',
+        'Covers localized calamities',
+        'Covers post-harvest losses'
+      ],
+      eligibility: [
+        'All farmers growing notified crops',
+        'Sharecroppers and tenant farmers',
+        'Both loanee and non-loanee farmers'
+      ],
+      documents: [
+        'Land Possession Certificate (7/12)',
+        'Sowing Certificate',
+        'Aadhar Card',
+        'Bank Passbook',
+        'Cancelled Cheque'
+      ],
+      process: [
+        { title: 'Visit Bank/CSC', desc: 'Go to nearest bank branch or CSC center.' },
+        { title: 'Proposal', desc: 'Fill the insurance proposal form.' },
+        { title: 'Premium', desc: 'Pay the calculated premium amount.' },
+        { title: 'Claim', desc: 'In case of loss, intimate insurer within 72 hours via App.' }
+      ]
+    },
+    {
+      id: 4,
+      title: 'PM-KUSUM Solar Pump',
+      subtitle: '90% Subsidy on Solar Pumps',
+      status: 'OPEN',
+      grad: 'from-cyan-600 to-blue-600',
+      description: 'Scheme to de-dieselise the farm sector by providing standalone solar pumps to farmers who do not have grid connectivity.',
+      benefits: [
+        'Upto 90% Subsidy',
+        'Daytime irrigation possible',
+        'Zero electricity bill',
+        'Low maintenance'
+      ],
+      eligibility: [
+        'Farmer must have water source',
+        'No existing electricity connection',
+        'Valid land ownership'
+      ],
+      documents: [
+        '7/12 Extract',
+        'Aadhar Card',
+        'Caste Certificate (if applicable)',
+        'Photo',
+        'Water Source Declaration'
+      ],
+      process: [
+        { title: 'Apply Online', desc: 'Visit state KUSUM portal.' },
+        { title: 'Login', desc: 'Register using Aadhar and Mobile.' },
+        { title: 'Payment', desc: 'Pay the beneficiary share online.' },
+        { title: 'Selection', desc: 'Select vendor for installation.' },
+        { title: 'Installation', desc: 'Vendor installs the pump at your farm.' }
+      ]
+    }
+  ],
+  hi: [
+    {
+      id: 1,
+      title: 'प्रधानमंत्री किसान सम्मान निधि',
+      subtitle: '₹6000 वार्षिक सहायता',
+      status: 'OPEN',
+      grad: 'from-green-600 to-emerald-700',
+      description: 'छोटे और सीमांत किसानों को निश्चित आय सहायता प्रदान करने के लिए सरकार की एक पहल। इसके तहत किसानों को प्रति वर्ष 6000 रुपये दिए जाते हैं।',
+      benefits: [
+        'प्रति वर्ष ₹6000 तीन किस्तों में',
+        'सीधे बैंक खाते में (DBT)',
+        'बिचौलियों की कोई भूमिका नहीं',
+        'पेंशन सुविधा उपलब्ध'
+      ],
+      eligibility: [
+        'स्वयं के नाम पर कृषि भूमि होनी चाहिए',
+        'संस्थागत भूमि धारक पात्र नहीं',
+        'सरकारी कर्मचारी पात्र नहीं',
+        'आयकरदाता पात्र नहीं'
+      ],
+      documents: [
+        'आधार कार्ड',
+        'खतौनी / भूमि रिकॉर्ड',
+        'बैंक पासबुक',
+        'मोबाइल नंबर',
+        'फोटो'
+      ],
+      process: [
+        { title: 'पंजीकरण', desc: 'pmkisan.gov.in पर जाएं और "New Farmer Registration" चुनें।' },
+        { title: 'विवरण', desc: 'आधार और राज्य का विवरण भरें।' },
+        { title: 'भूमि जानकारी', desc: 'खसरा/खतौनी नंबर और क्षेत्रफल भरें।' },
+        { title: 'अपलोड', desc: 'दस्तावेज़ स्कैन करके अपलोड करें।' },
+        { title: 'जमा करें', desc: 'फॉर्म जमा करें और प्रिंट निकालें।' }
+      ]
+    },
+    {
+      id: 2,
+      title: 'प्रधानमंत्री फसल बीमा योजना',
+      subtitle: 'फसल सुरक्षा बीमा',
+      status: 'OPEN',
+      grad: 'from-blue-600 to-indigo-700',
+      description: 'प्राकृतिक आपदाओं, कीटों और रोगों के परिणामस्वरूप फसल खराब होने की स्थिति में किसानों को वित्तीय सहायता प्रदान करना।',
+      benefits: [
+        'बहुत कम प्रीमियम (खरीफ 2%, रबी 1.5%)',
+        'पूरी बीमित राशि का भुगतान',
+        'स्थानीय आपदाओं के लिए कवर',
+        'कटाई के बाद के नुकसान के लिए कवर'
+      ],
+      eligibility: [
+        'अधिसूचित फसल उगाने वाले सभी किसान',
+        'बटाईदार और किरायेदार किसान',
+        'ऋणी और गैर-ऋणी दोनों किसान'
+      ],
+      documents: [
+        'भूमि रिकॉर्ड',
+        'बुवाई प्रमाण पत्र',
+        'आधार कार्ड',
+        'बैंक पासबुक',
+        'रद्द चेक'
+      ],
+      process: [
+        { title: 'बैंक/CSC जाएं', desc: 'नजदीकी बैंक या CSC केंद्र पर जाएं।' },
+        { title: 'फॉर्म', desc: 'बीमा प्रस्ताव फॉर्म भरें।' },
+        { title: 'प्रीमियम', desc: 'प्रीमियम राशि जमा करें।' },
+        { title: 'दावा', desc: 'नुकसान होने पर 72 घंटे के भीतर सूचित करें।' }
+      ]
+    }
+  ]
 };

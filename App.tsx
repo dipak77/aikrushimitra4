@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { ViewState, Language, UserProfile } from './types';
-import { TRANSLATIONS } from './constants';
+import { TRANSLATIONS, SCHEMES_DATA } from './constants';
 import { 
   Sprout, CloudSun, ScanLine, Mic, Droplets, ArrowLeft, Home, Store, 
   Wind, Camera, X, Wheat, Sun, MapPin, Clock, ArrowUpRight, 
@@ -9,7 +9,8 @@ import {
   Bell, FileText, Smartphone, CloudRain, Thermometer, UserCircle,
   Share2, Save, MoreHorizontal, LayoutDashboard, WifiOff, RefreshCw,
   Power, MicOff, Activity, LogOut, FlaskConical, TestTube,
-  TrendingUp, TrendingDown, Calendar, AlertTriangle, Calculator, Map as MapIcon, RotateCcw, Undo2
+  TrendingUp, TrendingDown, Calendar, AlertTriangle, Calculator, Map as MapIcon, RotateCcw, Undo2,
+  FileCheck, ScrollText, CheckSquare, ListOrdered, IndianRupee
 } from 'lucide-react';
 import { Button } from './components/Button';
 import { analyzeCropDisease, getGenAIKey, getSoilAdvice, predictYield } from './services/geminiService';
@@ -101,11 +102,6 @@ const MOCK_MARKET = [
   { name: 'Onion', price: 1800, trend: '-200', arrival: 'High', color: 'text-pink-300', bg: 'bg-pink-500/20', icon: Sprout, history: [2000, 1950, 1900, 1800] },
   { name: 'Tur', price: 9200, trend: '+500', arrival: 'Low', color: 'text-emerald-300', bg: 'bg-emerald-500/20', icon: Sprout, history: [8500, 8800, 9000, 9200] },
 ];
-const MOCK_SCHEMES = [
-  { id: 1, title: 'PM-Kisan', sub: '₹6000/Yr', status: 'OPEN', grad: 'from-blue-600 to-violet-600' },
-  { id: 2, title: 'Fasal Bima', sub: 'Insurance', status: 'OPEN', grad: 'from-fuchsia-600 to-purple-600' },
-  { id: 3, title: 'Solar Pump', sub: '90% Off', status: 'OPEN', grad: 'from-cyan-600 to-blue-600' },
-];
 
 const WEATHER_HOURLY = [
     { time: '10 AM', temp: '26°', icon: Sun },
@@ -126,6 +122,7 @@ const Sidebar = ({ view, setView, lang }: { view: ViewState, setView: (v: ViewSt
     { id: 'DASHBOARD', icon: LayoutDashboard, label: t.menu_dashboard },
     { id: 'MARKET', icon: Store, label: t.menu_market },
     { id: 'WEATHER', icon: CloudSun, label: t.menu_weather },
+    { id: 'SCHEMES', icon: Landmark, label: t.menu_schemes },
     { id: 'DISEASE_DETECTOR', icon: ScanLine, label: t.menu_crop_doctor },
     { id: 'SOIL', icon: FlaskConical, label: t.menu_soil },
     { id: 'YIELD', icon: TrendingUp, label: t.menu_yield },
@@ -170,7 +167,7 @@ const MobileNav = ({ view, setView }: { view: ViewState, setView: (v: ViewState)
     { id: 'DASHBOARD', icon: LayoutDashboard },
     { id: 'MARKET', icon: Store },
     { id: 'VOICE_ASSISTANT', icon: Mic, main: true },
-    { id: 'YIELD', icon: TrendingUp },
+    { id: 'SCHEMES', icon: Landmark },
     { id: 'AREA_CALCULATOR', icon: MapIcon },
   ];
 
@@ -210,6 +207,8 @@ const MobileNav = ({ view, setView }: { view: ViewState, setView: (v: ViewState)
 // 3. Main Dashboard
 const Dashboard = ({ lang, user, onNavigate }: any) => {
   const t = TRANSLATIONS[lang];
+  const schemes = SCHEMES_DATA[lang as Language] || SCHEMES_DATA['en'];
+
   return (
     <div className="h-full w-full overflow-y-auto overflow-x-hidden hide-scrollbar pb-32 lg:pl-32 lg:pt-6 lg:pr-6 overscroll-y-contain scroll-smooth">
       <div className="w-full max-w-7xl mx-auto px-4 py-4 space-y-6 pt-safe-top">
@@ -352,12 +351,12 @@ const Dashboard = ({ lang, user, onNavigate }: any) => {
                   <Landmark size={20} className="text-fuchsia-400"/> 
                   {t.govt_schemes}
               </h3>
-              <button onClick={triggerHaptic} className="text-xs font-bold text-slate-400 bg-white/5 px-3 py-1.5 rounded-full hover:bg-white/10 transition-all">View All</button>
+              <button onClick={() => { onNavigate('SCHEMES'); triggerHaptic(); }} className="text-xs font-bold text-slate-400 bg-white/5 px-3 py-1.5 rounded-full hover:bg-white/10 transition-all">{t.view_all}</button>
            </div>
            
            <div className="flex gap-4 overflow-x-auto hide-scrollbar pb-6 snap-x snap-mandatory px-2 -mx-2">
-              {MOCK_SCHEMES.map(s => (
-                 <div onClick={triggerHaptic} key={s.id} className="snap-center shrink-0 w-[85vw] md:w-[280px] h-36 rounded-[2.5rem] relative overflow-hidden cursor-pointer group active:scale-[0.98] transition-all shadow-lg shadow-black/30 border border-white/10">
+              {schemes.slice(0,3).map((s: any) => (
+                 <div onClick={() => { onNavigate('SCHEMES'); triggerHaptic(); }} key={s.id} className="snap-center shrink-0 w-[85vw] md:w-[280px] h-36 rounded-[2.5rem] relative overflow-hidden cursor-pointer group active:scale-[0.98] transition-all shadow-lg shadow-black/30 border border-white/10">
                     <div className={`absolute inset-0 bg-gradient-to-br ${s.grad} opacity-90`}></div>
                     <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-overlay"></div>
                     <div className="absolute -bottom-8 -right-8 w-32 h-32 bg-white/10 rounded-full blur-xl"></div>
@@ -369,8 +368,8 @@ const Dashboard = ({ lang, user, onNavigate }: any) => {
                           <span className="bg-black/20 backdrop-blur-md px-3 py-1 rounded-full text-[10px] font-black uppercase border border-white/10 shadow-sm">{s.status}</span>
                        </div>
                        <div>
-                          <h4 className="text-xl font-black leading-tight tracking-tight">{s.title}</h4>
-                          <p className="text-white/80 font-medium text-xs mt-1">{s.sub}</p>
+                          <h4 className="text-xl font-black leading-tight tracking-tight">{s.title.substring(0, 20)}...</h4>
+                          <p className="text-white/80 font-medium text-xs mt-1">{s.subtitle}</p>
                        </div>
                     </div>
                  </div>
@@ -400,6 +399,146 @@ const SimpleView = ({ title, children, onBack }: { title: string, children: Reac
        </div>
     </div>
   );
+};
+
+// 10. Schemes List View
+const SchemesView = ({ lang, onBack, onSelect }: { lang: Language, onBack: () => void, onSelect: (scheme: any) => void }) => {
+    const t = TRANSLATIONS[lang];
+    const schemes = SCHEMES_DATA[lang as Language] || SCHEMES_DATA['en'];
+
+    return (
+        <SimpleView title={t.schemes_title} onBack={onBack}>
+            <div className="space-y-4 pb-24">
+                <p className="text-slate-400 text-sm px-2 mb-4">{t.schemes_desc}</p>
+                {schemes.map((s: any) => (
+                    <div onClick={() => onSelect(s)} key={s.id} className="glass-panel rounded-[2rem] p-5 relative overflow-hidden cursor-pointer group active:scale-[0.98] transition-all border border-white/10 flex flex-col gap-4">
+                        <div className={`absolute top-0 right-0 w-32 h-32 bg-gradient-to-br ${s.grad} opacity-10 blur-3xl rounded-full`}></div>
+                        <div className="flex justify-between items-start relative z-10">
+                            <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${s.grad} flex items-center justify-center text-white shadow-lg`}>
+                                <Landmark size={24}/>
+                            </div>
+                            <span className="bg-green-500/20 text-green-400 px-3 py-1 rounded-full text-[10px] font-bold uppercase border border-green-500/20">{s.status}</span>
+                        </div>
+                        <div className="relative z-10">
+                            <h3 className="text-xl font-black text-white leading-tight mb-1">{s.title}</h3>
+                            <p className="text-slate-400 text-sm">{s.subtitle}</p>
+                        </div>
+                        <div className="pt-4 border-t border-white/5 flex justify-between items-center relative z-10">
+                            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t.apply_btn}</span>
+                            <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center group-hover:bg-white/10 transition-colors">
+                                <ArrowUpRight size={16} className="text-white"/>
+                            </div>
+                        </div>
+                    </div>
+                ))}
+            </div>
+        </SimpleView>
+    );
+};
+
+// 11. Scheme Detail View
+const SchemeDetailView = ({ scheme, lang, onBack }: { scheme: any, lang: Language, onBack: () => void }) => {
+    const t = TRANSLATIONS[lang];
+
+    return (
+        <div className="h-full w-full flex flex-col bg-[#020617] animate-enter">
+            {/* Header with Hero Gradient */}
+            <div className={`relative w-full h-64 bg-gradient-to-br ${scheme.grad} shrink-0`}>
+                <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-overlay"></div>
+                <div className="absolute inset-0 bg-gradient-to-t from-[#020617] via-[#020617]/40 to-transparent"></div>
+                
+                <div className="absolute top-0 left-0 right-0 p-6 pt-safe-top flex items-center gap-4 z-10">
+                    <button onClick={onBack} className="w-10 h-10 rounded-full bg-black/20 backdrop-blur-md flex items-center justify-center text-white hover:bg-black/40 transition-all border border-white/10">
+                        <ArrowLeft size={20}/>
+                    </button>
+                    <span className="text-xs font-bold uppercase tracking-wider text-white/80 bg-black/20 backdrop-blur-md px-3 py-1 rounded-full border border-white/10">{t.schemes_title}</span>
+                </div>
+
+                <div className="absolute bottom-6 left-6 right-6 z-10">
+                    <h1 className="text-3xl font-black text-white leading-tight mb-2 shadow-sm">{scheme.title}</h1>
+                    <p className="text-white/90 text-sm font-medium">{scheme.subtitle}</p>
+                </div>
+            </div>
+
+            {/* Content Content */}
+            <div className="flex-1 overflow-y-auto px-4 pb-32 pt-6 -mt-6 rounded-t-[2.5rem] bg-[#020617] relative z-20 hide-scrollbar">
+                
+                {/* Description */}
+                <div className="mb-8">
+                    <p className="text-slate-300 leading-relaxed text-sm">{scheme.description}</p>
+                </div>
+
+                {/* Benefits Section */}
+                <div className="mb-8">
+                    <h3 className="text-white font-black text-lg mb-4 flex items-center gap-2">
+                        <IndianRupee size={20} className="text-green-400"/>
+                        {t.scheme_tabs_info}
+                    </h3>
+                    <div className="grid gap-3">
+                        {scheme.benefits.map((b: string, i: number) => (
+                            <div key={i} className="glass-panel p-4 rounded-xl flex gap-3 items-start border border-green-500/10 bg-green-900/5">
+                                <CheckCircle2 size={18} className="text-green-400 shrink-0 mt-0.5"/>
+                                <span className="text-slate-200 text-sm font-medium">{b}</span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Eligibility Section */}
+                <div className="mb-8">
+                    <h3 className="text-white font-black text-lg mb-4 flex items-center gap-2">
+                        <CheckSquare size={20} className="text-blue-400"/>
+                        {t.scheme_eligibility}
+                    </h3>
+                    <div className="glass-panel p-5 rounded-2xl border border-white/10">
+                        <ul className="space-y-3">
+                            {scheme.eligibility.map((e: string, i: number) => (
+                                <li key={i} className="flex gap-3 text-slate-300 text-sm">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-blue-400 mt-2 shrink-0"></div>
+                                    {e}
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                </div>
+
+                {/* Documents Section */}
+                <div className="mb-8">
+                    <h3 className="text-white font-black text-lg mb-4 flex items-center gap-2">
+                        <FileText size={20} className="text-amber-400"/>
+                        {t.scheme_documents_req}
+                    </h3>
+                    <div className="grid grid-cols-2 gap-3">
+                        {scheme.documents.map((d: string, i: number) => (
+                            <div key={i} className="glass-panel p-3 rounded-xl flex flex-col items-center justify-center text-center gap-2 bg-white/5 min-h-[100px]">
+                                <FileCheck size={24} className="text-amber-400/80"/>
+                                <span className="text-xs text-slate-300 font-bold">{d}</span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Step by Step Process */}
+                <div className="mb-8">
+                    <h3 className="text-white font-black text-lg mb-4 flex items-center gap-2">
+                        <ListOrdered size={20} className="text-purple-400"/>
+                        {t.scheme_step_by_step}
+                    </h3>
+                    <div className="relative pl-4 space-y-8 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-white/10">
+                        {scheme.process.map((step: any, i: number) => (
+                            <div key={i} className="relative pl-6">
+                                <div className="absolute left-[-5px] top-0 w-3 h-3 rounded-full bg-purple-500 shadow-[0_0_10px_#a855f7]"></div>
+                                <h4 className="text-white font-bold text-base mb-1">{step.title}</h4>
+                                <p className="text-slate-400 text-sm">{step.desc}</p>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                <div className="h-10"></div>
+            </div>
+        </div>
+    );
 };
 
 // 6. Disease Detector Component
@@ -830,134 +969,423 @@ const AreaCalculator = ({ lang, onBack }: { lang: Language, onBack: () => void }
     );
 }
 
-const VoiceAssistant = ({ lang, user, onBack }: { lang: Language, user: UserProfile, onBack: () => void }) => {
+// 4. Immersive "Orb" Voice Assistant (Fullscreen Mobile 100dvh)
+const VoiceAssistant = ({ lang, user, onBack }: any) => {
   const t = TRANSLATIONS[lang];
-  const [active, setActive] = useState(false);
-  const [speaking, setSpeaking] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const audioContextRef = useRef<AudioContext | null>(null);
-  const streamRef = useRef<MediaStream | null>(null);
+  // Extended state for robustness
+  const [status, setStatus] = useState<'idle' | 'connecting' | 'connected' | 'reconnecting' | 'error' | 'offline'>('idle');
+  const [errorMessage, setErrorMessage] = useState('');
+  const [transcripts, setTranscripts] = useState<{role: 'user'|'model', text: string}[]>([]);
+  
+  // Robust Session Management & "Intent" Tracking
+  const shouldStayConnectedRef = useRef(false); // The user's intent to be in the session
+  const sessionPromiseRef = useRef<Promise<any> | null>(null);
+  const activeSessionRef = useRef<any>(null); 
+  
+  // Audio Nodes (Split Contexts)
+  const inputContextRef = useRef<AudioContext | null>(null);
+  const outputContextRef = useRef<AudioContext | null>(null);
+  const mediaStreamRef = useRef<MediaStream | null>(null);
   const processorRef = useRef<ScriptProcessorNode | null>(null);
-  const sourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
-  const sessionRef = useRef<any>(null);
+  
+  const reconnectTimeoutRef = useRef<any>(null);
+  const retryCountRef = useRef(0);
+  
   const nextStartTimeRef = useRef<number>(0);
-  const sourcesRef = useRef<Set<AudioBufferSourceNode>>(new Set());
+  const orbRef = useRef<HTMLDivElement>(null);
+  const animationFrameRef = useRef<number>(0);
+  const lastVolumeRef = useRef(0); 
 
+  // Auto-scroll for transcript
+  const transcriptEndRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    let mounted = true;
-    const init = async () => {
-        try {
-            const apiKey = getGenAIKey();
-            if(!apiKey) throw new Error("API Key Missing");
+    transcriptEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [transcripts]);
 
-            const ai = new GoogleGenAI({ apiKey });
-            const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-            
-            // Output Context
-            const ctx = new AudioContextClass({ sampleRate: 24000 });
-            audioContextRef.current = ctx;
-
-            // Input Context
-            const inputCtx = new AudioContextClass({ sampleRate: 16000 });
-            
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            streamRef.current = stream;
-
-            const config = {
-                model: 'gemini-2.5-flash-native-audio-preview-12-2025',
-                config: {
-                    responseModalities: [Modality.AUDIO],
-                    speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Kore' } } },
-                    systemInstruction: lang === 'mr' ? "Speak in Marathi. Keep it short." : "Keep it short."
-                }
-            };
-
-            const sessionPromise = ai.live.connect({
-                model: config.model,
-                config: config.config,
-                callbacks: {
-                    onopen: () => {
-                        if(!mounted) return;
-                        setActive(true);
-                        
-                        const source = inputCtx.createMediaStreamSource(stream);
-                        const processor = inputCtx.createScriptProcessor(4096, 1, 1);
-                        
-                        processor.onaudioprocess = (e) => {
-                            if(!mounted) return;
-                            const inputData = e.inputBuffer.getChannelData(0);
-                            const blob = createPCMChunk(inputData, inputCtx.sampleRate);
-                            sessionPromise.then(s => s.sendRealtimeInput({ media: blob }));
-                        };
-                        
-                        source.connect(processor);
-                        processor.connect(inputCtx.destination);
-                        
-                        sourceRef.current = source;
-                        processorRef.current = processor;
-                    },
-                    onmessage: async (msg: LiveServerMessage) => {
-                         if(!mounted) return;
-                         const audioData = msg.serverContent?.modelTurn?.parts?.[0]?.inlineData?.data;
-                         if (audioData) {
-                             setSpeaking(true);
-                             const buffer = await decodeAudioData(decode(audioData), ctx, 24000, 1);
-                             const source = ctx.createBufferSource();
-                             source.buffer = buffer;
-                             source.connect(ctx.destination);
-                             
-                             nextStartTimeRef.current = Math.max(nextStartTimeRef.current, ctx.currentTime);
-                             source.start(nextStartTimeRef.current);
-                             nextStartTimeRef.current += buffer.duration;
-                             
-                             sourcesRef.current.add(source);
-                             source.onended = () => {
-                                 sourcesRef.current.delete(source);
-                                 if(sourcesRef.current.size === 0) setSpeaking(false);
-                             };
-                         }
-                         if (msg.serverContent?.turnComplete) setSpeaking(false);
-                    },
-                    onclose: () => { if(mounted) setActive(false); },
-                    onerror: (e) => { 
-                        console.error(e);
-                        if(mounted) setError("Connection Error"); 
-                    }
-                }
-            });
-            sessionRef.current = sessionPromise;
-
-        } catch (e) {
-            if(mounted) setError("Microphone Error");
-        }
-    };
+  // Cleanup Function
+  const cleanup = (fullyStop: boolean = false) => {
+    console.log("Cleaning up session...");
     
-    init();
+    if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
+    
+    if (processorRef.current) {
+        processorRef.current.disconnect();
+        processorRef.current.onaudioprocess = null;
+        processorRef.current = null;
+    }
+    
+    if (mediaStreamRef.current) {
+        mediaStreamRef.current.getTracks().forEach(track => track.stop());
+        mediaStreamRef.current = null;
+    }
+    
+    if (inputContextRef.current) {
+        inputContextRef.current.close();
+        inputContextRef.current = null;
+    }
 
-    return () => {
-        mounted = false;
-        sourcesRef.current.forEach(s => s.stop());
-        if (sessionRef.current) sessionRef.current.then((s:any) => { try { s.close() } catch(e){} });
-        audioContextRef.current?.close();
-        streamRef.current?.getTracks().forEach(t => t.stop());
-        sourceRef.current?.disconnect();
-        processorRef.current?.disconnect();
-    };
-  }, [lang]);
+    if (outputContextRef.current) {
+        outputContextRef.current.close();
+        outputContextRef.current = null;
+    }
+
+    if (activeSessionRef.current) {
+        try { activeSessionRef.current.close(); } catch(e) {}
+        activeSessionRef.current = null;
+    }
+    sessionPromiseRef.current = null;
+    
+    if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
+
+    if (fullyStop) {
+        shouldStayConnectedRef.current = false;
+        setStatus('idle');
+    }
+  };
+
+  const handleAutoReconnect = () => {
+      if (!shouldStayConnectedRef.current) return;
+
+      if (retryCountRef.current >= 5) {
+          setStatus('error');
+          setErrorMessage('Network unstable. Stopped.');
+          shouldStayConnectedRef.current = false; 
+          return;
+      }
+      
+      setStatus('reconnecting');
+      const delay = Math.min(1000 * Math.pow(2, retryCountRef.current), 10000); 
+      
+      reconnectTimeoutRef.current = setTimeout(() => {
+          retryCountRef.current++;
+          connect();
+      }, delay);
+  };
+
+  // Visualizer handles both Input and Output streams
+  const visualize = (inputAnalyser: AnalyserNode, outputAnalyser: AnalyserNode) => {
+      if(!orbRef.current) return;
+      
+      // Get Input Level
+      const inputData = new Uint8Array(inputAnalyser.frequencyBinCount);
+      inputAnalyser.getByteFrequencyData(inputData);
+      let inputSum = 0;
+      for(let i = 0; i < inputData.length; i++) inputSum += inputData[i];
+      const inputAvg = inputSum / inputData.length;
+
+      // Get Output Level
+      const outputData = new Uint8Array(outputAnalyser.frequencyBinCount);
+      outputAnalyser.getByteFrequencyData(outputData);
+      let outputSum = 0;
+      for(let i = 0; i < outputData.length; i++) outputSum += outputData[i];
+      const outputAvg = outputSum / outputData.length;
+
+      // Combine for single visual
+      const maxAvg = Math.max(inputAvg, outputAvg);
+      const normalized = maxAvg / 255;
+
+      // Smooth Animation
+      const speed = 0.2; 
+      lastVolumeRef.current = lastVolumeRef.current + (normalized - lastVolumeRef.current) * speed;
+      const vol = lastVolumeRef.current;
+
+      const scale = 1 + (vol * 0.8); 
+      const opacity = 0.3 + (vol * 0.7);
+      const glowSize = 20 + (vol * 60);
+      const glowAlpha = 0.3 + (vol * 0.5);
+      
+      orbRef.current.style.transform = `scale(${scale})`;
+      orbRef.current.style.opacity = `${opacity}`;
+      orbRef.current.style.boxShadow = `
+          0 0 ${glowSize}px rgba(34, 211, 238, ${glowAlpha}),
+          inset 0 0 ${20 + vol * 20}px rgba(168, 85, 247, ${vol * 0.4})
+      `;
+
+      animationFrameRef.current = requestAnimationFrame(() => visualize(inputAnalyser, outputAnalyser));
+  };
+
+  const connect = async () => {
+    if (!navigator.onLine) {
+        setStatus('offline');
+        return;
+    }
+
+    const apiKey = getGenAIKey();
+    if (!apiKey) {
+      setStatus('error');
+      setErrorMessage("API Key Not Found.");
+      return;
+    }
+
+    cleanup(false); 
+    shouldStayConnectedRef.current = true; 
+    setErrorMessage('');
+    setStatus(retryCountRef.current > 0 ? 'reconnecting' : 'connecting');
+
+    try {
+      // 1. Setup Audio Input (Microphone) - Prefer 16kHz
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
+      mediaStreamRef.current = stream;
+      
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      const inputCtx = new AudioContextClass({ sampleRate: 16000 });
+      await inputCtx.resume();
+      inputContextRef.current = inputCtx;
+
+      // 2. Setup Audio Output (Speaker) - 24kHz for Model
+      const outputCtx = new AudioContextClass({ sampleRate: 24000 });
+      await outputCtx.resume();
+      outputContextRef.current = outputCtx;
+      nextStartTimeRef.current = outputCtx.currentTime;
+
+      // 3. Audio Nodes & Graph
+      const source = inputCtx.createMediaStreamSource(stream);
+      const processor = inputCtx.createScriptProcessor(4096, 1, 1);
+      processorRef.current = processor;
+      
+      const inputAnalyser = inputCtx.createAnalyser();
+      inputAnalyser.fftSize = 256;
+      inputAnalyser.smoothingTimeConstant = 0.5;
+
+      const outputAnalyser = outputCtx.createAnalyser();
+      outputAnalyser.fftSize = 256;
+      outputAnalyser.smoothingTimeConstant = 0.5;
+
+      // Connect Input Graph
+      source.connect(inputAnalyser);
+      source.connect(processor);
+      processor.connect(inputCtx.destination);
+      
+      // Start Visualizer
+      visualize(inputAnalyser, outputAnalyser);
+
+      // 4. Gemini Connection
+      const ai = new GoogleGenAI({ apiKey });
+      const sessionPromise = ai.live.connect({
+        model: 'gemini-2.5-flash-native-audio-preview-12-2025',
+        config: { 
+            responseModalities: [Modality.AUDIO], 
+            speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Puck' } } },
+            inputAudioTranscription: {}, 
+            outputAudioTranscription: {},
+            systemInstruction: "You are AI Krushi Mitra. Speak Marathi or English based on user. Keep answers concise.",
+        },
+        callbacks: {
+           onopen: () => { 
+              console.log("Session Opened");
+              retryCountRef.current = 0; 
+              setStatus('connected'); 
+              triggerHaptic();
+           },
+           onmessage: async (msg) => {
+              // Handle Audio Output
+              const audioData = msg.serverContent?.modelTurn?.parts?.[0]?.inlineData?.data;
+              if (audioData) {
+                 const buffer = await decodeAudioData(decode(audioData), outputCtx, 24000, 1);
+                 const sourceNode = outputCtx.createBufferSource();
+                 sourceNode.buffer = buffer;
+                 
+                 // Connect to Output Graph
+                 sourceNode.connect(outputAnalyser);
+                 sourceNode.connect(outputCtx.destination);
+                 
+                 const currentTime = outputCtx.currentTime;
+                 if (nextStartTimeRef.current < currentTime) nextStartTimeRef.current = currentTime;
+                 sourceNode.start(nextStartTimeRef.current);
+                 nextStartTimeRef.current += buffer.duration;
+              }
+
+              // Handle Transcription
+              const userTranscript = msg.serverContent?.inputTranscription?.text;
+              if (userTranscript) {
+                  setTranscripts(prev => [...prev, { role: 'user', text: userTranscript }]);
+              }
+           },
+           onclose: (e) => {
+               console.log("Session Closed", e);
+               // Handle specific close codes
+               if (e.code === 1008 || e.reason?.includes("leaked")) {
+                   setErrorMessage("API Key Revoked/Leaked. Please set a new valid API_KEY in environment variables.");
+                   setStatus('error');
+                   shouldStayConnectedRef.current = false;
+                   return; // Do not reconnect
+               }
+               
+               // Only reconnect if the user didn't intentionally stop AND it wasn't a clean close
+               if (shouldStayConnectedRef.current && e.code !== 1000) {
+                   handleAutoReconnect();
+               } else {
+                   setStatus('idle');
+                   shouldStayConnectedRef.current = false;
+               }
+           },
+           onerror: (err) => {
+               console.error("Session Error:", err);
+               if (shouldStayConnectedRef.current) handleAutoReconnect();
+           }
+        }
+      });
+      
+      sessionPromiseRef.current = sessionPromise;
+      sessionPromise.then(sess => {
+          activeSessionRef.current = sess;
+      }).catch(e => {
+          console.error("Connection Failed:", e);
+          handleAutoReconnect();
+      });
+      
+      // 5. Send Audio Logic
+      processor.onaudioprocess = (e) => {
+         const inputData = e.inputBuffer.getChannelData(0);
+         // Use the input context's sample rate to downsample correctly
+         const blob = createPCMChunk(inputData, inputCtx.sampleRate); 
+         
+         if (sessionPromiseRef.current) {
+             sessionPromiseRef.current.then(session => {
+                 if (session === activeSessionRef.current && shouldStayConnectedRef.current) {
+                    session.sendRealtimeInput({ media: blob });
+                 }
+             }).catch(() => {});
+         }
+      };
+
+    } catch(e: any) { 
+        console.error("Setup Failed", e);
+        setErrorMessage(e.message || "Failed to connect microphone");
+        setStatus('error');
+    }
+  };
+
+  const handleToggle = () => {
+      triggerHaptic();
+      if (status === 'idle' || status === 'error') {
+          setTranscripts([]);
+          connect();
+      } else {
+          cleanup(true);
+      }
+  };
+
+  const handleBack = () => {
+      cleanup(true);
+      onBack();
+  };
 
   return (
-    <div className="fixed inset-0 z-[200] bg-[#020617] flex flex-col items-center justify-center p-6 animate-enter">
-        <button onClick={onBack} className="absolute top-6 left-6 w-12 h-12 rounded-full bg-white/10 flex items-center justify-center text-white z-50 hover:bg-white/20">
-            <X size={24}/>
-        </button>
-        <div className="relative">
-             <div className={clsx("w-64 h-64 rounded-full bg-cyan-500/20 blur-3xl absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 transition-all", (active) ? "scale-100 opacity-100" : "scale-50 opacity-0")}></div>
-             <div className="w-32 h-32 rounded-full bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center shadow-[0_0_50px_rgba(6,182,212,0.4)] relative z-10">
-                 {speaking ? <Activity size={48} className="text-white animate-bounce"/> : <Mic size={48} className="text-white"/>}
-             </div>
-        </div>
-        <h2 className="text-2xl font-black text-white mt-12 text-center">{error || (active ? (speaking ? "Speaking..." : "Listening...") : "Connecting...")}</h2>
+    <div className="fixed inset-0 z-[200] bg-black flex flex-col items-center justify-center overflow-hidden h-[100dvh] w-full">
+       {/* Cosmic Background */}
+       <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-indigo-900/40 via-black to-black"></div>
+       <div className="absolute top-[-20%] left-[-20%] w-[80vw] h-[80vw] bg-purple-600/20 blur-[100px] rounded-full"></div>
+       <div className="absolute bottom-[-20%] right-[-20%] w-[80vw] h-[80vw] bg-cyan-600/20 blur-[100px] rounded-full"></div>
+
+       {/* Top Bar with Enhanced Back Button */}
+       <div className="absolute top-0 w-full p-4 pt-4 pt-safe-top flex justify-between items-center z-[210]">
+          <button 
+             onClick={handleBack} 
+             className="flex items-center gap-2 pl-4 pr-5 py-3 rounded-full bg-black/40 backdrop-blur-md border border-white/20 text-white hover:bg-white/10 transition-all active:scale-95 shadow-lg shadow-black/30"
+          >
+             <Home size={20} className="text-cyan-300"/>
+             <span className="font-bold text-sm tracking-wide">Dashboard</span>
+          </button>
+          
+          {/* Status Badge */}
+          {status !== 'idle' && (
+              <div className={clsx("flex items-center gap-2 px-4 py-2 rounded-full glass-panel transition-colors duration-500", 
+                 status === 'connected' ? "border-cyan-500/30 bg-cyan-900/20" : 
+                 status === 'reconnecting' ? "border-yellow-500/30 bg-yellow-900/20" :
+                 status === 'offline' ? "border-red-500/30 bg-red-900/20" : 
+                 status === 'error' ? "border-red-500/30 bg-red-900/20" : "bg-white/5"
+              )}>
+                 <div className={clsx("w-2 h-2 rounded-full transition-all", 
+                    status === 'connected' ? "bg-cyan-400 animate-pulse shadow-[0_0_8px_#22d3ee]" : 
+                    status === 'reconnecting' ? "bg-yellow-400 animate-ping" : 
+                    (status === 'offline' || status === 'error') ? "bg-red-500" : "bg-slate-500"
+                 )}></div>
+                 <span className="text-xs font-bold text-white uppercase tracking-widest">
+                     {status === 'connected' ? 'Live' : status === 'reconnecting' ? 'Reconnecting...' : status}
+                 </span>
+              </div>
+          )}
+       </div>
+
+       {/* Contextual Memory / Transcript UI */}
+       <div className="absolute top-24 inset-x-0 bottom-1/2 overflow-y-auto hide-scrollbar px-6 z-20 flex flex-col gap-3 mask-image-gradient pb-8">
+           {status === 'connected' && transcripts.length === 0 && (
+               <div className="text-center text-slate-500 text-sm mt-10 animate-pulse">Start speaking...</div>
+           )}
+           {transcripts.map((msg, i) => (
+               <div key={i} className={clsx("p-3 rounded-2xl backdrop-blur-md border border-white/5 max-w-[85%] text-sm font-medium animate-enter shadow-lg", 
+                   msg.role === 'user' ? "self-end bg-cyan-500/10 text-cyan-100 rounded-tr-sm border-cyan-500/20" : "self-start bg-purple-500/10 text-purple-100 rounded-tl-sm border-purple-500/20"
+               )}>
+                   {msg.text}
+               </div>
+           ))}
+           <div ref={transcriptEndRef} />
+       </div>
+
+       {/* The ORB - Central Interaction Area */}
+       <div className="relative z-30 flex-1 flex items-center justify-center w-full mt-32">
+          <div className="relative w-80 h-80 flex items-center justify-center">
+             
+             {/* Visualizer Orb (Only when active) */}
+             {(status === 'connected' || status === 'reconnecting') && (
+                <>
+                   <div className="absolute inset-0 rounded-full border border-cyan-500/30 scale-[1.3] animate-[spin_10s_linear_infinite]"></div>
+                   <div className="absolute inset-0 rounded-full border border-purple-500/20 scale-[1.6] animate-[spin_15s_linear_infinite_reverse]"></div>
+                   <div ref={orbRef} className="absolute inset-0 bg-cyan-500/30 rounded-full blur-3xl transition-transform duration-75 ease-out will-change-transform mix-blend-screen"></div>
+                </>
+             )}
+             
+             {/* Main Trigger Button */}
+             <button onClick={handleToggle} 
+                className={clsx("relative z-40 w-48 h-48 rounded-full flex items-center justify-center shadow-[0_0_50px_rgba(79,70,229,0.3)] transition-all duration-500 active:scale-95 touch-manipulation backdrop-blur-xl border-4",
+                   status === 'idle' ? "bg-gradient-to-tr from-cyan-600 to-blue-600 border-white/20 animate-pulse" : 
+                   status === 'connected' ? "bg-black/80 border-cyan-500/50" :
+                   status === 'reconnecting' ? "bg-black/80 border-yellow-500/50" : "bg-black/50 border-white/10"
+                )}>
+                
+                {status === 'connecting' || status === 'reconnecting' ? (
+                    <RefreshCw size={64} className={clsx("animate-spin", status === 'reconnecting' ? "text-yellow-400" : "text-cyan-500")}/>
+                ) : status === 'idle' ? (
+                    <div className="flex flex-col items-center">
+                        <Mic size={64} className="text-white drop-shadow-md mb-2"/>
+                        <span className="text-xs font-black uppercase tracking-widest text-white/80">Tap to Start</span>
+                    </div>
+                ) : (status === 'offline' || status === 'error') ? (
+                    <WifiOff size={64} className="text-red-400"/>
+                ) : (
+                    <div className="flex flex-col items-center">
+                        <Mic size={56} className="text-cyan-400 drop-shadow-[0_0_20px_rgba(34,211,238,1)] mb-2"/>
+                        <span className="text-[10px] font-bold text-cyan-200">Tap to Stop</span>
+                    </div>
+                )}
+             </button>
+          </div>
+       </div>
+
+       {/* Status Text & Secondary Exit */}
+       <div className="mb-safe-bottom pb-8 text-center z-10 px-8 animate-enter delay-100 h-40 flex flex-col items-center justify-end">
+          <h2 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-b from-white to-slate-400 mb-2 tracking-tight">
+             {status === 'connected' ? "I'm listening..." : 
+              status === 'reconnecting' ? "Signal Weak..." :
+              status === 'offline' ? "No Internet" :
+              status === 'error' ? "Connection Failed" : 
+              status === 'connecting' ? "Connecting..." : t.voice_title}
+          </h2>
+          <p className="text-slate-400 text-base max-w-xs mx-auto leading-relaxed mb-6">
+             {errorMessage ? <span className="text-red-400">{errorMessage}</span> : 
+              status === 'reconnecting' ? "Boosting signal..." :
+              status === 'offline' ? "Waiting for network..." :
+              status === 'connected' ? "Go ahead, ask me anything." : 
+              status === 'idle' ? t.voice_desc : "Establishing secure link..."}
+          </p>
+
+          {/* Secondary Exit Button */}
+          <button onClick={handleBack} className="flex items-center gap-2 px-6 py-3 rounded-full bg-white/5 border border-white/10 text-slate-300 hover:bg-white/10 hover:text-white transition-all active:scale-95">
+             <LogOut size={16} />
+             <span className="font-bold text-xs uppercase tracking-wider">Exit Voice Mode</span>
+          </button>
+       </div>
     </div>
   );
 };
@@ -966,6 +1394,7 @@ const App = () => {
   const [view, setView] = useState<ViewState>('DASHBOARD');
   const [lang, setLang] = useState<Language>('mr');
   const [user] = useState<UserProfile>({ name: "Suresh Patil", village: "Satara", district: "Satara", landSize: "5 Acres", crop: "Soyabean" });
+  const [selectedScheme, setSelectedScheme] = useState<any>(null);
 
   const getView = () => {
     switch(view) {
@@ -975,6 +1404,11 @@ const App = () => {
        case 'SOIL': return <SoilAnalysis lang={lang} onBack={() => setView('DASHBOARD')} />;
        case 'YIELD': return <YieldPredictor lang={lang} onBack={() => setView('DASHBOARD')} />;
        case 'AREA_CALCULATOR': return <AreaCalculator lang={lang} onBack={() => setView('DASHBOARD')} />;
+       case 'SCHEMES': 
+          if(selectedScheme) {
+             return <SchemeDetailView scheme={selectedScheme} lang={lang} onBack={() => setSelectedScheme(null)} />;
+          }
+          return <SchemesView lang={lang} onBack={() => setView('DASHBOARD')} onSelect={(s) => setSelectedScheme(s)} />;
        case 'MARKET': 
          return <SimpleView title={TRANSLATIONS[lang].market_title} onBack={() => setView('DASHBOARD')}>
             <div className="space-y-4">
