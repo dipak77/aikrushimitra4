@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import express from 'express';
 import path from 'path';
 import fs from 'fs';
@@ -7,8 +8,8 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
 const PORT = process.env.PORT || 8080;
 
-// Helper to get API Key safely
-const getApiKey = () => process.env.API_KEY || 'AIzaSyBay_ndkcD4SNKVJy-ggAzMDlQjoXCiVBU';
+// Helper to get API Key safely - REMOVED LEAKED KEY FALLBACK
+const getApiKey = () => process.env.API_KEY || '';
 
 // Determine environment
 const isProduction = process.env.NODE_ENV === 'production';

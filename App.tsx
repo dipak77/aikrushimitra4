@@ -579,6 +579,14 @@ const VoiceAssistant = ({ lang, user, onBack }: any) => {
            },
            onclose: (e) => {
                console.log("Session Closed", e);
+               // Handle specific close codes
+               if (e.code === 1008 || e.reason?.includes("leaked")) {
+                   setErrorMessage("API Key Revoked/Leaked. Please set a new valid API_KEY in environment variables.");
+                   setStatus('error');
+                   shouldStayConnectedRef.current = false;
+                   return; // Do not reconnect
+               }
+               
                // Only reconnect if the user didn't intentionally stop AND it wasn't a clean close
                if (shouldStayConnectedRef.current && e.code !== 1000) {
                    handleAutoReconnect();
