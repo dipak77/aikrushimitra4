@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Language } from '../../types';
 import { TRANSLATIONS } from '../../constants';
-import { RotateCcw, Undo2, MapPin, Layers, Crosshair, Plus, ArrowLeft, Ruler, CheckCircle2, ChevronDown, ChevronUp } from 'lucide-react';
+import { RotateCcw, Undo2, MapPin, Layers, Crosshair, Plus, ArrowLeft, Ruler, ChevronDown, ChevronUp, Maximize2, Minimize2 } from 'lucide-react';
 import { triggerHaptic } from '../../utils/common';
 import { clsx } from 'clsx';
 import { Button } from '../Button';
@@ -22,7 +22,7 @@ const AreaCalculator = ({ lang, onBack }: { lang: Language, onBack: () => void }
     const [areaSqM, setAreaSqM] = useState(0);
     const [mapType, setMapType] = useState<'SATELLITE' | 'STREET'>('SATELLITE');
     const [isLocating, setIsLocating] = useState(false);
-    const [isExpanded, setIsExpanded] = useState(true);
+    const [isDetailsOpen, setIsDetailsOpen] = useState(false);
 
     // Init Map
     useEffect(() => {
@@ -40,10 +40,10 @@ const AreaCalculator = ({ lang, onBack }: { lang: Language, onBack: () => void }
         // Add Default Layer
         updateMapLayer(map, 'SATELLITE');
 
-        // Add "Click to Add" listener
+        // Add "Click to Add" listener (Optional backup)
         map.on('click', (e: any) => {
-             // Optional: allow map click if needed, but crosshair is primary
-             // handleAddPoint(e.latlng.lat, e.latlng.lng);
+            // We rely on crosshair, but clicking map can also add point for desktop users
+            // handleAddPoint(e.latlng.lat, e.latlng.lng);
         });
 
         // Try to locate user immediately
@@ -72,10 +72,10 @@ const AreaCalculator = ({ lang, onBack }: { lang: Language, onBack: () => void }
             // Draw Polygon
             polygonRef.current = L.polygon(latLngs, {
                 color: '#22d3ee', // Cyan-400
-                weight: 4,
+                weight: 3,
                 opacity: 1,
                 fillColor: '#0891b2', // Cyan-600
-                fillOpacity: 0.3,
+                fillOpacity: 0.25,
                 dashArray: points.length < 3 ? '10, 10' : undefined
             }).addTo(map);
 
@@ -87,9 +87,9 @@ const AreaCalculator = ({ lang, onBack }: { lang: Language, onBack: () => void }
                 const icon = L.divIcon({
                     className: 'custom-marker',
                     html: `
-                        <div class="relative w-4 h-4">
+                        <div class="relative w-4 h-4 group">
                             <div class="absolute inset-0 bg-cyan-400 rounded-full animate-ping opacity-75 ${isLast ? 'block' : 'hidden'}"></div>
-                            <div class="relative w-4 h-4 bg-white border-2 ${isFirst ? 'border-green-500 bg-green-100 scale-125' : 'border-cyan-600'} rounded-full shadow-lg"></div>
+                            <div class="relative w-4 h-4 bg-white border-2 ${isFirst ? 'border-green-500 bg-green-100 scale-125' : 'border-cyan-600'} rounded-full shadow-[0_0_10px_rgba(0,0,0,0.5)]"></div>
                         </div>
                     `,
                     iconSize: [16, 16],
@@ -114,7 +114,7 @@ const AreaCalculator = ({ lang, onBack }: { lang: Language, onBack: () => void }
                 attribution: 'Tiles &copy; Esri'
             }).addTo(map);
         } else {
-            // CartoDB Voyager
+            // CartoDB Voyager (Street)
             tileLayerRef.current = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
                 maxZoom: 19,
                 subdomains: 'abcd',
@@ -199,163 +199,146 @@ const AreaCalculator = ({ lang, onBack }: { lang: Language, onBack: () => void }
     const guntha = sqMeter / 101.17;
     const acre = sqMeter / 4046.86;
     const hectare = sqMeter / 10000;
-    const bigha = sqMeter / 2529.28; // Standard approx Bigha
+    const bigha = sqMeter / 2529.28;
 
     return (
         <div className="fixed inset-0 z-[100] bg-slate-950 flex flex-col h-[100dvh] w-full animate-enter">
             
-            {/* 1. Top Header */}
-            <div className="absolute top-0 left-0 right-0 z-[500] p-4 pt-safe-top flex items-center justify-between pointer-events-none">
+            {/* 1. Header (Top Left) */}
+            <div className="absolute top-4 left-4 z-[500] pt-safe-top pointer-events-none flex items-center gap-3">
                 <button 
                     onClick={onBack} 
-                    className="pointer-events-auto w-10 h-10 rounded-full bg-slate-900/60 backdrop-blur-md border border-white/20 text-white flex items-center justify-center shadow-lg hover:bg-slate-800 transition-all active:scale-95"
+                    className="pointer-events-auto w-10 h-10 rounded-full bg-slate-900/40 backdrop-blur-xl border border-white/10 text-white flex items-center justify-center shadow-lg hover:bg-slate-900/60 transition-all active:scale-95"
                 >
                     <ArrowLeft size={20} />
                 </button>
-                
-                <div className="pointer-events-auto bg-slate-900/60 backdrop-blur-md border border-white/20 px-5 py-2.5 rounded-full shadow-lg flex items-center gap-3">
+                <div className="pointer-events-auto bg-slate-900/40 backdrop-blur-xl border border-white/10 px-4 py-2 rounded-full shadow-lg flex items-center gap-2">
                     <Ruler size={16} className="text-cyan-400"/>
-                    <h1 className="text-sm font-bold text-white tracking-wide">{t.area_title}</h1>
+                    <span className="text-sm font-bold text-white tracking-wide">{t.area_title}</span>
                 </div>
-                
-                <div className="w-10"></div>
             </div>
 
-            {/* 2. Map Area */}
-            <div className="flex-1 relative w-full h-full bg-slate-800 z-0">
-                <div ref={mapRef} className="w-full h-full z-0 outline-none" style={{ background: '#0f172a' }}></div>
+            {/* 2. Map Tools (Top Right) */}
+            <div className="absolute top-20 right-4 z-[400] flex flex-col gap-3 pt-safe-top">
+                <button 
+                    onClick={handleLocate} 
+                    className={clsx(
+                        "w-11 h-11 rounded-full flex items-center justify-center shadow-xl border border-white/10 transition-all active:scale-95 backdrop-blur-xl", 
+                        isLocating ? "bg-cyan-500 text-white animate-pulse" : "bg-slate-900/40 text-white hover:bg-slate-900/60"
+                    )}
+                >
+                    <MapPin size={20} />
+                </button>
+                <button 
+                    onClick={toggleMapType} 
+                    className="w-11 h-11 rounded-full bg-slate-900/40 backdrop-blur-xl flex items-center justify-center text-white shadow-xl border border-white/10 hover:bg-slate-900/60 active:scale-95 transition-all"
+                >
+                    <Layers size={20} />
+                </button>
+            </div>
 
-                {/* Crosshair */}
+            {/* 3. Map View (Full Screen) */}
+            <div className="flex-1 relative w-full h-full bg-slate-800 z-0">
+                <div ref={mapRef} className="w-full h-full z-0 outline-none bg-slate-900"></div>
+
+                {/* Crosshair (Fixed Center) */}
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-[400]">
                     <div className="relative">
-                        <Crosshair size={32} className="text-white drop-shadow-[0_0_8px_rgba(0,0,0,0.8)]" strokeWidth={1.5} />
+                        <Crosshair size={32} className="text-white drop-shadow-[0_0_4px_rgba(0,0,0,0.9)]" strokeWidth={1.5} />
                         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-1 h-1 bg-cyan-400 rounded-full shadow-[0_0_5px_#22d3ee]"></div>
                     </div>
                 </div>
-
-                {/* Floating Tools (Right) */}
-                <div className="absolute top-28 right-4 flex flex-col gap-3 z-[400]">
-                    <button 
-                        onClick={handleLocate} 
-                        className={clsx(
-                            "w-12 h-12 rounded-2xl flex items-center justify-center shadow-xl border border-white/10 transition-all active:scale-95", 
-                            isLocating ? "bg-cyan-500 text-white animate-pulse" : "bg-slate-900/80 backdrop-blur-md text-white hover:bg-slate-800"
-                        )}
-                    >
-                        <MapPin size={22} />
-                    </button>
-                    <button 
-                        onClick={toggleMapType} 
-                        className="w-12 h-12 rounded-2xl bg-slate-900/80 backdrop-blur-md flex items-center justify-center text-white shadow-xl border border-white/10 hover:bg-slate-800 active:scale-95 transition-all"
-                    >
-                        <Layers size={22} />
-                    </button>
-                </div>
-
-                {/* Main Action: Add Point (Floating) */}
-                <div className="absolute bottom-32 lg:bottom-40 left-1/2 -translate-x-1/2 z-[400] flex flex-col items-center gap-2 pointer-events-auto">
-                    {points.length === 0 && (
-                         <div className="bg-black/60 backdrop-blur-md px-4 py-1.5 rounded-full text-[11px] text-white font-medium mb-1 border border-white/10 animate-pulse shadow-lg">
-                            Move map & tap (+) to mark corners
-                         </div>
-                    )}
-                    <button 
-                        onClick={handleAddCenterPoint}
-                        className="group relative flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-r from-cyan-500 to-blue-600 shadow-[0_0_30px_rgba(6,182,212,0.4)] border-4 border-slate-900/50 active:scale-90 transition-all"
-                    >
-                        <Plus size={32} className="text-white group-hover:rotate-90 transition-transform duration-300" strokeWidth={3} />
-                        <div className="absolute inset-0 rounded-full border-2 border-white/20 animate-ping opacity-50"></div>
-                    </button>
-                </div>
             </div>
 
-            {/* 3. Bottom Results Panel (Responsive Card) */}
-            <div className="absolute bottom-6 left-4 right-4 z-[500] max-w-4xl mx-auto animate-enter">
-                <div className={clsx("glass-panel rounded-[2rem] border border-white/10 bg-slate-900/90 backdrop-blur-xl shadow-2xl transition-all duration-300 overflow-hidden", isExpanded ? "p-5" : "p-4")}>
-                    
-                    {/* Expand/Collapse Handle (Mobile) */}
-                    <div className="flex justify-center md:hidden mb-2" onClick={() => setIsExpanded(!isExpanded)}>
-                         <div className="w-12 h-1 bg-slate-700 rounded-full"></div>
-                    </div>
-
-                    <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-                        
-                        {/* Main Stats */}
-                        <div className="flex-1">
-                           <div className="flex items-center justify-between md:justify-start gap-4 mb-1">
-                               <div className="flex items-center gap-2">
-                                   <Ruler size={14} className="text-cyan-400"/>
-                                   <span className="text-slate-400 text-xs font-bold uppercase tracking-widest">{t.total_area}</span>
-                               </div>
-                               <button onClick={reset} disabled={points.length === 0} className="text-[10px] font-bold text-red-400 uppercase bg-red-500/10 px-2 py-1 rounded hover:bg-red-500/20 disabled:opacity-0 transition-opacity md:hidden">
-                                  Reset
-                               </button>
-                           </div>
-                           
-                           {/* Primary (Acre) */}
-                           <div className="flex items-baseline gap-2 mb-4">
-                               <h2 className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white to-slate-300 tracking-tighter font-mono">
-                                   {acre.toFixed(2)}
-                               </h2>
-                               <span className="text-lg text-cyan-400 font-bold uppercase">{t.unit_acre}</span>
-                           </div>
-
-                           {/* Secondary Units Grid */}
-                           <div className={clsx("grid grid-cols-2 sm:grid-cols-4 gap-3 transition-all", !isExpanded && "hidden md:grid")}>
-                               <UnitBox label={t.unit_guntha} value={guntha.toFixed(2)} color="text-emerald-400" bg="bg-emerald-500/10" border="border-emerald-500/20" />
-                               <UnitBox label={t.unit_bigha} value={bigha.toFixed(2)} color="text-amber-400" bg="bg-amber-500/10" border="border-amber-500/20" />
-                               <UnitBox label={t.unit_hectare} value={hectare.toFixed(2)} color="text-purple-400" bg="bg-purple-500/10" border="border-purple-500/20" />
-                               <UnitBox label={t.unit_sqm} value={sqMeter.toFixed(0)} color="text-slate-300" bg="bg-slate-700/30" border="border-slate-600/30" />
-                           </div>
-                        </div>
-
-                        {/* Actions (Desktop) */}
-                        <div className="hidden md:flex flex-col gap-3 shrink-0 min-w-[140px]">
-                            <button 
-                                onClick={undo} 
-                                disabled={points.length === 0}
-                                className="flex items-center justify-center gap-2 py-3 rounded-xl bg-slate-800 border border-white/10 text-slate-300 font-bold hover:bg-slate-700 active:scale-95 transition-all disabled:opacity-30"
-                            >
-                                <Undo2 size={16} /> {t.undo_point}
-                            </button>
-                            <button 
-                                onClick={reset}
-                                disabled={points.length === 0} 
-                                className="flex items-center justify-center gap-2 py-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 font-bold hover:bg-red-500/20 active:scale-95 transition-all disabled:opacity-30"
-                            >
-                                <RotateCcw size={16} /> {t.reset_map}
-                            </button>
-                        </div>
-                         
-                         {/* Actions (Mobile Row) */}
-                         <div className={clsx("grid grid-cols-2 gap-3 md:hidden pt-2 border-t border-white/5", !isExpanded && "hidden")}>
-                            <button 
-                                onClick={undo} 
-                                disabled={points.length === 0}
-                                className="flex items-center justify-center gap-2 py-3 rounded-xl bg-slate-800 border border-white/10 text-slate-300 font-bold disabled:opacity-30"
-                            >
-                                <Undo2 size={16} /> {t.undo_point}
-                            </button>
-                             <button 
-                                onClick={reset}
-                                disabled={points.length === 0} 
-                                className="flex items-center justify-center gap-2 py-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 font-bold disabled:opacity-30"
-                            >
-                                <RotateCcw size={16} /> {t.reset_map}
-                            </button>
+            {/* 4. Controls & Results (Bottom Overlay) */}
+            <div className="absolute bottom-0 inset-x-0 z-[500] flex flex-col items-center justify-end pointer-events-none pb-safe-bottom">
+                
+                {/* Result Card (Floating above controls) */}
+                <div className="w-full max-w-md px-4 mb-4 pointer-events-auto">
+                     <div className={clsx(
+                         "glass-panel rounded-3xl border border-white/10 bg-slate-900/70 backdrop-blur-xl transition-all duration-300 shadow-2xl overflow-hidden",
+                         isDetailsOpen ? "p-5" : "p-4"
+                     )}>
+                         {/* Header / Collapsed View */}
+                         <div 
+                             className="flex items-center justify-between cursor-pointer" 
+                             onClick={() => setIsDetailsOpen(!isDetailsOpen)}
+                         >
+                             <div>
+                                 <p className="text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-0.5">{t.total_area}</p>
+                                 <div className="flex items-baseline gap-2">
+                                     <h2 className="text-4xl font-black text-white font-mono tracking-tight">{acre.toFixed(2)}</h2>
+                                     <span className="text-sm font-bold text-cyan-400 self-end mb-1 uppercase">{t.unit_acre}</span>
+                                 </div>
+                             </div>
+                             
+                             <div className="flex items-center gap-3">
+                                 {/* Mini Stats (Visible when collapsed) */}
+                                 {!isDetailsOpen && (
+                                     <div className="hidden sm:flex flex-col items-end text-right">
+                                         <span className="text-xs font-mono text-white/90">{guntha.toFixed(2)} Guntha</span>
+                                         <span className="text-[10px] font-mono text-white/60">{sqMeter.toFixed(0)} Sq.m</span>
+                                     </div>
+                                 )}
+                                 <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors">
+                                     {isDetailsOpen ? <ChevronDown size={18} className="text-slate-300"/> : <ChevronUp size={18} className="text-slate-300"/>}
+                                 </div>
+                             </div>
                          </div>
-                    </div>
+
+                         {/* Expanded Details Grid */}
+                         <div className={clsx("grid grid-cols-4 gap-2 pt-4 mt-4 border-t border-white/10", !isDetailsOpen && "hidden")}>
+                             <UnitBox label={t.unit_guntha} value={guntha.toFixed(2)} />
+                             <UnitBox label={t.unit_bigha} value={bigha.toFixed(2)} />
+                             <UnitBox label={t.unit_hectare} value={hectare.toFixed(2)} />
+                             <UnitBox label={t.unit_sqm} value={sqMeter.toFixed(0)} />
+                         </div>
+                     </div>
                 </div>
+
+                {/* Main Controls Row */}
+                <div className="w-full max-w-md px-6 mb-6 flex items-center justify-between pointer-events-auto">
+                    {/* Undo Button */}
+                    <button 
+                        onClick={undo}
+                        disabled={points.length === 0}
+                        className="w-12 h-12 rounded-full bg-slate-900/60 backdrop-blur-xl border border-white/10 flex items-center justify-center text-slate-300 shadow-lg active:scale-95 transition-all disabled:opacity-30 disabled:pointer-events-none hover:bg-slate-800 hover:text-white"
+                    >
+                        <Undo2 size={20} />
+                    </button>
+
+                    {/* Add Point Button (Center, Large) */}
+                    <button 
+                        onClick={handleAddCenterPoint}
+                        className="group relative flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-tr from-cyan-500 to-blue-600 shadow-[0_0_30px_rgba(6,182,212,0.4)] border-[6px] border-slate-900/50 active:scale-90 transition-all z-10"
+                    >
+                        <Plus size={36} className="text-white group-hover:rotate-90 transition-transform duration-300" strokeWidth={3} />
+                        {/* Ripple Hint if empty */}
+                        {points.length === 0 && (
+                             <div className="absolute inset-0 rounded-full border-2 border-white/30 animate-ping opacity-50 pointer-events-none"></div>
+                        )}
+                    </button>
+
+                    {/* Reset Button */}
+                    <button 
+                        onClick={reset}
+                        disabled={points.length === 0}
+                        className="w-12 h-12 rounded-full bg-slate-900/60 backdrop-blur-xl border border-white/10 flex items-center justify-center text-red-400 shadow-lg active:scale-95 transition-all disabled:opacity-30 disabled:pointer-events-none hover:bg-red-500/20"
+                    >
+                        <RotateCcw size={20} />
+                    </button>
+                </div>
+
             </div>
 
         </div>
     );
 };
 
-const UnitBox = ({ label, value, color, bg, border }: { label: string, value: string, color: string, bg: string, border: string }) => (
-    <div className={`flex flex-col p-2.5 rounded-xl border ${bg} ${border}`}>
-        <span className={`text-[10px] font-bold uppercase opacity-80 mb-0.5 ${color}`}>{label}</span>
-        <span className="text-lg font-mono font-bold text-white">{value}</span>
+const UnitBox = ({ label, value }: { label: string, value: string }) => (
+    <div className="flex flex-col items-center p-2 rounded-xl bg-white/5 border border-white/5">
+        <span className="text-[9px] font-bold uppercase text-slate-400 mb-1">{label}</span>
+        <span className="text-sm font-mono font-bold text-white leading-none">{value}</span>
     </div>
 );
 
