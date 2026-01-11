@@ -2,10 +2,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Language } from '../../types';
 import { TRANSLATIONS } from '../../constants';
-import { RotateCcw, Undo2, MapPin, Layers, Crosshair, Plus, ArrowLeft, Ruler, ChevronDown, ChevronUp, Maximize2, Minimize2 } from 'lucide-react';
+import { RotateCcw, Undo2, MapPin, Layers, Crosshair, Plus, ArrowLeft, Ruler, ChevronDown, ChevronUp } from 'lucide-react';
 import { triggerHaptic } from '../../utils/common';
 import { clsx } from 'clsx';
-import { Button } from '../Button';
 
 // Declare Leaflet global
 declare const L: any;
@@ -39,12 +38,6 @@ const AreaCalculator = ({ lang, onBack }: { lang: Language, onBack: () => void }
 
         // Add Default Layer
         updateMapLayer(map, 'SATELLITE');
-
-        // Add "Click to Add" listener (Optional backup)
-        map.on('click', (e: any) => {
-            // We rely on crosshair, but clicking map can also add point for desktop users
-            // handleAddPoint(e.latlng.lat, e.latlng.lng);
-        });
 
         // Try to locate user immediately
         handleLocate();
@@ -253,48 +246,60 @@ const AreaCalculator = ({ lang, onBack }: { lang: Language, onBack: () => void }
             {/* 4. Controls & Results (Bottom Overlay) */}
             <div className="absolute bottom-0 inset-x-0 z-[500] flex flex-col items-center justify-end pointer-events-none pb-safe-bottom">
                 
-                {/* Result Card (Floating above controls) */}
-                <div className="w-full max-w-md px-4 mb-4 pointer-events-auto">
-                     <div className={clsx(
-                         "glass-panel rounded-3xl border border-white/10 bg-slate-900/70 backdrop-blur-xl transition-all duration-300 shadow-2xl overflow-hidden",
-                         isDetailsOpen ? "p-5" : "p-4"
-                     )}>
-                         {/* Header / Collapsed View */}
-                         <div 
-                             className="flex items-center justify-between cursor-pointer" 
-                             onClick={() => setIsDetailsOpen(!isDetailsOpen)}
-                         >
-                             <div>
-                                 <p className="text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-0.5">{t.total_area}</p>
-                                 <div className="flex items-baseline gap-2">
-                                     <h2 className="text-4xl font-black text-white font-mono tracking-tight">{acre.toFixed(2)}</h2>
-                                     <span className="text-sm font-bold text-cyan-400 self-end mb-1 uppercase">{t.unit_acre}</span>
-                                 </div>
-                             </div>
-                             
-                             <div className="flex items-center gap-3">
-                                 {/* Mini Stats (Visible when collapsed) */}
-                                 {!isDetailsOpen && (
-                                     <div className="hidden sm:flex flex-col items-end text-right">
-                                         <span className="text-xs font-mono text-white/90">{guntha.toFixed(2)} Guntha</span>
-                                         <span className="text-[10px] font-mono text-white/60">{sqMeter.toFixed(0)} Sq.m</span>
-                                     </div>
-                                 )}
-                                 <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors">
-                                     {isDetailsOpen ? <ChevronDown size={18} className="text-slate-300"/> : <ChevronUp size={18} className="text-slate-300"/>}
-                                 </div>
-                             </div>
-                         </div>
+                {/* Condition: Show Area Calculation ONLY after 4 points */}
+                {points.length >= 4 && (
+                    <div className="w-full max-w-md px-4 mb-2 pointer-events-auto animate-enter">
+                        <div className={clsx(
+                            "glass-panel rounded-3xl border border-white/10 bg-slate-900/80 backdrop-blur-xl transition-all duration-300 shadow-2xl overflow-hidden",
+                            isDetailsOpen ? "p-5" : "p-4"
+                        )}>
+                            {/* Header / Collapsed View */}
+                            <div 
+                                className="flex items-center justify-between cursor-pointer" 
+                                onClick={() => setIsDetailsOpen(!isDetailsOpen)}
+                            >
+                                <div>
+                                    <p className="text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-0.5">{t.total_area}</p>
+                                    <div className="flex items-baseline gap-2">
+                                        <h2 className="text-4xl font-black text-white font-mono tracking-tight">{acre.toFixed(2)}</h2>
+                                        <span className="text-sm font-bold text-cyan-400 self-end mb-1 uppercase">{t.unit_acre}</span>
+                                    </div>
+                                </div>
+                                
+                                <div className="flex items-center gap-3">
+                                    {!isDetailsOpen && (
+                                        <div className="hidden sm:flex flex-col items-end text-right">
+                                            <span className="text-xs font-mono text-white/90">{guntha.toFixed(2)} Guntha</span>
+                                            <span className="text-[10px] font-mono text-white/60">{sqMeter.toFixed(0)} Sq.m</span>
+                                        </div>
+                                    )}
+                                    <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors">
+                                        {isDetailsOpen ? <ChevronDown size={18} className="text-slate-300"/> : <ChevronUp size={18} className="text-slate-300"/>}
+                                    </div>
+                                </div>
+                            </div>
 
-                         {/* Expanded Details Grid */}
-                         <div className={clsx("grid grid-cols-4 gap-2 pt-4 mt-4 border-t border-white/10", !isDetailsOpen && "hidden")}>
-                             <UnitBox label={t.unit_guntha} value={guntha.toFixed(2)} />
-                             <UnitBox label={t.unit_bigha} value={bigha.toFixed(2)} />
-                             <UnitBox label={t.unit_hectare} value={hectare.toFixed(2)} />
-                             <UnitBox label={t.unit_sqm} value={sqMeter.toFixed(0)} />
-                         </div>
-                     </div>
-                </div>
+                            {/* Expanded Details Grid */}
+                            <div className={clsx("grid grid-cols-4 gap-2 pt-4 mt-4 border-t border-white/10", !isDetailsOpen && "hidden")}>
+                                <UnitBox label={t.unit_guntha} value={guntha.toFixed(2)} />
+                                <UnitBox label={t.unit_bigha} value={bigha.toFixed(2)} />
+                                <UnitBox label={t.unit_hectare} value={hectare.toFixed(2)} />
+                                <UnitBox label={t.unit_sqm} value={sqMeter.toFixed(0)} />
+                            </div>
+                        </div>
+                    </div>
+                )}
+                
+                {/* Helper Text (Only if < 4 points) */}
+                {points.length < 4 && (
+                    <div className="mb-4 bg-slate-900/60 backdrop-blur-md border border-white/10 px-4 py-1.5 rounded-full pointer-events-auto">
+                        <p className="text-xs font-bold text-white tracking-wide">
+                            {points.length === 0 ? "Tap + to mark first corner" : 
+                             points.length < 3 ? "Mark next corner" : 
+                             "Mark final corner to see area"}
+                        </p>
+                    </div>
+                )}
 
                 {/* Main Controls Row */}
                 <div className="w-full max-w-md px-6 mb-6 flex items-center justify-between pointer-events-auto">

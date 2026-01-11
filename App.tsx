@@ -17,11 +17,21 @@ import SchemesView from './components/views/SchemesView';
 import SchemeDetailView from './components/views/SchemeDetailView';
 import MarketView from './components/views/MarketView';
 import WeatherView from './components/views/WeatherView';
+import ProfileView from './components/views/ProfileView';
 
 const App = () => {
   const [view, setView] = useState<ViewState>('DASHBOARD');
   const [lang, setLang] = useState<Language>('mr');
-  const [user] = useState<UserProfile>({ name: "Suresh Patil", village: "Satara", district: "Satara", landSize: "5 Acres", crop: "Soyabean" });
+  
+  // Changed default name from 'Suresh Patil' to 'Patil' as requested
+  const [user, setUser] = useState<UserProfile>({ 
+    name: "Patil", 
+    village: "Satara", 
+    district: "Satara", 
+    landSize: "5 Acres", 
+    crop: "Soyabean" 
+  });
+  
   const [selectedScheme, setSelectedScheme] = useState<any>(null);
 
   const getView = () => {
@@ -41,17 +51,22 @@ const App = () => {
          return <MarketView lang={lang} onBack={() => setView('DASHBOARD')} />;
        case 'WEATHER':
          return <WeatherView lang={lang} onBack={() => setView('DASHBOARD')} />;
+       case 'PROFILE':
+         return <ProfileView lang={lang} currentUser={user} onSave={(u) => { setUser(u); setView('DASHBOARD'); }} onBack={() => setView('DASHBOARD')} />;
        default: return <Dashboard lang={lang} user={user} onNavigate={setView} />;
     }
   };
 
+  // Hide Sidebar/Nav for specific full-screen views
+  const isFullScreen = view === 'VOICE_ASSISTANT' || view === 'AREA_CALCULATOR';
+
   return (
     <div className="flex h-[100dvh] w-full font-sans bg-transparent text-slate-100 selection:bg-cyan-500/30">
-       {view !== 'VOICE_ASSISTANT' && <Sidebar view={view} setView={setView} lang={lang} />}
+       {!isFullScreen && <Sidebar view={view} setView={setView} lang={lang} />}
        <main className="flex-1 h-full relative z-0 w-full max-w-[100vw] overflow-hidden">
           {getView()}
        </main>
-       {view !== 'VOICE_ASSISTANT' && <MobileNav view={view} setView={setView} />}
+       {!isFullScreen && <MobileNav view={view} setView={setView} />}
     </div>
   );
 };

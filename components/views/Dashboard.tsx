@@ -1,34 +1,103 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { UserProfile, Language, ViewState } from '../../types';
 import { TRANSLATIONS, SCHEMES_DATA } from '../../constants';
-import { Clock, UserCircle, MapPin, Sun, Wind, Droplets, Mic, ArrowUpRight, ScanLine, FlaskConical, TrendingUp, Map as MapIcon, Landmark } from 'lucide-react';
+import { Clock, UserCircle, MapPin, Sun, Wind, Droplets, Mic, ArrowUpRight, ScanLine, FlaskConical, TrendingUp, Map as MapIcon, Landmark, Loader2, CloudSun, Cloud, CloudRain, Snowflake, CloudLightning, Sprout } from 'lucide-react';
 import { formatDate, triggerHaptic } from '../../utils/common';
+import { clsx } from 'clsx';
+
+// WMO Weather Code Mapping (Simple version for Dashboard)
+const getWeatherInfo = (code: number, isDay: number) => {
+    if (code === 0) return { icon: isDay ? Sun : CloudSun, label: isDay ? 'Sunny' : 'Clear', color: isDay ? 'text-amber-300' : 'text-indigo-300' };
+    if (code >= 1 && code <= 3) return { icon: Cloud, label: 'Partly Cloudy', color: 'text-blue-300' };
+    if (code >= 45 && code <= 48) return { icon: Cloud, label: 'Foggy', color: 'text-slate-300' };
+    if (code >= 51 && code <= 67) return { icon: CloudRain, label: 'Rainy', color: 'text-cyan-400' };
+    if (code >= 71 && code <= 77) return { icon: Snowflake, label: 'Snow', color: 'text-white' };
+    if (code >= 95) return { icon: CloudLightning, label: 'Thunderstorm', color: 'text-yellow-400' };
+    return { icon: Sun, label: 'Unknown', color: 'text-white' };
+};
 
 const Dashboard = ({ lang, user, onNavigate }: { lang: Language, user: UserProfile, onNavigate: (v: ViewState) => void }) => {
   const t = TRANSLATIONS[lang];
   const schemes = SCHEMES_DATA[lang as Language] || SCHEMES_DATA['en'];
 
+  const [weatherData, setWeatherData] = useState<any>(null);
+  const [locationName, setLocationName] = useState<string>(user.village);
+  const [loadingWeather, setLoadingWeather] = useState(true);
+
+  // Fetch Live Weather & Location
+  useEffect(() => {
+    const fetchWeather = async (lat: number, lng: number) => {
+        try {
+            // 1. Reverse Geocoding
+            try {
+                const locRes = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=en`);
+                const locData = await locRes.json();
+                const city = locData.locality || locData.city || locData.principalSubdivision || user.village;
+                setLocationName(city);
+            } catch(e) {
+                // Keep default user village if reverse geo fails
+            }
+
+            // 2. Weather Data
+            const wRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,relative_humidity_2m,is_day,weather_code,wind_speed_10m&timezone=auto`);
+            const wData = await wRes.json();
+            setWeatherData(wData);
+        } catch (e) {
+            console.error("Weather Fetch Error", e);
+        } finally {
+            setLoadingWeather(false);
+        }
+    };
+
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+            (pos) => fetchWeather(pos.coords.latitude, pos.coords.longitude),
+            (err) => {
+                console.warn("Location denied, using default");
+                fetchWeather(19.75, 75.71); // Default to Maharashtra center
+            }
+        );
+    } else {
+        fetchWeather(19.75, 75.71);
+    }
+  }, [user.village]);
+
+  const weatherInfo = weatherData ? getWeatherInfo(weatherData.current.weather_code, weatherData.current.is_day) : null;
+
   return (
     <div className="h-full w-full overflow-y-auto overflow-x-hidden hide-scrollbar pb-32 lg:pl-32 lg:pt-6 lg:pr-6 overscroll-y-contain scroll-smooth">
       <div className="w-full max-w-7xl mx-auto px-4 py-4 space-y-6 pt-safe-top">
         
-        {/* Header */}
-        <header className="flex justify-between items-start animate-enter mt-2">
-           <div>
-              <div className="flex items-center gap-2 mb-2 glass-panel w-fit px-3 py-1 rounded-full bg-slate-800/50">
-                 <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse shadow-[0_0_8px_#4ade80]"></span>
-                 <p className="text-green-400 font-bold text-[10px] uppercase tracking-widest">{t.live_system}</p>
+        {/* === BRAND HEADER START === */}
+        <header className="flex justify-between items-center animate-enter mt-2">
+           <div className="flex items-center gap-4">
+              {/* Logo Orb Animation */}
+              <div className="relative w-14 h-14">
+                  <div className="absolute inset-0 rounded-full border-[1.5px] border-cyan-500/40 border-t-cyan-400 border-l-transparent animate-[spin_3s_linear_infinite]"></div>
+                  <div className="absolute inset-1 rounded-full border-[1.5px] border-emerald-500/40 border-b-emerald-400 border-r-transparent animate-[spin_4s_linear_infinite_reverse]"></div>
+                  <div className="absolute inset-2 bg-gradient-to-br from-cyan-900/50 to-emerald-900/50 rounded-full backdrop-blur-sm border border-white/10 flex items-center justify-center shadow-[0_0_15px_rgba(34,211,238,0.2)]">
+                      <Sprout size={20} className="text-cyan-300 drop-shadow-[0_0_5px_rgba(34,211,238,0.8)]" />
+                  </div>
               </div>
-              <h1 className="text-3xl font-black text-white tracking-tight drop-shadow-sm leading-tight mt-1">
-                 {t.welcome_title} <br/>
-                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-blue-400 to-fuchsia-400 drop-shadow-[0_0_10px_rgba(6,182,212,0.3)]">{user.name.split(' ')[0]}</span>
-              </h1>
-              <p className="text-slate-400 font-medium text-xs mt-2 flex items-center gap-1.5">
-                 <Clock size={12}/> {formatDate()}
-              </p>
+
+              {/* Animated Text Title */}
+              <div className="flex flex-col">
+                  <h1 className="text-2xl font-black tracking-tight leading-none text-white relative">
+                      <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-emerald-300 to-cyan-400 bg-[length:200%_auto] animate-[text-shimmer_3s_linear_infinite]">
+                        AI Krushi
+                      </span>{' '}
+                      <span className="text-slate-100">Mitra</span>
+                      <span className="absolute -top-1 -right-2 flex h-2 w-2">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-500"></span>
+                      </span>
+                  </h1>
+                  <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mt-1">Smart Farming Assistant</p>
+              </div>
            </div>
            
+           {/* Profile Button */}
            <button onClick={() => { onNavigate('PROFILE'); triggerHaptic(); }} className="relative group">
               <div className="absolute inset-0 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full blur opacity-20 group-hover:opacity-40 transition-opacity"></div>
               <div className="w-12 h-12 rounded-full glass-panel border border-white/20 flex items-center justify-center relative overflow-hidden">
@@ -36,35 +105,67 @@ const Dashboard = ({ lang, user, onNavigate }: { lang: Language, user: UserProfi
               </div>
            </button>
         </header>
+        
+        {/* Welcome Message */}
+        <div className="animate-enter delay-75">
+             <div className="flex items-center gap-2 mb-1">
+                 <Clock size={12} className="text-emerald-400"/> 
+                 <span className="text-emerald-400 text-xs font-bold uppercase tracking-wider">{formatDate()}</span>
+             </div>
+             <h2 className="text-xl text-slate-300 font-medium">
+                 {t.welcome_title} <span className="text-white font-bold">{user.name.split(' ')[0]}</span>
+             </h2>
+        </div>
+        {/* === BRAND HEADER END === */}
 
         {/* Bento Grid Layout */}
         <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 auto-rows-auto">
            
-           {/* Weather Card */}
+           {/* Weather Card (Live) */}
            <div onClick={() => { onNavigate('WEATHER'); triggerHaptic(); }} className="col-span-1 md:col-span-2 row-span-2 relative group cursor-pointer overflow-hidden rounded-[2.5rem] border border-white/10 text-white shadow-2xl shadow-purple-900/20 animate-enter delay-100 transition-all active:scale-[0.98]">
               <div className="absolute inset-0 bg-gradient-to-br from-indigo-700 via-purple-800 to-indigo-900 backdrop-blur-xl"></div>
               <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-overlay"></div>
               <div className="absolute -top-10 -right-10 w-48 h-48 bg-amber-400/30 rounded-full blur-[60px] animate-pulse"></div>
-              <div className="absolute top-4 right-4 float-3d">
-                  <Sun size={64} className="text-amber-300 drop-shadow-[0_0_30px_rgba(251,191,36,0.6)]" fill="rgba(251,191,36,0.5)"/>
-              </div>
+              
               <div className="relative p-6 z-10 min-h-[180px] flex flex-col justify-between h-full">
                  <div className="glass-panel w-fit px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 bg-black/20 border-white/10">
-                    <MapPin size={10} className="text-cyan-300"/> {user.village}
+                    <MapPin size={10} className="text-cyan-300"/> {locationName}
                  </div>
+                 
                  <div className="mt-4">
-                    <h2 className="text-7xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-b from-white to-white/60 drop-shadow-lg">28°</h2>
-                    <p className="text-lg font-medium text-indigo-200 -mt-2 mb-4">Sunny & Clear</p>
-                    <div className="grid grid-cols-2 gap-3">
-                       <div className="glass-panel p-2 rounded-xl flex items-center gap-2 bg-white/5">
-                          <Wind size={16} className="text-cyan-300"/> 
-                          <span className="font-bold text-sm">12 km/h</span>
-                       </div>
-                       <div className="glass-panel p-2 rounded-xl flex items-center gap-2 bg-white/5">
-                          <Droplets size={16} className="text-blue-300"/> 
-                          <span className="font-bold text-sm">45%</span>
-                       </div>
-                    </div>
+                    {loadingWeather ? (
+                        <div className="flex flex-col gap-2 py-4">
+                             <Loader2 className="animate-spin text-white/50" size={24} />
+                             <span className="text-xs text-white/50 font-medium">Updating Weather...</span>
+                        </div>
+                    ) : weatherData && weatherInfo ? (
+                        <>
+                             {/* Dynamic Icon Positioned absolutely like the static one was */}
+                             <div className="absolute top-4 right-4 float-3d">
+                                 <weatherInfo.icon size={64} className={clsx(weatherInfo.color, "drop-shadow-[0_0_30px_rgba(255,255,255,0.3)]")} />
+                             </div>
+
+                             <h2 className="text-7xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-b from-white to-white/60 drop-shadow-lg">
+                                 {Math.round(weatherData.current.temperature_2m)}°
+                             </h2>
+                             <p className="text-lg font-medium text-indigo-200 -mt-2 mb-4">{weatherInfo.label}</p>
+                             <div className="grid grid-cols-2 gap-3 max-w-[200px]">
+                                <div className="glass-panel p-2 rounded-xl flex items-center gap-2 bg-white/5">
+                                   <Wind size={16} className="text-cyan-300"/> 
+                                   <span className="font-bold text-sm">{weatherData.current.wind_speed_10m} km/h</span>
+                                </div>
+                                <div className="glass-panel p-2 rounded-xl flex items-center gap-2 bg-white/5">
+                                   <Droplets size={16} className="text-blue-300"/> 
+                                   <span className="font-bold text-sm">{weatherData.current.relative_humidity_2m}%</span>
+                                </div>
+                             </div>
+                        </>
+                    ) : (
+                        <div className="py-4">
+                            <h2 className="text-5xl font-black text-white/50">--°</h2>
+                            <p className="text-white/50 text-sm">Weather Unavailable</p>
+                        </div>
+                    )}
                  </div>
               </div>
            </div>
