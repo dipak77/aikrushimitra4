@@ -385,7 +385,7 @@ const Dashboard = ({ lang, user, onNavigate }: any) => {
 // SimpleView Component
 const SimpleView = ({ title, children, onBack }: { title: string, children: React.ReactNode, onBack: () => void }) => {
   return (
-    <div className="h-full w-full flex flex-col bg-[#020617] animate-enter">
+    <div className="h-full w-full flex flex-col bg-[#020617] animate-enter lg:pl-32">
        <div className="flex items-center gap-4 p-6 pt-safe-top z-10 sticky top-0 bg-[#020617]/80 backdrop-blur-md border-b border-white/5">
           <button onClick={() => { onBack(); triggerHaptic(); }} className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-slate-300 hover:bg-white/10 active:scale-95 transition-all">
              <ArrowLeft size={20}/>
@@ -441,7 +441,7 @@ const SchemeDetailView = ({ scheme, lang, onBack }: { scheme: any, lang: Languag
     const t = TRANSLATIONS[lang];
 
     return (
-        <div className="h-full w-full flex flex-col bg-[#020617] animate-enter">
+        <div className="h-full w-full flex flex-col bg-[#020617] animate-enter lg:pl-32">
             {/* Header with Hero Gradient */}
             <div className={`relative w-full h-64 bg-gradient-to-br ${scheme.grad} shrink-0`}>
                 <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-overlay"></div>

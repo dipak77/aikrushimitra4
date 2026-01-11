@@ -1,16 +1,52 @@
+
 <!DOCTYPE html>
 <html lang="mr" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>AI कृषी मित्र</title>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Noto+Sans+Devanagari:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- 1. Tailwind CDN (As requested) -->
+    <script src="https://cdn.tailwindcss.com"></script>
     <script>
-      // This object will be populated by the server at runtime
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            colors: {
+              // Matches standard Tailwind colors used in app
+            }
+          }
+        }
+      }
+    </script>
+
+    <!-- 2. Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Noto+Sans+Devanagari:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- 3. Environment Variables -->
+    <script>
       window.ENV = {
         API_KEY: "" 
       };
     </script>
+
+    <!-- 4. Critical CSS (Fallback) -->
+    <style>
+      html, body { 
+        background-color: #020617; 
+        color: #f1f5f9; 
+        margin: 0; 
+        padding: 0; 
+        height: 100%; 
+        width: 100%;
+        overflow: hidden; 
+      }
+      #root {
+        height: 100%;
+        width: 100%;
+      }
+    </style>
 <script type="importmap">
 {
   "imports": {
@@ -21,25 +57,30 @@
     "lucide-react": "https://esm.sh/lucide-react@^0.562.0",
     "clsx": "https://esm.sh/clsx@^2.1.1",
     "tailwind-merge": "https://esm.sh/tailwind-merge@^3.4.0",
+    "dotenv/": "https://esm.sh/dotenv@^17.2.3/",
     "express": "https://esm.sh/express@^5.2.1",
     "path": "https://esm.sh/path@^0.12.7",
     "fs": "https://esm.sh/fs@^0.0.1-security",
     "url": "https://esm.sh/url@^0.11.4",
     "vite": "https://esm.sh/vite@^7.3.1",
-    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2",
-    "dotenv/": "https://esm.sh/dotenv@^17.2.3/"
+    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2"
   }
 }
 </script>
 </head>
-<body class="text-slate-100 selection:bg-fuchsia-500 selection:text-white">
+<body class="selection:bg-fuchsia-500 selection:text-white">
+    <!-- Background Layer (z-0) -->
     <div class="premium-bg">
         <div class="gradient-orb-1"></div>
         <div class="gradient-orb-2"></div>
         <div class="gradient-orb-3"></div>
         <div class="curve-overlay"></div>
     </div>
-    <div id="root" class="h-full w-full relative"></div>
+    
+    <!-- Content Layer (z-10) -->
+    <div id="root"></div>
+    
+    <!-- 5. App Entry - REMOVED IMPORTMAP to fix Vite Build -->
     <script type="module" src="/index.tsx"></script>
 </body>
 </html>

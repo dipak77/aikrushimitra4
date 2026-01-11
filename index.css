@@ -7,29 +7,38 @@
   --safe-bottom: env(safe-area-inset-bottom);
 }
 
-body {
-  @apply bg-slate-950 text-slate-100;
+html, body {
+  @apply h-full w-full bg-slate-950 text-slate-100;
+  margin: 0;
+  padding: 0;
   overscroll-behavior-y: none;
 }
 
+/* Background Layer - z-0 */
 .premium-bg {
-  @apply fixed inset-0 -z-50 overflow-hidden bg-slate-950;
+  @apply fixed inset-0 z-0 overflow-hidden pointer-events-none;
+  background: radial-gradient(circle at center, #1e1b4b 0%, #020617 100%);
 }
 
 .gradient-orb-1 {
-  @apply absolute top-[-10%] left-[-10%] w-[70vw] h-[70vw] rounded-full bg-indigo-900/30 blur-[100px] animate-pulse;
+  @apply absolute top-[-10%] left-[-10%] w-[70vw] h-[70vw] rounded-full bg-indigo-600/20 blur-[120px] animate-pulse mix-blend-screen;
 }
 
 .gradient-orb-2 {
-  @apply absolute bottom-[-10%] right-[-10%] w-[70vw] h-[70vw] rounded-full bg-fuchsia-900/20 blur-[120px];
+  @apply absolute bottom-[-10%] right-[-10%] w-[70vw] h-[70vw] rounded-full bg-fuchsia-600/20 blur-[120px] mix-blend-screen;
 }
 
 .gradient-orb-3 {
-  @apply absolute top-[40%] left-[30%] w-[50vw] h-[50vw] rounded-full bg-cyan-900/20 blur-[90px];
+  @apply absolute top-[40%] left-[30%] w-[60vw] h-[60vw] rounded-full bg-cyan-600/15 blur-[100px] mix-blend-screen;
 }
 
 .curve-overlay {
-  @apply absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-overlay pointer-events-none;
+  @apply absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-overlay;
+}
+
+/* Content Layer - z-10 */
+#root {
+  @apply relative z-10 h-full w-full overflow-hidden;
 }
 
 .glass-panel {
