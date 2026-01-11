@@ -24,14 +24,18 @@
     <!-- 2. Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Noto+Sans+Devanagari:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     
-    <!-- 3. Environment Variables -->
+    <!-- 3. Leaflet Maps -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+    <!-- 4. Environment Variables -->
     <script>
       window.ENV = {
         API_KEY: "" 
       };
     </script>
 
-    <!-- 4. Critical CSS (Fallback) -->
+    <!-- 5. Critical CSS (Fallback) -->
     <style>
       html, body { 
         background-color: #020617; 
@@ -45,6 +49,23 @@
       #root {
         height: 100%;
         width: 100%;
+      }
+      /* Leaflet overrides for dark mode feel */
+      .leaflet-container {
+        background: #020617;
+        font-family: inherit;
+      }
+      .leaflet-control-attribution {
+        background: rgba(0,0,0,0.5) !important;
+        color: #aaa !important;
+      }
+      .leaflet-bar a {
+        background-color: #1e293b !important;
+        color: white !important;
+        border-bottom: 1px solid #334155 !important;
+      }
+      .leaflet-bar a:hover {
+        background-color: #334155 !important;
       }
     </style>
 <script type="importmap">
@@ -80,7 +101,7 @@
     <!-- Content Layer (z-10) -->
     <div id="root"></div>
     
-    <!-- 5. App Entry - REMOVED IMPORTMAP to fix Vite Build -->
+    <!-- 6. App Entry -->
     <script type="module" src="/index.tsx"></script>
 </body>
 </html>
