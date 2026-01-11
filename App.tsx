@@ -39,7 +39,7 @@ const App = () => {
   const getView = () => {
     switch(view) {
        case 'SPLASH': return <SplashScreen onComplete={() => setView('DASHBOARD')} />;
-       case 'DASHBOARD': return <Dashboard lang={lang} user={user} onNavigate={setView} />;
+       case 'DASHBOARD': return <Dashboard lang={lang} setLang={setLang} user={user} onNavigate={setView} />;
        case 'VOICE_ASSISTANT': return <VoiceAssistant lang={lang} user={user} onBack={() => setView('DASHBOARD')} />;
        case 'DISEASE_DETECTOR': return <DiseaseDetector lang={lang} onBack={() => setView('DASHBOARD')} />;
        case 'SOIL': return <SoilAnalysis lang={lang} onBack={() => setView('DASHBOARD')} />;
@@ -56,7 +56,7 @@ const App = () => {
          return <WeatherView lang={lang} onBack={() => setView('DASHBOARD')} />;
        case 'PROFILE':
          return <ProfileView lang={lang} currentUser={user} onSave={(u) => { setUser(u); setView('DASHBOARD'); }} onBack={() => setView('DASHBOARD')} />;
-       default: return <Dashboard lang={lang} user={user} onNavigate={setView} />;
+       default: return <Dashboard lang={lang} setLang={setLang} user={user} onNavigate={setView} />;
     }
   };
 

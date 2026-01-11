@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { UserProfile, Language, ViewState } from '../../types';
 import { TRANSLATIONS, SCHEMES_DATA } from '../../constants';
-import { Clock, UserCircle, MapPin, Sun, Wind, Droplets, Mic, ArrowUpRight, ScanLine, FlaskConical, TrendingUp, Map as MapIcon, Landmark, Loader2, CloudSun, Cloud, CloudRain, Snowflake, CloudLightning, Sprout } from 'lucide-react';
+import { Clock, UserCircle, MapPin, Sun, Wind, Droplets, Mic, ArrowUpRight, ScanLine, FlaskConical, TrendingUp, Map as MapIcon, Landmark, Loader2, CloudSun, Cloud, CloudRain, Snowflake, CloudLightning, Sprout, Languages } from 'lucide-react';
 import { formatDate, triggerHaptic } from '../../utils/common';
 import { clsx } from 'clsx';
 
@@ -17,13 +17,21 @@ const getWeatherInfo = (code: number, isDay: number) => {
     return { icon: Sun, label: 'Unknown', color: 'text-white' };
 };
 
-const Dashboard = ({ lang, user, onNavigate }: { lang: Language, user: UserProfile, onNavigate: (v: ViewState) => void }) => {
+const Dashboard = ({ lang, setLang, user, onNavigate }: { lang: Language, setLang: (l: Language) => void, user: UserProfile, onNavigate: (v: ViewState) => void }) => {
   const t = TRANSLATIONS[lang];
   const schemes = SCHEMES_DATA[lang as Language] || SCHEMES_DATA['en'];
 
   const [weatherData, setWeatherData] = useState<any>(null);
   const [locationName, setLocationName] = useState<string>(user.village);
   const [loadingWeather, setLoadingWeather] = useState(true);
+
+  // Cycle Language Function
+  const cycleLanguage = () => {
+      triggerHaptic();
+      if (lang === 'mr') setLang('hi');
+      else if (lang === 'hi') setLang('en');
+      else setLang('mr');
+  };
 
   // Fetch Live Weather & Location
   useEffect(() => {
@@ -100,13 +108,26 @@ const Dashboard = ({ lang, user, onNavigate }: { lang: Language, user: UserProfi
               </div>
            </div>
            
-           {/* Profile Button */}
-           <button onClick={() => { onNavigate('PROFILE'); triggerHaptic(); }} className="relative group">
-              <div className="absolute inset-0 bg-gradient-to-r from-emerald-500 to-cyan-500 rounded-full blur opacity-20 group-hover:opacity-40 transition-opacity"></div>
-              <div className="w-12 h-12 rounded-full glass-panel border border-white/20 flex items-center justify-center relative overflow-hidden">
-                  <UserCircle className="text-slate-200 w-full h-full p-1" strokeWidth={1.5}/>
-              </div>
-           </button>
+           <div className="flex items-center gap-3">
+               {/* Language Switcher */}
+               <button 
+                  onClick={cycleLanguage} 
+                  className="h-12 px-4 rounded-full glass-panel border border-white/20 flex items-center gap-2 active:scale-95 transition-all hover:bg-white/10"
+               >
+                  <Languages size={18} className="text-cyan-400" />
+                  <span className="text-xs font-bold text-white uppercase tracking-wider">
+                      {lang === 'mr' ? 'मराठी' : lang === 'hi' ? 'हिंदी' : 'ENG'}
+                  </span>
+               </button>
+
+               {/* Profile Button */}
+               <button onClick={() => { onNavigate('PROFILE'); triggerHaptic(); }} className="relative group">
+                  <div className="absolute inset-0 bg-gradient-to-r from-emerald-500 to-cyan-500 rounded-full blur opacity-20 group-hover:opacity-40 transition-opacity"></div>
+                  <div className="w-12 h-12 rounded-full glass-panel border border-white/20 flex items-center justify-center relative overflow-hidden">
+                      <UserCircle className="text-slate-200 w-full h-full p-1" strokeWidth={1.5}/>
+                  </div>
+               </button>
+           </div>
         </header>
         
         {/* Welcome Message */}
