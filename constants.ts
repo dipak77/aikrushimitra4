@@ -1,5 +1,6 @@
 
 import { Language } from './types';
+import { ScanLine, Store, Mic, FlaskConical, Map as MapIcon, TrendingUp } from 'lucide-react';
 
 export const TRANSLATIONS: Record<Language, any> = {
   mr: {
@@ -335,6 +336,30 @@ export const TRANSLATIONS: Record<Language, any> = {
     author: "Author",
     date_format: "Date",
   }
+};
+
+export const PROMO_NOTIFICATIONS: Record<Language, any[]> = {
+  mr: [
+    { id: 'scan', title: 'पीक डॉक्टर वापरला का?', desc: 'पानाचा फोटो काढा आणि रोगाचे निदान मिळवा.', icon: ScanLine, view: 'DISEASE_DETECTOR', color: 'text-emerald-400' },
+    { id: 'market', title: 'बाजार भाव तपासले?', desc: 'तुमच्या जवळच्या मार्केटचे ताजे भाव पहा.', icon: Store, view: 'MARKET', color: 'text-amber-400' },
+    { id: 'voice', title: 'बोलून माहिती विचारा!', desc: 'माईक बटण दाबा आणि हवी ती माहिती मिळवा.', icon: Mic, view: 'VOICE_ASSISTANT', color: 'text-cyan-400' },
+    { id: 'soil', title: 'जमिनीची सुपीकता वाढवा!', desc: 'माती परीक्षण अहवालानुसार खतांचा सल्ला घ्या.', icon: FlaskConical, view: 'SOIL', color: 'text-purple-400' },
+    { id: 'area', title: 'शेत मोजायचे आहे?', desc: 'सॅटेलाईटद्वारे अचूक क्षेत्र मोजणी करा.', icon: MapIcon, view: 'AREA_CALCULATOR', color: 'text-blue-400' },
+  ],
+  hi: [
+    { id: 'scan', title: 'फसल डॉक्टर आजमाया?', desc: 'पत्ती की फोटो लें और रोग का पता लगाएं।', icon: ScanLine, view: 'DISEASE_DETECTOR', color: 'text-emerald-400' },
+    { id: 'market', title: 'मंडी भाव देखे?', desc: 'अपने नजदीकी मंडी के ताज़ा भाव देखें।', icon: Store, view: 'MARKET', color: 'text-amber-400' },
+    { id: 'voice', title: 'बोलकर जानकारी पाएं!', desc: 'माइक बटन दबाएं और सवाल पूछें।', icon: Mic, view: 'VOICE_ASSISTANT', color: 'text-cyan-400' },
+    { id: 'soil', title: 'मिट्टी की सेहत सुधारें!', desc: 'मृदा परीक्षण के अनुसार खाद की सलाह लें।', icon: FlaskConical, view: 'SOIL', color: 'text-purple-400' },
+    { id: 'area', title: 'खेत मापना है?', desc: 'सैटेलाइट से सटीक क्षेत्रफल मापें।', icon: MapIcon, view: 'AREA_CALCULATOR', color: 'text-blue-400' },
+  ],
+  en: [
+    { id: 'scan', title: 'Try Crop Doctor!', desc: 'Snap a photo of leaf to detect diseases.', icon: ScanLine, view: 'DISEASE_DETECTOR', color: 'text-emerald-400' },
+    { id: 'market', title: 'Check Market Rates!', desc: 'Get live prices from nearby Mandis.', icon: Store, view: 'MARKET', color: 'text-amber-400' },
+    { id: 'voice', title: 'Just Ask AI!', desc: 'Tap the mic and speak in your language.', icon: Mic, view: 'VOICE_ASSISTANT', color: 'text-cyan-400' },
+    { id: 'soil', title: 'Boost Soil Health!', desc: 'Get fertilizer advice based on NPK.', icon: FlaskConical, view: 'SOIL', color: 'text-purple-400' },
+    { id: 'area', title: 'Measure Farm Area!', desc: 'Calculate accurate land size via Satellite.', icon: MapIcon, view: 'AREA_CALCULATOR', color: 'text-blue-400' },
+  ]
 };
 
 export const SCHEMES_DATA = {

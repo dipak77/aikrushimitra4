@@ -5,6 +5,7 @@ import { ViewState, Language, UserProfile } from './types';
 // Layout
 import Sidebar from './components/layout/Sidebar';
 import MobileNav from './components/layout/MobileNav';
+import NotificationSystem from './components/NotificationSystem';
 
 // Views
 import Dashboard from './components/views/Dashboard';
@@ -65,6 +66,10 @@ const App = () => {
 
   return (
     <div className="flex h-[100dvh] w-full font-sans bg-transparent text-slate-100 selection:bg-cyan-500/30">
+       
+       {/* Feature Notification System (Global) */}
+       {!isFullScreen && <NotificationSystem lang={lang} onNavigate={setView} />}
+
        {!isFullScreen && <Sidebar view={view} setView={setView} lang={lang} />}
        <main className="flex-1 h-full relative z-0 w-full max-w-[100vw] overflow-hidden">
           {getView()}

@@ -1,11 +1,39 @@
 
-import React from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { ViewState } from '../../types';
 import { LayoutDashboard, Store, Mic, Landmark, Map as MapIcon } from 'lucide-react';
 import { clsx } from 'clsx';
 import { triggerHaptic } from '../../utils/common';
 
 const MobileNav = ({ view, setView }: { view: ViewState, setView: (v: ViewState) => void }) => {
+  const [isVisible, setIsVisible] = useState(true);
+  const lastScrollY = useRef(0);
+  
+  // Smart Scroll Detection
+  useEffect(() => {
+    // We use capture: true to detect scroll events from any child container
+    const handleScroll = (e: Event) => {
+        // Safe casting to get scroll position
+        const target = e.target as HTMLElement;
+        const currentScrollY = target.scrollTop || window.scrollY;
+        
+        // Threshold to prevent jitter on small scrolls
+        if (Math.abs(currentScrollY - lastScrollY.current) < 10) return;
+
+        if (currentScrollY > lastScrollY.current && currentScrollY > 50) {
+            // Scrolling Down -> Hide Nav
+            setIsVisible(false);
+        } else {
+            // Scrolling Up -> Show Nav
+            setIsVisible(true);
+        }
+        lastScrollY.current = currentScrollY;
+    };
+
+    window.addEventListener('scroll', handleScroll, { capture: true });
+    return () => window.removeEventListener('scroll', handleScroll, { capture: true });
+  }, []);
+
   const navItems = [
     { id: 'DASHBOARD', icon: LayoutDashboard },
     { id: 'MARKET', icon: Store },
@@ -15,7 +43,10 @@ const MobileNav = ({ view, setView }: { view: ViewState, setView: (v: ViewState)
   ];
 
   return (
-    <div className="lg:hidden fixed bottom-0 inset-x-0 z-[150] flex justify-center pointer-events-none px-4 pb-safe-bottom">
+    <div className={clsx(
+        "lg:hidden fixed bottom-0 inset-x-0 z-[150] flex justify-center pointer-events-none px-4 pb-safe-bottom transition-transform duration-500 ease-in-out",
+        isVisible ? "translate-y-0" : "translate-y-[150%]"
+    )}>
       {/* Bottom Gradient Fade for smooth blending */}
       <div className="absolute inset-0 bg-gradient-to-t from-[#020617] via-[#020617]/95 to-transparent h-[150%] bottom-0 -z-10"></div>
       
