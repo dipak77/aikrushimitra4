@@ -1,9 +1,14 @@
-
 import React from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { triggerHaptic } from '../../utils/common';
 
-const SimpleView = ({ title, children, onBack }: { title: string, children: React.ReactNode, onBack: () => void }) => {
+interface SimpleViewProps {
+  title: string;
+  children?: React.ReactNode;
+  onBack: () => void;
+}
+
+const SimpleView = ({ title, children, onBack }: SimpleViewProps) => {
   return (
     <div className="h-full w-full flex flex-col bg-[#020617] animate-enter lg:pl-32">
        <div className="flex items-center gap-4 p-6 pt-safe-top z-10 sticky top-0 bg-[#020617]/80 backdrop-blur-md border-b border-white/5">

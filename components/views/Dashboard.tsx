@@ -2,8 +2,9 @@
 import React, { useState, useEffect } from 'react';
 import { UserProfile, Language, ViewState } from '../../types';
 import { TRANSLATIONS, SCHEMES_DATA } from '../../constants';
-import { Clock, UserCircle, MapPin, Sun, Wind, Droplets, Mic, ArrowUpRight, ScanLine, FlaskConical, TrendingUp, Map as MapIcon, Landmark, Loader2, CloudSun, Cloud, CloudRain, Snowflake, CloudLightning, Sprout, Languages } from 'lucide-react';
+import { Clock, UserCircle, MapPin, Sun, Wind, Droplets, Mic, ArrowUpRight, ScanLine, FlaskConical, TrendingUp, Map as MapIcon, Landmark, Loader2, CloudSun, Cloud, CloudRain, Snowflake, CloudLightning, Sprout, Languages, Store, TrendingDown } from 'lucide-react';
 import { formatDate, triggerHaptic } from '../../utils/common';
+import { MOCK_MARKET } from '../../data/mock';
 import { clsx } from 'clsx';
 
 // WMO Weather Code Mapping (Simple version for Dashboard)
@@ -266,6 +267,41 @@ const Dashboard = ({ lang, setLang, user, onNavigate }: { lang: Language, setLan
                     <MapIcon size={20}/>
                  </div>
               </div>
+           </div>
+
+           {/* Market Rates Widget (New) */}
+           <div onClick={() => { onNavigate('MARKET'); triggerHaptic(); }} className="col-span-1 md:col-span-2 row-span-1 glass-panel rounded-[2.5rem] p-5 relative overflow-hidden cursor-pointer group animate-enter delay-300 active:scale-[0.98] transition-all border border-white/10 hover:border-amber-500/20">
+               {/* Ambient Glow */}
+               <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/10 blur-3xl rounded-full"></div>
+               
+               <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                     <div className="w-8 h-8 rounded-full bg-amber-500/20 flex items-center justify-center text-amber-400">
+                        <Store size={16}/>
+                     </div>
+                     <h3 className="text-base font-black text-white tracking-tight">{t.menu_market}</h3>
+                  </div>
+                  <ArrowUpRight size={16} className="text-slate-500 group-hover:text-white transition-colors"/>
+               </div>
+
+               {/* Mini Market List */}
+               <div className="grid grid-cols-2 gap-3">
+                   {MOCK_MARKET.slice(0, 4).map((m, i) => (
+                      <div key={i} className="flex items-center justify-between p-2 rounded-xl bg-white/5 border border-white/5">
+                          <div className="flex items-center gap-2">
+                              <m.icon size={14} className={m.color} />
+                              <span className="text-xs font-medium text-slate-300">{m.name}</span>
+                          </div>
+                          <div className="flex flex-col items-end">
+                              <span className="text-xs font-bold text-white">₹{m.price}</span>
+                              <span className={clsx("text-[9px] font-bold flex items-center", m.trend.includes('+') ? "text-green-400" : "text-red-400")}>
+                                 {m.trend.includes('+') ? <TrendingUp size={8} className="mr-0.5"/> : <TrendingDown size={8} className="mr-0.5"/>}
+                                 {m.trend}
+                              </span>
+                          </div>
+                      </div>
+                   ))}
+               </div>
            </div>
 
         </div>
