@@ -1,35 +1,89 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Sprout } from 'lucide-react';
 
 export const SplashScreen = ({ onComplete }: { onComplete: () => void }) => {
-  const [phase, setPhase] = useState(0);
+  const [mode, setMode] = useState<'VIDEO' | 'CSS'>('VIDEO');
+  const [phase, setPhase] = useState(0); // 0=Init, 1=AnimStart, 2=Loaded, 3=Exit
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const timeoutRef = useRef<any>(null);
 
+  // --- 1. VIDEO LOGIC ---
   useEffect(() => {
-    // Sequence Logic
-    // Phase 1: Start Animation (Enter)
-    const t1 = setTimeout(() => setPhase(1), 100);
-    
-    // Phase 2: Loading Complete (Bar full)
-    const t2 = setTimeout(() => setPhase(2), 2500);
-    
-    // Phase 3: Exit Animation & Navigate
-    const t3 = setTimeout(() => {
-        setPhase(3);
-        setTimeout(onComplete, 600); // Wait for exit fade out
-    }, 3200);
+    if (mode === 'VIDEO') {
+        const video = videoRef.current;
+        if (video) {
+            // Attempt autoplay
+            video.play().catch((e) => {
+                console.warn("Splash video autoplay failed (likely browser block or missing file), switching to CSS animation:", e);
+                setMode('CSS');
+            });
+        }
+        
+        // Safety Timeout: If video doesn't start or stalls for 4s, switch to CSS
+        timeoutRef.current = setTimeout(() => {
+             if (videoRef.current && videoRef.current.currentTime < 0.1) {
+                 console.warn("Splash video timeout");
+                 setMode('CSS');
+             }
+        }, 4000);
 
-    return () => {
-      clearTimeout(t1);
-      clearTimeout(t2);
-      clearTimeout(t3);
+        return () => clearTimeout(timeoutRef.current);
     }
-  }, [onComplete]);
+  }, [mode]);
 
+  const onVideoEnd = () => {
+      // Fade out video
+      setPhase(3); 
+      setTimeout(onComplete, 600);
+  };
+
+  const onVideoError = () => {
+      console.warn("Splash video error (404/Format)");
+      setMode('CSS');
+  };
+
+  // --- 2. CSS ANIMATION LOGIC (Fallback) ---
+  useEffect(() => {
+    if (mode === 'CSS') {
+        // Sequence Logic
+        const t1 = setTimeout(() => setPhase(1), 100);
+        const t2 = setTimeout(() => setPhase(2), 2500);
+        const t3 = setTimeout(() => {
+            setPhase(3);
+            setTimeout(onComplete, 600);
+        }, 3200);
+
+        return () => {
+            clearTimeout(t1);
+            clearTimeout(t2);
+            clearTimeout(t3);
+        }
+    }
+  }, [mode, onComplete]);
+
+  // --- RENDER: VIDEO MODE ---
+  if (mode === 'VIDEO') {
+      return (
+        <div className={`fixed inset-0 z-[9999] bg-[#020617] flex items-center justify-center transition-opacity duration-700 ${phase === 3 ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
+            <video 
+                ref={videoRef}
+                className="w-full h-full object-cover"
+                muted
+                playsInline
+                preload="auto"
+                src="/splash-v.mp4"
+                onEnded={onVideoEnd}
+                onError={onVideoError}
+            />
+        </div>
+      );
+  }
+
+  // --- RENDER: CSS MODE (Fallback) ---
   return (
     <div className={`fixed inset-0 z-[9999] bg-[#020617] flex flex-col items-center justify-center transition-opacity duration-700 ease-in-out ${phase === 3 ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
         
-        {/* CSS Animations */}
         <style>{`
             @keyframes orbit-spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
             @keyframes pulse-ring { 0% { transform: scale(0.8); opacity: 0.5; } 100% { transform: scale(1.2); opacity: 0; } }
