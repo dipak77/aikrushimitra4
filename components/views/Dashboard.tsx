@@ -2,31 +2,257 @@
 import React, { useState, useEffect } from 'react';
 import { UserProfile, Language, ViewState } from '../../types';
 import { TRANSLATIONS, SCHEMES_DATA } from '../../constants';
-import { Clock, UserCircle, MapPin, Sun, Wind, Droplets, Mic, ArrowUpRight, ScanLine, FlaskConical, TrendingUp, Map as MapIcon, Landmark, Loader2, CloudSun, Cloud, CloudRain, Snowflake, CloudLightning, Sprout, Languages, Store, TrendingDown } from 'lucide-react';
-import { formatDate, triggerHaptic } from '../../utils/common';
+import { UserCircle, MapPin, Wind, Droplets, Mic, ArrowUpRight, ScanLine, FlaskConical, Map as MapIcon, Landmark, Loader2, Sprout, Languages, Store, Sun, Leaf, ChevronRight, BellRing } from 'lucide-react';
+import { triggerHaptic } from '../../utils/common';
 import { MOCK_MARKET } from '../../data/mock';
 import { clsx } from 'clsx';
 
-// WMO Weather Code Mapping (Simple version for Dashboard)
-const getWeatherInfo = (code: number, isDay: number) => {
-    if (code === 0) return { icon: isDay ? Sun : CloudSun, label: isDay ? 'Sunny' : 'Clear', color: isDay ? 'text-amber-300' : 'text-indigo-300' };
-    if (code >= 1 && code <= 3) return { icon: Cloud, label: 'Partly Cloudy', color: 'text-blue-300' };
-    if (code >= 45 && code <= 48) return { icon: Cloud, label: 'Foggy', color: 'text-slate-300' };
-    if (code >= 51 && code <= 67) return { icon: CloudRain, label: 'Rainy', color: 'text-cyan-400' };
-    if (code >= 71 && code <= 77) return { icon: Snowflake, label: 'Snow', color: 'text-white' };
-    if (code >= 95) return { icon: CloudLightning, label: 'Thunderstorm', color: 'text-yellow-400' };
-    return { icon: Sun, label: 'Unknown', color: 'text-white' };
+// --- 1. AMBIENT BACKGROUND SYSTEM ---
+const PlanetaryGlobe = () => {
+    return (
+        <div className="absolute top-[-10%] right-[-30%] md:right-0 md:left-1/2 md:-translate-x-1/2 w-[120vw] md:w-[60vw] aspect-square z-0 pointer-events-none opacity-60 md:opacity-80">
+            <style>{`
+                @keyframes globe-spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+                .globe-grid {
+                    background-image: radial-gradient(rgba(139, 92, 246, 0.3) 1px, transparent 1px);
+                    background-size: 30px 30px;
+                    mask-image: radial-gradient(circle at center, black 40%, transparent 80%);
+                }
+            `}</style>
+            <div className="absolute inset-0 rounded-full bg-gradient-to-br from-purple-600/20 via-blue-600/10 to-transparent blur-3xl"></div>
+            <div className="absolute inset-10 rounded-full border border-white/5 bg-[#020617]/30 backdrop-blur-sm overflow-hidden shadow-[inset_0_0_60px_rgba(139,92,246,0.2)]">
+                <div className="absolute inset-[-50%] globe-grid animate-[globe-spin_120s_linear_infinite]"></div>
+                <div className="absolute inset-0 bg-gradient-to-tr from-purple-500/10 to-cyan-500/10 rounded-full mix-blend-overlay"></div>
+            </div>
+            <div className="absolute inset-0 rounded-full border border-dashed border-cyan-500/20 animate-[globe-spin_60s_linear_infinite_reverse]"></div>
+        </div>
+    );
+};
+
+// --- 2. CROP VITALITY ORBIT (Advanced Visual) ---
+const CropOrbitCard = ({ crop }: { crop: string }) => {
+    return (
+        <div className="relative w-full h-full min-h-[280px] rounded-[2.5rem] overflow-hidden group border border-white/5 bg-[#0f172a]/80 shadow-2xl">
+            {/* Dark Void Background */}
+            <div className="absolute inset-0 bg-gradient-to-br from-emerald-950/50 via-[#020617] to-slate-950 z-0"></div>
+            
+            {/* --- ORBITAL ANIMATION CSS --- */}
+            <style>{`
+                @keyframes orbit { from { transform: rotate(0deg) translateX(80px) rotate(0deg); } to { transform: rotate(360deg) translateX(80px) rotate(-360deg); } }
+                @keyframes orbit-rev { from { transform: rotate(360deg) translateX(60px) rotate(-360deg); } to { transform: rotate(0deg) translateX(60px) rotate(0deg); } }
+                @keyframes pulse-core { 0%, 100% { box-shadow: 0 0 30px rgba(16, 185, 129, 0.4); transform: scale(1); } 50% { box-shadow: 0 0 60px rgba(16, 185, 129, 0.6); transform: scale(1.05); } }
+            `}</style>
+
+            <div className="relative z-10 p-6 h-full flex flex-col justify-between">
+                <div className="flex justify-between items-start">
+                    <div>
+                        <div className="flex items-center gap-2 mb-1">
+                            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_10px_#10b981]"></span>
+                            <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest">Live Monitoring</span>
+                        </div>
+                        <h3 className="text-3xl font-black text-white tracking-tight">{crop}</h3>
+                        <p className="text-sm text-slate-400">Growth Stage: <span className="text-white font-bold">Flowering</span></p>
+                    </div>
+                </div>
+
+                {/* CENTRAL ORB VISUALIZATION */}
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none mt-4">
+                    
+                    {/* Orbit Ring 1 */}
+                    <div className="absolute w-[220px] h-[220px] border border-white/5 rounded-full"></div>
+                    {/* Orbit Ring 2 */}
+                    <div className="absolute w-[160px] h-[160px] border border-dashed border-emerald-500/20 rounded-full animate-[spin_20s_linear_infinite]"></div>
+
+                    {/* The Core (Crop Soul) */}
+                    <div className="relative w-24 h-24 rounded-full bg-gradient-to-br from-emerald-400 to-teal-600 flex items-center justify-center shadow-[0_0_50px_rgba(16,185,129,0.3)] animate-[pulse-core_3s_ease-in-out_infinite] z-20">
+                         <Sprout size={40} className="text-white drop-shadow-lg" />
+                         <div className="absolute inset-0 bg-white/20 rounded-full blur-md animate-pulse"></div>
+                    </div>
+
+                    {/* Satellite: Water */}
+                    <div className="absolute w-10 h-10 rounded-full bg-[#0f172a] border border-blue-500/50 flex items-center justify-center shadow-[0_0_20px_rgba(59,130,246,0.4)] z-30"
+                         style={{ animation: 'orbit 8s linear infinite' }}>
+                         <Droplets size={16} className="text-blue-400" />
+                    </div>
+
+                    {/* Satellite: Sun */}
+                    <div className="absolute w-8 h-8 rounded-full bg-[#0f172a] border border-amber-500/50 flex items-center justify-center shadow-[0_0_20px_rgba(245,158,11,0.4)] z-30"
+                         style={{ animation: 'orbit-rev 12s linear infinite' }}>
+                         <Sun size={14} className="text-amber-400" />
+                    </div>
+
+                </div>
+
+                {/* Bottom Stats */}
+                <div className="grid grid-cols-2 gap-3 relative z-20">
+                    <div className="bg-[#020617]/60 backdrop-blur-md rounded-xl p-3 border border-emerald-500/20 flex items-center gap-3">
+                        <div className="p-2 rounded-lg bg-emerald-500/20 text-emerald-400"><Leaf size={16}/></div>
+                        <div>
+                            <p className="text-[10px] text-slate-400 font-bold uppercase">Health</p>
+                            <p className="text-sm font-bold text-white">98% Good</p>
+                        </div>
+                    </div>
+                    <div className="bg-[#020617]/60 backdrop-blur-md rounded-xl p-3 border border-blue-500/20 flex items-center gap-3">
+                        <div className="p-2 rounded-lg bg-blue-500/20 text-blue-400"><Droplets size={16}/></div>
+                        <div>
+                            <p className="text-[10px] text-slate-400 font-bold uppercase">Water</p>
+                            <p className="text-sm font-bold text-white">Optimal</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+// --- 3. IMPRESSIVE ORB ACTION GRID ---
+const OrbActionGrid = ({ t, onNavigate }: { t: any, onNavigate: (v: ViewState) => void }) => {
+    const actions = [
+         { 
+             id: 'DISEASE_DETECTOR', 
+             icon: ScanLine, 
+             label: t.quick_action_doctor, 
+             color: 'text-emerald-300', 
+             bg: 'bg-emerald-500/20',
+             orbColor: 'bg-emerald-500',
+             gradient: 'from-emerald-500/10 via-emerald-500/5 to-slate-900/60'
+         },
+         { 
+             id: 'SOIL', 
+             icon: FlaskConical, 
+             label: t.quick_action_soil, 
+             color: 'text-amber-300', 
+             bg: 'bg-amber-500/20',
+             orbColor: 'bg-amber-500',
+             gradient: 'from-amber-500/10 via-amber-500/5 to-slate-900/60'
+         },
+         { 
+             id: 'AREA_CALCULATOR', 
+             icon: MapIcon, 
+             label: t.menu_area, 
+             color: 'text-cyan-300', 
+             bg: 'bg-cyan-500/20',
+             orbColor: 'bg-cyan-500',
+             gradient: 'from-cyan-500/10 via-cyan-500/5 to-slate-900/60'
+         },
+         { 
+             id: 'VOICE_ASSISTANT', 
+             icon: Mic, 
+             label: t.menu_voice, 
+             color: 'text-fuchsia-300', 
+             bg: 'bg-fuchsia-500/20',
+             orbColor: 'bg-fuchsia-500',
+             gradient: 'from-fuchsia-500/10 via-fuchsia-500/5 to-slate-900/60'
+         },
+    ];
+
+    return (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pb-24">
+            <style>{`
+                @keyframes scan-line {
+                    0% { transform: translateY(-40px); opacity: 0; }
+                    20% { opacity: 1; }
+                    80% { opacity: 1; }
+                    100% { transform: translateY(40px); opacity: 0; }
+                }
+                @keyframes bubble-rise {
+                    0% { transform: translateY(20px) scale(0.5); opacity: 0; }
+                    50% { opacity: 0.8; }
+                    100% { transform: translateY(-40px) scale(1.2); opacity: 0; }
+                }
+            `}</style>
+            
+            {actions.map((item, i) => (
+                <div key={item.id} onClick={() => { onNavigate(item.id as ViewState); triggerHaptic(); }} 
+                     className={`relative h-44 rounded-[2.5rem] bg-gradient-to-br ${item.gradient} border border-white/5 overflow-hidden group cursor-pointer hover:border-white/20 transition-all active:scale-[0.98] shadow-lg flex flex-col items-center justify-center animate-enter backdrop-blur-sm`}
+                     style={{animationDelay: `${300 + i * 50}ms`}}
+                >
+                    {/* Dynamic Orb Animation Background */}
+                    <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-28 h-28 ${item.orbColor}/20 rounded-full blur-[40px] group-hover:blur-[50px] transition-all duration-700`}></div>
+                    
+                    {/* Unique Animations per ID */}
+                    {item.id === 'DISEASE_DETECTOR' && (
+                         <div className="absolute inset-0 flex items-center justify-center opacity-50 pointer-events-none">
+                             <div className="w-full h-[2px] bg-emerald-400 absolute top-1/2 -translate-y-1/2 animate-[scan-line_3s_ease-in-out_infinite] shadow-[0_0_10px_#34d399]"></div>
+                         </div>
+                    )}
+                    
+                    {item.id === 'SOIL' && (
+                         <div className="absolute inset-0 overflow-hidden opacity-50 pointer-events-none">
+                             <div className="absolute bottom-1/2 left-[40%] w-1.5 h-1.5 bg-amber-400 rounded-full animate-[bubble-rise_4s_linear_infinite]"></div>
+                             <div className="absolute bottom-1/2 left-[60%] w-2.5 h-2.5 bg-amber-400 rounded-full animate-[bubble-rise_5s_linear_infinite_1s]"></div>
+                         </div>
+                    )}
+
+                    {item.id === 'AREA_CALCULATOR' && (
+                         <div className="absolute inset-0 flex items-center justify-center opacity-40 pointer-events-none">
+                             <div className="w-24 h-24 border border-dashed border-cyan-400/50 rounded-full animate-[spin_10s_linear_infinite]"></div>
+                             <div className="absolute w-full h-[1px] bg-cyan-400/30 rotate-45"></div>
+                             <div className="absolute w-full h-[1px] bg-cyan-400/30 -rotate-45"></div>
+                         </div>
+                    )}
+
+                    {item.id === 'VOICE_ASSISTANT' && (
+                         <div className="absolute inset-0 flex items-center justify-center opacity-40 pointer-events-none">
+                             <div className="w-20 h-20 border border-fuchsia-400/50 rounded-full animate-[ping_3s_linear_infinite]"></div>
+                             <div className="w-16 h-16 border border-fuchsia-400/30 rounded-full animate-[ping_3s_linear_infinite_1s]"></div>
+                         </div>
+                    )}
+                    
+                    {/* Icon Container with Glass Effect */}
+                    <div className={`relative z-10 w-16 h-16 rounded-3xl ${item.bg} flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-500 shadow-[inset_0_0_20px_rgba(255,255,255,0.05)] border border-white/10 backdrop-blur-md ring-1 ring-white/5`}>
+                        <item.icon size={28} className={item.color} strokeWidth={2} />
+                    </div>
+                    
+                    {/* Label */}
+                    <span className="relative z-10 text-sm font-bold text-slate-200 group-hover:text-white transition-colors tracking-wide">{item.label}</span>
+                </div>
+            ))}
+        </div>
+    )
+}
+
+// --- 4. GOVERNMENT SCHEMES BANNER (Holographic Gold) ---
+const SchemesBanner = ({ count, onClick, t }: { count: number, onClick: () => void, t: any }) => {
+    return (
+        <div onClick={() => { onClick(); triggerHaptic(); }} className="relative w-full overflow-hidden rounded-[2rem] cursor-pointer group animate-enter delay-200 shadow-2xl shadow-orange-900/20 border border-white/5">
+             {/* Background Gradient */}
+             <div className="absolute inset-0 bg-gradient-to-r from-amber-600 via-orange-600 to-amber-700"></div>
+             <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-40 mix-blend-overlay"></div>
+             
+             {/* Holographic Shine Effect */}
+             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent skew-x-12 translate-x-[-150%] group-hover:animate-[shimmer_1.5s_infinite]"></div>
+
+             <div className="relative z-10 p-6 flex items-center justify-between">
+                 <div className="flex items-center gap-5">
+                     <div className="w-16 h-16 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center shadow-inner">
+                         <Landmark size={32} className="text-white drop-shadow-md" />
+                     </div>
+                     <div>
+                         <h3 className="text-2xl font-black text-white leading-none mb-2">{t.govt_schemes}</h3>
+                         <div className="flex items-center gap-2 bg-black/20 px-3 py-1 rounded-full backdrop-blur-sm w-fit border border-white/10">
+                            <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
+                            <span className="text-amber-100 text-xs font-bold uppercase tracking-wide">{count} Active Schemes</span>
+                         </div>
+                     </div>
+                 </div>
+                 
+                 <div className="h-12 w-12 rounded-full bg-white/20 flex items-center justify-center group-hover:scale-110 transition-transform backdrop-blur-sm border border-white/10 shadow-lg">
+                     <ChevronRight size={28} className="text-white" />
+                 </div>
+             </div>
+        </div>
+    );
 };
 
 const Dashboard = ({ lang, setLang, user, onNavigate }: { lang: Language, setLang: (l: Language) => void, user: UserProfile, onNavigate: (v: ViewState) => void }) => {
   const t = TRANSLATIONS[lang];
-  const schemes = SCHEMES_DATA[lang as Language] || SCHEMES_DATA['en'];
+  const schemesCount = (SCHEMES_DATA[lang as Language] || []).length;
 
   const [weatherData, setWeatherData] = useState<any>(null);
   const [locationName, setLocationName] = useState<string>(user.village);
   const [loadingWeather, setLoadingWeather] = useState(true);
 
-  // Cycle Language Function
   const cycleLanguage = () => {
       triggerHaptic();
       if (lang === 'mr') setLang('hi');
@@ -34,26 +260,21 @@ const Dashboard = ({ lang, setLang, user, onNavigate }: { lang: Language, setLan
       else setLang('mr');
   };
 
-  // Fetch Live Weather & Location
   useEffect(() => {
     const fetchWeather = async (lat: number, lng: number) => {
         try {
-            // 1. Reverse Geocoding
             try {
                 const locRes = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=en`);
                 const locData = await locRes.json();
                 const city = locData.locality || locData.city || locData.principalSubdivision || user.village;
                 setLocationName(city);
-            } catch(e) {
-                // Keep default user village if reverse geo fails
-            }
+            } catch(e) {}
 
-            // 2. Weather Data
-            const wRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,relative_humidity_2m,is_day,weather_code,wind_speed_10m&timezone=auto`);
+            const wRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,relative_humidity_2m,is_day,weather_code,wind_speed_10m&daily=temperature_2m_max,temperature_2m_min&timezone=auto`);
             const wData = await wRes.json();
             setWeatherData(wData);
         } catch (e) {
-            console.error("Weather Fetch Error", e);
+            console.error(e);
         } finally {
             setLoadingWeather(false);
         }
@@ -62,282 +283,165 @@ const Dashboard = ({ lang, setLang, user, onNavigate }: { lang: Language, setLan
     if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
             (pos) => fetchWeather(pos.coords.latitude, pos.coords.longitude),
-            (err) => {
-                console.warn("Location denied, using default");
-                fetchWeather(19.75, 75.71); // Default to Maharashtra center
-            }
+            () => fetchWeather(19.75, 75.71)
         );
     } else {
         fetchWeather(19.75, 75.71);
     }
   }, [user.village]);
 
-  const weatherInfo = weatherData ? getWeatherInfo(weatherData.current.weather_code, weatherData.current.is_day) : null;
-
   return (
-    <div className="h-full w-full overflow-y-auto overflow-x-hidden hide-scrollbar pb-32 lg:pl-32 lg:pt-6 lg:pr-6 overscroll-y-contain scroll-smooth">
-      <div className="w-full max-w-7xl mx-auto px-4 py-4 space-y-6 pt-safe-top">
+    <div className="h-full w-full overflow-y-auto overflow-x-hidden hide-scrollbar pb-32 lg:pl-28 lg:pr-6 overscroll-y-contain scroll-smooth relative bg-[#020617]">
+      
+      {/* BACKGROUND LAYERS */}
+      <div className="fixed inset-0 bg-[#020617] z-[-1]"></div>
+      <div className="fixed top-0 left-0 right-0 h-[50vh] bg-gradient-to-b from-[#0f172a] to-transparent opacity-50 z-[-1]"></div>
+      <PlanetaryGlobe />
+
+      <div className="w-full max-w-7xl mx-auto px-4 py-6 pt-safe-top relative z-10 space-y-6">
         
-        {/* === BRAND HEADER START === */}
-        <header className="flex justify-between items-center animate-enter mt-2">
+        {/* PREMIUM HEADER BRANDING */}
+        <header className="flex justify-between items-center animate-enter py-2">
            <div className="flex items-center gap-4">
-              {/* Enhanced Orb Logo Animation */}
-              <div className="relative w-14 h-14">
-                  {/* Saffron Ring */}
-                  <div className="absolute inset-0 rounded-full border-[1.5px] border-amber-500/40 border-t-amber-400 border-l-transparent animate-[spin_4s_linear_infinite]"></div>
-                  {/* Cyan Ring */}
-                  <div className="absolute inset-1 rounded-full border-[1.5px] border-cyan-500/40 border-b-cyan-400 border-r-transparent animate-[spin_3s_linear_infinite_reverse]"></div>
-                  {/* Emerald Core */}
-                  <div className="absolute inset-2 bg-gradient-to-br from-emerald-900/50 to-cyan-900/50 rounded-full backdrop-blur-sm border border-white/10 flex items-center justify-center shadow-[0_0_15px_rgba(16,185,129,0.3)]">
-                      <Sprout size={20} className="text-emerald-400 drop-shadow-[0_0_5px_rgba(52,211,153,0.8)]" />
+              {/* 3D ORBITAL LOGO */}
+              <div className="relative w-14 h-14 md:w-16 md:h-16 flex-shrink-0 perspective-1000 group">
+                  <div className="absolute inset-0 bg-cyan-500/20 blur-[30px] rounded-full group-hover:bg-cyan-400/30 transition-all duration-700"></div>
+
+                  {/* Rotating Rings */}
+                  <div className="absolute inset-0 rounded-full border border-cyan-400/50 animate-[spin_10s_linear_infinite]"></div>
+                  <div className="absolute inset-2 rounded-full border border-blue-400/30 animate-[spin_15s_linear_infinite_reverse]"></div>
+
+                  {/* Central Core Sphere */}
+                  <div className="absolute inset-0 m-auto w-10 h-10 md:w-11 md:h-11 rounded-full bg-gradient-to-br from-cyan-400 to-blue-700 shadow-[0_0_20px_rgba(6,182,212,0.6)] flex items-center justify-center overflow-hidden border border-white/20">
+                      <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-30 mix-blend-overlay"></div>
+                      <span className="font-black text-[10px] md:text-xs text-white z-10 tracking-tighter">AI</span>
+                  </div>
+
+                  {/* Orbiting Satellite */}
+                  <div className="absolute inset-0 animate-[spin_3s_linear_infinite]">
+                      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-1.5 h-1.5 bg-white rounded-full shadow-[0_0_10px_white]"></div>
                   </div>
               </div>
 
-              {/* Animated Text Title with Tri-Color Gradient */}
-              <div className="flex flex-col">
-                  <h1 className="text-2xl font-black tracking-tight leading-none text-white relative">
-                      <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-white to-amber-400 bg-[length:200%_auto] animate-[text-shimmer_4s_linear_infinite]">
-                        AI Krushi
-                      </span>{' '}
-                      <span className="text-slate-100">Mitra</span>
-                      <span className="absolute -top-1 -right-2 flex h-2 w-2">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                      </span>
-                  </h1>
-                  <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mt-1">Smart Farming Assistant</p>
+              {/* CINEMATIC TYPOGRAPHY */}
+              <div>
+                 <h1 className="text-3xl md:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white via-cyan-100 to-blue-200 tracking-tighter leading-none drop-shadow-[0_0_15px_rgba(6,182,212,0.3)] filter">
+                    AI <span className="text-white">KRUSHI</span>
+                 </h1>
+                 <p className="text-[9px] md:text-[10px] font-bold text-cyan-400 uppercase tracking-[0.25em] md:tracking-[0.3em] ml-1 mt-1 drop-shadow-md">
+                    Smart Farming
+                 </p>
               </div>
            </div>
            
            <div className="flex items-center gap-3">
-               {/* Language Switcher */}
-               <button 
-                  onClick={cycleLanguage} 
-                  className="h-12 px-4 rounded-full glass-panel border border-white/20 flex items-center gap-2 active:scale-95 transition-all hover:bg-white/10"
-               >
-                  <Languages size={18} className="text-cyan-400" />
-                  <span className="text-xs font-bold text-white uppercase tracking-wider">
-                      {lang === 'mr' ? 'मराठी' : lang === 'hi' ? 'हिंदी' : 'ENG'}
-                  </span>
+               <button onClick={cycleLanguage} className="h-9 px-3 rounded-lg bg-[#1e293b]/80 border border-white/10 flex items-center gap-2 hover:bg-[#334155] transition-all">
+                  <Languages size={14} className="text-slate-300" />
+                  <span className="text-xs font-bold text-white uppercase">{lang === 'mr' ? 'मराठी' : 'ENG'}</span>
                </button>
-
-               {/* Profile Button */}
-               <button onClick={() => { onNavigate('PROFILE'); triggerHaptic(); }} className="relative group">
-                  <div className="absolute inset-0 bg-gradient-to-r from-emerald-500 to-cyan-500 rounded-full blur opacity-20 group-hover:opacity-40 transition-opacity"></div>
-                  <div className="w-12 h-12 rounded-full glass-panel border border-white/20 flex items-center justify-center relative overflow-hidden">
-                      <UserCircle className="text-slate-200 w-full h-full p-1" strokeWidth={1.5}/>
-                  </div>
-               </button>
+               <div className="w-9 h-9 rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 p-[1px] cursor-pointer shadow-lg shadow-cyan-500/20" onClick={() => onNavigate('PROFILE')}>
+                   <div className="w-full h-full rounded-full bg-[#0f172a] flex items-center justify-center overflow-hidden">
+                       <UserCircle size={20} className="text-white" />
+                   </div>
+               </div>
            </div>
         </header>
-        
-        {/* Welcome Message */}
-        <div className="animate-enter delay-75">
-             <div className="flex items-center gap-2 mb-1">
-                 <Clock size={12} className="text-emerald-400"/> 
-                 <span className="text-emerald-400 text-xs font-bold uppercase tracking-wider">{formatDate()}</span>
-             </div>
-             <h2 className="text-xl text-slate-300 font-medium">
-                 {t.welcome_title} <span className="text-white font-bold">{user.name.split(' ')[0]}</span>
-             </h2>
-        </div>
-        {/* === BRAND HEADER END === */}
 
-        {/* Bento Grid Layout */}
-        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 auto-rows-auto">
-           
-           {/* Weather Card (Live) */}
-           <div onClick={() => { onNavigate('WEATHER'); triggerHaptic(); }} className="col-span-1 md:col-span-2 row-span-2 relative group cursor-pointer overflow-hidden rounded-[2.5rem] border border-white/10 text-white shadow-2xl shadow-purple-900/20 animate-enter delay-100 transition-all active:scale-[0.98]">
-              <div className="absolute inset-0 bg-gradient-to-br from-indigo-700 via-purple-800 to-indigo-900 backdrop-blur-xl"></div>
-              <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-overlay"></div>
-              <div className="absolute -top-10 -right-10 w-48 h-48 bg-amber-400/30 rounded-full blur-[60px] animate-pulse"></div>
-              
-              <div className="relative p-6 z-10 min-h-[180px] flex flex-col justify-between h-full">
-                 <div className="glass-panel w-fit px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 bg-black/20 border-white/10">
-                    <MapPin size={10} className="text-cyan-300"/> {locationName}
-                 </div>
-                 
-                 <div className="mt-4">
-                    {loadingWeather ? (
-                        <div className="flex flex-col gap-2 py-4">
-                             <Loader2 className="animate-spin text-white/50" size={24} />
-                             <span className="text-xs text-white/50 font-medium">Updating Weather...</span>
-                        </div>
-                    ) : weatherData && weatherInfo ? (
-                        <>
-                             {/* Dynamic Icon Positioned absolutely like the static one was */}
-                             <div className="absolute top-4 right-4 float-3d">
-                                 <weatherInfo.icon size={64} className={clsx(weatherInfo.color, "drop-shadow-[0_0_30px_rgba(255,255,255,0.3)]")} />
+        {/* HERO: WEATHER PRISM */}
+        <div className="animate-enter delay-100">
+             <div onClick={() => { onNavigate('WEATHER'); triggerHaptic(); }} className="w-full p-8 rounded-[2.5rem] bg-[#0f172a]/60 backdrop-blur-xl border border-white/5 shadow-2xl cursor-pointer hover:border-blue-500/30 transition-all group relative overflow-hidden">
+                    {/* Dynamic Ambient Background based on temperature */}
+                    <div className="absolute top-[-50%] right-[-10%] w-[600px] h-[600px] rounded-full bg-blue-600/10 blur-[100px] group-hover:bg-blue-500/20 transition-all duration-700"></div>
+                    
+                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 relative z-10">
+                        <div className="flex items-start gap-4">
+                             <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500/20 to-purple-500/20 flex items-center justify-center text-blue-300 shadow-[0_0_30px_rgba(59,130,246,0.2)] border border-white/5 backdrop-blur-md">
+                                <Wind size={32} />
                              </div>
-
-                             <h2 className="text-7xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-b from-white to-white/60 drop-shadow-lg">
-                                 {Math.round(weatherData.current.temperature_2m)}°
-                             </h2>
-                             <p className="text-lg font-medium text-indigo-200 -mt-2 mb-4">{weatherInfo.label}</p>
-                             <div className="grid grid-cols-2 gap-3 max-w-[200px]">
-                                <div className="glass-panel p-2 rounded-xl flex items-center gap-2 bg-white/5">
-                                   <Wind size={16} className="text-cyan-300"/> 
-                                   <span className="font-bold text-sm">{weatherData.current.wind_speed_10m} km/h</span>
-                                </div>
-                                <div className="glass-panel p-2 rounded-xl flex items-center gap-2 bg-white/5">
-                                   <Droplets size={16} className="text-blue-300"/> 
-                                   <span className="font-bold text-sm">{weatherData.current.relative_humidity_2m}%</span>
-                                </div>
+                             <div>
+                                 <div className="flex items-center gap-2">
+                                     <h2 className="text-xl font-black text-white leading-none">Weather</h2>
+                                     <span className="text-[10px] font-bold text-white bg-blue-600 px-2 py-0.5 rounded-full shadow-lg shadow-blue-500/50">LIVE</span>
+                                 </div>
+                                 <p className="text-sm text-slate-400 font-medium mt-1 flex items-center gap-1">
+                                    <MapPin size={12}/> {locationName}
+                                 </p>
                              </div>
-                        </>
-                    ) : (
-                        <div className="py-4">
-                            <h2 className="text-5xl font-black text-white/50">--°</h2>
-                            <p className="text-white/50 text-sm">Weather Unavailable</p>
                         </div>
-                    )}
-                 </div>
-              </div>
-           </div>
 
-           {/* Voice Assistant Promo */}
-           <div onClick={() => { onNavigate('VOICE_ASSISTANT'); triggerHaptic(); }} className="col-span-1 md:col-span-1 row-span-2 glass-panel rounded-[2.5rem] p-6 relative overflow-hidden cursor-pointer group animate-enter delay-200 active:scale-[0.98] transition-all border border-white/10 bg-slate-900/40">
-              <div className="absolute inset-0 bg-gradient-to-b from-emerald-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
-              <div className="relative z-20 h-full flex flex-col items-center justify-center text-center">
-                 <div className="w-20 h-20 rounded-full bg-gradient-to-tr from-emerald-500/20 to-cyan-500/20 border border-white/10 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform shadow-[0_0_30px_rgba(16,185,129,0.15)] relative">
-                    <div className="absolute inset-0 rounded-full border border-emerald-400/30 animate-[spin_4s_linear_infinite]"></div>
-                    <div className="absolute inset-2 rounded-full border border-cyan-400/30 animate-[spin_3s_linear_infinite_reverse]"></div>
-                    <Mic size={32} className="text-emerald-300 drop-shadow-[0_0_10px_rgba(52,211,153,0.8)]"/>
-                 </div>
-                 <h3 className="text-lg font-black mb-1">{t.menu_voice}</h3>
-                 <p className="text-slate-400 text-xs leading-relaxed mb-4 px-2">Ask about crops or market in your language.</p>
-                 <button className="px-6 py-3 rounded-full bg-gradient-to-r from-emerald-500 to-cyan-600 text-white font-bold text-xs hover:from-emerald-400 hover:to-cyan-500 transition-all shadow-lg shadow-emerald-500/30 w-full flex items-center justify-center gap-2">
-                    Start Talk <ArrowUpRight size={14}/>
-                 </button>
-              </div>
-           </div>
-
-           {/* Crop Doctor */}
-           <div onClick={() => { onNavigate('DISEASE_DETECTOR'); triggerHaptic(); }} className="col-span-1 row-span-1 glass-panel rounded-[2.5rem] p-5 relative overflow-hidden cursor-pointer group animate-enter delay-300 active:scale-[0.98] transition-all bg-gradient-to-r from-emerald-900/40 to-teal-900/40 border border-emerald-500/20 flex items-center justify-between">
-              <div className="absolute -left-4 -bottom-4 w-24 h-24 bg-emerald-500/20 blur-2xl rounded-full"></div>
-              <div className="flex flex-col justify-center pl-1 z-10">
-                 <h3 className="text-lg font-black text-white tracking-tight">{t.quick_action_doctor}</h3>
-                 <p className="text-emerald-400 text-[10px] font-bold uppercase tracking-wider mt-0.5 flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse"></span>
-                    AI READY
-                 </p>
-              </div>
-              <div className="w-14 h-14 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-emerald-500/30 z-10 group-hover:rotate-6 transition-transform">
-                 <ScanLine size={24}/>
-              </div>
-           </div>
-
-            {/* Soil Health */}
-            <div onClick={() => { onNavigate('SOIL'); triggerHaptic(); }} className="col-span-1 row-span-1 glass-panel rounded-[2.5rem] p-5 relative overflow-hidden cursor-pointer group animate-enter delay-300 active:scale-[0.98] transition-all bg-gradient-to-r from-orange-900/40 to-amber-900/40 border border-orange-500/20 flex items-center justify-between">
-              <div className="absolute -right-4 -top-4 w-24 h-24 bg-orange-500/20 blur-2xl rounded-full"></div>
-              <div className="flex flex-col justify-center pl-1 z-10">
-                 <h3 className="text-lg font-black text-white tracking-tight">{t.quick_action_soil}</h3>
-                 <p className="text-orange-400 text-[10px] font-bold uppercase tracking-wider mt-0.5 flex items-center gap-1">
-                    <FlaskConical size={10} className="text-orange-400" />
-                    CHECK NPK
-                 </p>
-              </div>
-              <div className="w-14 h-14 bg-gradient-to-br from-orange-500 to-amber-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-orange-500/30 z-10 group-hover:-rotate-6 transition-transform">
-                 <FlaskConical size={24}/>
-              </div>
-           </div>
-
-           {/* Smart Tools Group */}
-           <div className="col-span-1 md:col-span-2 row-span-1 flex gap-4">
-              {/* Yield Predictor */}
-              <div onClick={() => { onNavigate('YIELD'); triggerHaptic(); }} className="flex-1 glass-panel rounded-[2.5rem] p-5 relative overflow-hidden cursor-pointer group animate-enter delay-300 active:scale-[0.98] transition-all bg-gradient-to-r from-blue-900/40 to-cyan-900/40 border border-blue-500/20 flex items-center justify-between">
-                 <div className="absolute -left-4 -bottom-4 w-24 h-24 bg-blue-500/20 blur-2xl rounded-full"></div>
-                 <div className="flex flex-col justify-center pl-1 z-10">
-                    <h3 className="text-base font-black text-white tracking-tight">{t.menu_yield}</h3>
-                    <p className="text-blue-400 text-[9px] font-bold uppercase tracking-wider mt-0.5">AI FORECAST</p>
-                 </div>
-                 <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-cyan-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-blue-500/30 z-10 group-hover:scale-110 transition-transform">
-                    <TrendingUp size={20}/>
-                 </div>
-              </div>
-
-              {/* Area Calculator */}
-              <div onClick={() => { onNavigate('AREA_CALCULATOR'); triggerHaptic(); }} className="flex-1 glass-panel rounded-[2.5rem] p-5 relative overflow-hidden cursor-pointer group animate-enter delay-300 active:scale-[0.98] transition-all bg-gradient-to-r from-purple-900/40 to-fuchsia-900/40 border border-purple-500/20 flex items-center justify-between">
-                 <div className="absolute -right-4 -top-4 w-24 h-24 bg-purple-500/20 blur-2xl rounded-full"></div>
-                 <div className="flex flex-col justify-center pl-1 z-10">
-                    <h3 className="text-base font-black text-white tracking-tight">{t.menu_area}</h3>
-                    <p className="text-purple-400 text-[9px] font-bold uppercase tracking-wider mt-0.5">SATELLITE</p>
-                 </div>
-                 <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-fuchsia-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-purple-500/30 z-10 group-hover:scale-110 transition-transform">
-                    <MapIcon size={20}/>
-                 </div>
-              </div>
-           </div>
-
-           {/* Market Rates Widget (New) */}
-           <div onClick={() => { onNavigate('MARKET'); triggerHaptic(); }} className="col-span-1 md:col-span-2 row-span-1 glass-panel rounded-[2.5rem] p-5 relative overflow-hidden cursor-pointer group animate-enter delay-300 active:scale-[0.98] transition-all border border-white/10 hover:border-amber-500/20">
-               {/* Ambient Glow */}
-               <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/10 blur-3xl rounded-full"></div>
-               
-               <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-2">
-                     <div className="w-8 h-8 rounded-full bg-amber-500/20 flex items-center justify-center text-amber-400">
-                        <Store size={16}/>
-                     </div>
-                     <h3 className="text-base font-black text-white tracking-tight">{t.menu_market}</h3>
-                  </div>
-                  <ArrowUpRight size={16} className="text-slate-500 group-hover:text-white transition-colors"/>
-               </div>
-
-               {/* Mini Market List */}
-               <div className="grid grid-cols-2 gap-3">
-                   {MOCK_MARKET.slice(0, 4).map((m, i) => (
-                      <div key={i} className="flex items-center justify-between p-2 rounded-xl bg-white/5 border border-white/5">
-                          <div className="flex items-center gap-2">
-                              <m.icon size={14} className={m.color} />
-                              <span className="text-xs font-medium text-slate-300">{m.name}</span>
-                          </div>
-                          <div className="flex flex-col items-end">
-                              <span className="text-xs font-bold text-white">₹{m.price}</span>
-                              <span className={clsx("text-[9px] font-bold flex items-center", m.trend.includes('+') ? "text-green-400" : "text-red-400")}>
-                                 {m.trend.includes('+') ? <TrendingUp size={8} className="mr-0.5"/> : <TrendingDown size={8} className="mr-0.5"/>}
-                                 {m.trend}
-                              </span>
-                          </div>
-                      </div>
-                   ))}
-               </div>
-           </div>
-
-        </div>
-
-        {/* Schemes Carousel */}
-        <div className="animate-enter delay-300 pb-24">
-           <div className="flex items-center justify-between mb-4 px-2">
-              <h3 className="text-lg font-black text-white flex items-center gap-2">
-                  <Landmark size={20} className="text-fuchsia-400"/> 
-                  {t.govt_schemes}
-              </h3>
-              <button onClick={() => { onNavigate('SCHEMES'); triggerHaptic(); }} className="text-xs font-bold text-slate-400 bg-white/5 px-3 py-1.5 rounded-full hover:bg-white/10 transition-all">{t.view_all}</button>
-           </div>
-           
-           <div className="flex gap-4 overflow-x-auto hide-scrollbar pb-6 snap-x snap-mandatory px-2 -mx-2">
-              {schemes.slice(0,3).map((s: any) => (
-                 <div onClick={() => { onNavigate('SCHEMES'); triggerHaptic(); }} key={s.id} className="snap-center shrink-0 w-[85vw] md:w-[280px] h-36 rounded-[2.5rem] relative overflow-hidden cursor-pointer group active:scale-[0.98] transition-all shadow-lg shadow-black/30 border border-white/10">
-                    <div className={`absolute inset-0 bg-gradient-to-br ${s.grad} opacity-90`}></div>
-                    <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-overlay"></div>
-                    <div className="absolute -bottom-8 -right-8 w-32 h-32 bg-white/10 rounded-full blur-xl"></div>
-                    <div className="absolute inset-0 p-6 flex flex-col justify-between text-white z-10">
-                       <div className="flex justify-between items-start">
-                          <div className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/10">
-                              <Landmark size={20} className="text-white"/>
-                          </div>
-                          <span className="bg-black/20 backdrop-blur-md px-3 py-1 rounded-full text-[10px] font-black uppercase border border-white/10 shadow-sm">{s.status}</span>
-                       </div>
-                       <div>
-                          <h4 className="text-xl font-black leading-tight tracking-tight">{s.title.substring(0, 20)}...</h4>
-                          <p className="text-white/80 font-medium text-xs mt-1">{s.subtitle}</p>
-                       </div>
+                        {loadingWeather ? <Loader2 className="animate-spin text-white/50"/> : (
+                            <div className="flex items-center gap-8 w-full md:w-auto justify-between md:justify-end">
+                                <div>
+                                    <h3 className="text-6xl font-black text-white tracking-tighter leading-none drop-shadow-2xl">
+                                        {Math.round(weatherData?.current?.temperature_2m || 0)}°
+                                    </h3>
+                                    <p className="text-xs text-blue-300 font-bold mt-1 text-center uppercase tracking-widest">
+                                       {weatherData?.current?.weather_code <= 3 ? 'Sunny' : weatherData?.current?.weather_code < 50 ? 'Cloudy' : 'Rainy'}
+                                    </p>
+                                </div>
+                                <div className="h-12 w-[1px] bg-white/10 hidden md:block"></div>
+                                <div className="space-y-3">
+                                    <div className="flex items-center gap-2 text-slate-300">
+                                        <Wind size={14}/>
+                                        <span className="text-sm font-bold">{weatherData?.current?.wind_speed_10m} km/h</span>
+                                    </div>
+                                    <div className="flex items-center gap-2 text-slate-300">
+                                        <Droplets size={14}/>
+                                        <span className="text-sm font-bold">{weatherData?.current?.relative_humidity_2m}%</span>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                     </div>
-                 </div>
-              ))}
-           </div>
+             </div>
         </div>
+
+        {/* ROW 2: CROP ORB & MARKET PULSE */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-enter delay-200">
+            
+            {/* 1. Crop Vitality Orb (Centerpiece) */}
+            <div className="lg:col-span-2">
+                <CropOrbitCard crop={user.crop} />
+            </div>
+
+            {/* 2. Market Pulse & Schemes Short */}
+            <div className="flex flex-col gap-6">
+                
+                {/* Market Ticker */}
+                <div onClick={() => { onNavigate('MARKET'); triggerHaptic(); }} className="flex-1 p-6 rounded-[2.5rem] bg-[#0f172a]/80 backdrop-blur-xl border border-white/5 shadow-lg cursor-pointer hover:border-amber-500/30 transition-all group relative overflow-hidden flex flex-col justify-between">
+                    <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                    
+                    <div className="flex justify-between items-start relative z-10 mb-2">
+                        <div className="w-12 h-12 rounded-2xl bg-amber-500/20 flex items-center justify-center text-amber-400 shadow-[0_0_20px_rgba(245,158,11,0.2)]">
+                            <Store size={24} />
+                        </div>
+                        <ArrowUpRight size={20} className="text-slate-500 group-hover:text-amber-400 transition-colors"/>
+                    </div>
+                    
+                    <div className="relative z-10">
+                        <h3 className="text-lg font-bold text-white mb-3">{t.menu_market}</h3>
+                        <div className="space-y-2">
+                            {MOCK_MARKET.slice(0, 2).map((m, i) => (
+                                <div key={i} className="flex justify-between items-center bg-white/5 p-2.5 rounded-xl border border-white/5">
+                                    <span className="text-xs font-bold text-slate-200">{m.name}</span>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-sm font-mono font-bold text-white">₹{m.price}</span>
+                                        <span className={`text-[10px] ${m.trend.includes('+')?'text-green-400':'text-red-400'}`}>{m.trend}</span>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+
+                {/* --- SCHEMES BANNER --- */}
+                <SchemesBanner count={schemesCount} onClick={() => onNavigate('SCHEMES')} t={t} />
+
+            </div>
+        </div>
+
+        {/* ROW 3: IMPRESSIVE ACTION GRID */}
+        <OrbActionGrid t={t} onNavigate={onNavigate} />
 
       </div>
     </div>

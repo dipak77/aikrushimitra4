@@ -1,29 +1,132 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Language } from '../../types';
 import { TRANSLATIONS } from '../../constants';
-import SimpleView from '../layout/SimpleView';
+import { ArrowLeft, MoreVertical } from 'lucide-react';
 import { triggerHaptic } from '../../utils/common';
-import { Sun, Wind, Droplets, Clock, Calendar, CloudSun, CloudRain, CloudLightning, Snowflake, Cloud, MapPin, Loader2, Navigation, RefreshCw } from 'lucide-react';
+import { AreaChart, Area, XAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { Loader2 } from 'lucide-react';
 import { clsx } from 'clsx';
 
-// WMO Weather Code Mapping
-const getWeatherInfo = (code: number, isDay: number) => {
-    // 0: Clear
-    // 1,2,3: Cloudy
-    // 45,48: Fog
-    // 51-67: Rain
-    // 71-77: Snow
-    // 95-99: Thunderstorm
-    
-    if (code === 0) return { icon: isDay ? Sun : CloudSun, label: isDay ? 'Sunny' : 'Clear', color: isDay ? 'text-amber-400' : 'text-indigo-300', gradient: isDay ? 'from-amber-400/20 to-orange-500/20' : 'from-indigo-400/20 to-purple-500/20', orb: isDay ? 'bg-amber-400/40' : 'bg-indigo-400/40' };
-    if (code >= 1 && code <= 3) return { icon: Cloud, label: 'Partly Cloudy', color: 'text-blue-300', gradient: 'from-blue-400/20 to-cyan-500/20', orb: 'bg-blue-400/40' };
-    if (code >= 45 && code <= 48) return { icon: Cloud, label: 'Foggy', color: 'text-slate-300', gradient: 'from-slate-400/20 to-gray-500/20', orb: 'bg-slate-400/40' };
-    if (code >= 51 && code <= 67) return { icon: CloudRain, label: 'Rainy', color: 'text-cyan-400', gradient: 'from-cyan-500/20 to-blue-600/20', orb: 'bg-cyan-400/40' };
-    if (code >= 71 && code <= 77) return { icon: Snowflake, label: 'Snow', color: 'text-white', gradient: 'from-white/20 to-slate-300/20', orb: 'bg-white/40' };
-    if (code >= 95) return { icon: CloudLightning, label: 'Thunderstorm', color: 'text-yellow-400', gradient: 'from-purple-600/20 to-yellow-500/20', orb: 'bg-purple-500/40' };
-    
-    return { icon: Sun, label: 'Unknown', color: 'text-white', gradient: 'from-slate-500/20', orb: 'bg-white/20' };
+// --- IMMERSIVE WEATHER BACKGROUND ANIMATIONS ---
+const WeatherEffects = ({ type }: { type: 'clear' | 'cloudy' | 'rain' | 'storm' }) => {
+    return (
+        <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
+            {/* SUNNY EFFECT */}
+            {type === 'clear' && (
+                <>
+                    <div className="absolute top-[-20%] right-[-20%] w-[80vw] h-[80vw] bg-amber-500/20 rounded-full blur-[100px] animate-pulse"></div>
+                    <div className="absolute top-[10%] right-[10%] w-40 h-40 bg-yellow-400/30 rounded-full blur-[60px] animate-[pulse_4s_ease-in-out_infinite]"></div>
+                    {/* Sun Rays */}
+                    <div className="absolute top-0 right-0 w-[100vw] h-[100vw] bg-[conic-gradient(from_0deg,transparent,rgba(251,191,36,0.1),transparent)] animate-[spin_20s_linear_infinite] opacity-50"></div>
+                </>
+            )}
+
+            {/* CLOUDY EFFECT */}
+            {(type === 'cloudy' || type === 'rain' || type === 'storm') && (
+                <>
+                    <style>{`
+                        @keyframes float-cloud-bg {
+                            0% { transform: translateX(-100%) translateY(0); opacity: 0; }
+                            10% { opacity: 0.4; }
+                            90% { opacity: 0.4; }
+                            100% { transform: translateX(100vw) translateY(0); opacity: 0; }
+                        }
+                    `}</style>
+                    <div className="absolute top-20 left-0 w-64 h-24 bg-white/5 rounded-full blur-2xl animate-[float-cloud-bg_20s_linear_infinite]"></div>
+                    <div className="absolute top-40 left-0 w-80 h-32 bg-white/5 rounded-full blur-3xl animate-[float-cloud-bg_25s_linear_infinite]" style={{animationDelay: '5s'}}></div>
+                    <div className="absolute top-10 left-0 w-48 h-16 bg-white/5 rounded-full blur-xl animate-[float-cloud-bg_15s_linear_infinite]" style={{animationDelay: '10s'}}></div>
+                </>
+            )}
+
+            {/* RAIN EFFECT */}
+            {(type === 'rain' || type === 'storm') && (
+                <div className="absolute inset-0 z-10 opacity-30">
+                     <style>{`
+                        @keyframes rain-fall {
+                            0% { transform: translateY(-10vh); }
+                            100% { transform: translateY(100vh); }
+                        }
+                     `}</style>
+                     {[...Array(20)].map((_, i) => (
+                         <div 
+                            key={i} 
+                            className="absolute bg-blue-400/50 w-[1px] h-10"
+                            style={{
+                                left: `${Math.random() * 100}%`,
+                                top: `${Math.random() * -20}%`,
+                                animation: `rain-fall ${0.5 + Math.random()}s linear infinite`,
+                                animationDelay: `${Math.random()}s`
+                            }}
+                         ></div>
+                     ))}
+                </div>
+            )}
+
+            {/* STORM EFFECT */}
+            {type === 'storm' && (
+                <>
+                    <div className="absolute inset-0 bg-black/40 z-0"></div>
+                    <div className="absolute inset-0 bg-white z-20 animate-[flash_5s_ease-in-out_infinite_alternate] opacity-0 mix-blend-overlay"></div>
+                    <style>{`
+                        @keyframes flash {
+                            0%, 90% { opacity: 0; }
+                            92% { opacity: 0.3; }
+                            94% { opacity: 0; }
+                            96% { opacity: 0.1; }
+                            100% { opacity: 0; }
+                        }
+                    `}</style>
+                </>
+            )}
+        </div>
+    );
+};
+
+// CSS-Only 3D Icon
+const WeatherIcon3D = ({ type, isDay, size = "large" }: { type: 'clear' | 'cloudy' | 'rain' | 'storm', isDay: number, size?: "small" | "large" }) => {
+    const scale = size === 'small' ? 'scale-50' : 'scale-100';
+    return (
+      <div className={`relative w-32 h-32 transform ${scale} transition-transform z-10`}>
+         <style>{`
+           .cloud-shape {
+              background: linear-gradient(to bottom, #ffffff 0%, #e2e8f0 100%);
+              box-shadow: inset 0 0 20px rgba(255,255,255,0.8), 0 15px 30px rgba(0,0,0,0.2);
+           }
+           .sun-shape {
+              background: linear-gradient(135deg, #fcd34d 0%, #f59e0b 100%);
+              box-shadow: 0 0 40px rgba(251, 191, 36, 0.6);
+           }
+           .rain-drop {
+              background: linear-gradient(180deg, #67e8f9 0%, #06b6d4 100%);
+              box-shadow: 0 5px 10px rgba(6, 182, 212, 0.3);
+           }
+           @keyframes float-cloud {
+              0%, 100% { transform: translateY(0px); }
+              50% { transform: translateY(-10px); }
+           }
+         `}</style>
+  
+         {isDay === 1 && (type === 'clear' || type === 'cloudy') && (
+           <div className="absolute top-0 right-2 w-16 h-16 rounded-full sun-shape animate-pulse z-0"></div>
+         )}
+  
+         <div className="absolute top-8 left-4 z-10 animate-[float-cloud_6s_ease-in-out_infinite]">
+            <div className="relative">
+               <div className="w-20 h-20 rounded-full cloud-shape absolute -top-8 -left-2"></div>
+               <div className="w-16 h-16 rounded-full cloud-shape absolute -top-4 left-10"></div>
+               <div className="w-28 h-12 rounded-full cloud-shape absolute top-4 left-0"></div>
+            </div>
+         </div>
+  
+         {(type === 'rain' || type === 'storm') && (
+            <div className="absolute bottom-4 left-8 z-0 flex gap-3">
+               <div className="w-3 h-5 rounded-full rain-drop animate-[bounce_1s_infinite]"></div>
+               <div className="w-3 h-5 rounded-full rain-drop animate-[bounce_1.2s_infinite] delay-100"></div>
+            </div>
+         )}
+      </div>
+    );
 };
 
 const WeatherView = ({ lang, onBack }: { lang: Language, onBack: () => void }) => {
@@ -31,30 +134,17 @@ const WeatherView = ({ lang, onBack }: { lang: Language, onBack: () => void }) =
     const [loading, setLoading] = useState(true);
     const [weather, setWeather] = useState<any>(null);
     const [locationName, setLocationName] = useState('Locating...');
-    const [currentTime, setCurrentTime] = useState(new Date());
     const [error, setError] = useState('');
-
-    // Clock
-    useEffect(() => {
-        const timer = setInterval(() => setCurrentTime(new Date()), 1000);
-        return () => clearInterval(timer);
-    }, []);
+    const [selectedDay, setSelectedDay] = useState(0);
 
     const fetchWeather = async (lat: number, lng: number) => {
         try {
-            // 1. Get Location Name (Reverse Geocoding - Free API)
-            try {
-                const locRes = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=en`);
-                const locData = await locRes.json();
-                setLocationName(`${locData.locality || locData.city || 'Village'}, ${locData.principalSubdivisionCode || ''}`);
-            } catch (e) {
-                setLocationName(`${lat.toFixed(2)}, ${lng.toFixed(2)}`);
-            }
+            const locRes = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=en`);
+            const locData = await locRes.json();
+            setLocationName(locData.locality || locData.city || 'My Location');
 
-            // 2. Get Weather Data (Open-Meteo - Free API)
-            const weatherRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,relative_humidity_2m,is_day,weather_code,wind_speed_10m&hourly=temperature_2m,weather_code,is_day&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=3`);
+            const weatherRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,relative_humidity_2m,is_day,weather_code,wind_speed_10m&hourly=temperature_2m,weather_code,is_day&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto`);
             const data = await weatherRes.json();
-            
             setWeather(data);
             setLoading(false);
         } catch (err) {
@@ -63,179 +153,148 @@ const WeatherView = ({ lang, onBack }: { lang: Language, onBack: () => void }) =
         }
     };
 
-    const getLocation = () => {
-        setLoading(true);
-        setError('');
+    useEffect(() => {
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
-                (position) => {
-                    fetchWeather(position.coords.latitude, position.coords.longitude);
-                },
-                (err) => {
-                    setError('Location permission denied');
-                    setLoading(false);
-                    // Fallback to default (Satara, MH)
-                    fetchWeather(17.68, 74.01);
-                }
+                (pos) => fetchWeather(pos.coords.latitude, pos.coords.longitude),
+                () => fetchWeather(19.75, 75.71)
             );
-        } else {
-            setError('Geolocation not supported');
-            setLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        getLocation();
+        } else fetchWeather(19.75, 75.71);
     }, []);
 
-    const currentInfo = weather ? getWeatherInfo(weather.current.weather_code, weather.current.is_day) : null;
+    // Format Data for Chart
+    const chartData = weather?.hourly.time.slice(0, 8).map((time: string, i: number) => ({
+        time: new Date(time).getHours() + ':00',
+        temp: Math.round(weather.hourly.temperature_2m[i]),
+    })) || [];
+
+    const getWeatherType = (code: number) => {
+        if (code >= 95) return 'storm';
+        if (code >= 51) return 'rain';
+        if (code >= 1 && code <= 3) return 'cloudy';
+        return 'clear';
+    }
+
+    if (loading) return (
+        <div className="h-full w-full flex items-center justify-center bg-[#020617]">
+             <Loader2 className="animate-spin text-purple-400" size={32} />
+        </div>
+    );
+
+    const weatherType = getWeatherType(weather.current.weather_code);
 
     return (
-        <SimpleView title={t.weather_title} onBack={onBack}>
-            {loading ? (
-                <div className="h-[60vh] flex flex-col items-center justify-center animate-enter">
-                    <Loader2 size={48} className="text-cyan-400 animate-spin mb-4"/>
-                    <p className="text-slate-400 animate-pulse">Detecting location & weather...</p>
-                </div>
-            ) : error && !weather ? (
-                <div className="h-[60vh] flex flex-col items-center justify-center animate-enter text-center px-6">
-                    <CloudLightning size={48} className="text-red-400 mb-4"/>
-                    <p className="text-red-300 font-bold mb-2">{error}</p>
-                    <button onClick={getLocation} className="px-6 py-2 bg-white/10 rounded-full text-sm font-bold mt-4 flex items-center gap-2">
-                        <RefreshCw size={14}/> Retry
-                    </button>
-                </div>
-            ) : weather && currentInfo ? (
-                <div className="space-y-6 animate-enter pb-24">
+        <div className="h-full w-full bg-[#1e1b4b] flex flex-col animate-enter lg:pl-32 relative overflow-hidden">
+            
+            {/* Immersive Background */}
+            <WeatherEffects type={weatherType} />
+            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#1e1b4b]/50 to-[#1e1b4b] z-0 pointer-events-none"></div>
+            
+            {/* 1. Header */}
+            <div className="pt-safe-top px-6 py-4 flex items-center justify-between z-20">
+                <button onClick={onBack} className="w-10 h-10 rounded-full border border-white/10 flex items-center justify-center text-white hover:bg-white/10 transition-colors backdrop-blur-md">
+                    <ArrowLeft size={20}/>
+                </button>
+                <span className="text-white font-bold text-lg drop-shadow-md">Temperature</span>
+                <button className="w-10 h-10 rounded-full border border-white/10 flex items-center justify-center text-white hover:bg-white/10 transition-colors backdrop-blur-md">
+                    <MoreVertical size={20}/>
+                </button>
+            </div>
+
+            {/* 2. Main Weather Display */}
+            {weather && (
+                <div className="flex-1 overflow-y-auto hide-scrollbar px-6 pb-20 z-20 relative">
                     
-                    {/* Main Weather Orb Card */}
-                    <div onClick={triggerHaptic} className="relative w-full aspect-[4/5] md:aspect-[2/1] rounded-[2.5rem] overflow-hidden group cursor-pointer border border-white/10 shadow-2xl">
+                    {/* Day Selector Pill */}
+                    <div className="flex justify-center mb-8">
+                        <div className="flex bg-[#2e2b5e]/80 backdrop-blur-md p-1 rounded-full border border-white/10">
+                            {['Today', 'Tomorrow', 'Next 7 Days'].map((day, i) => (
+                                <button 
+                                    key={i} 
+                                    onClick={() => { setSelectedDay(i); triggerHaptic(); }}
+                                    className={clsx(
+                                        "px-6 py-2 rounded-full text-sm font-bold transition-all",
+                                        selectedDay === i ? "bg-[#7c3aed] text-white shadow-lg" : "text-slate-400 hover:text-white"
+                                    )}
+                                >
+                                    {day}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Main Icon & Temp */}
+                    <div className="flex flex-col items-center justify-center mb-8 relative">
+                        {/* Glow behind icon */}
+                        <div className="absolute top-0 w-40 h-40 bg-purple-600/20 blur-[60px] rounded-full animate-pulse"></div>
                         
-                        {/* Background & Orb Animation */}
-                        <div className="absolute inset-0 bg-[#0f172a]"></div>
-                        <div className={`absolute inset-0 bg-gradient-to-br ${currentInfo.gradient} opacity-20`}></div>
+                        <WeatherIcon3D 
+                            type={weatherType} 
+                            isDay={weather.current.is_day} 
+                        />
                         
-                        {/* The ORB */}
-                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120%] h-[120%] flex items-center justify-center pointer-events-none">
-                            <div className={clsx(
-                                "w-[200px] h-[200px] rounded-full blur-[80px] animate-pulse transition-all duration-1000",
-                                currentInfo.orb
-                            )}></div>
-                             <div className={clsx(
-                                "absolute w-[120px] h-[120px] rounded-full blur-[50px] animate-pulse transition-all duration-1000 delay-75",
-                                "bg-white/20"
-                            )}></div>
-                        </div>
-
-                        {/* Noise Texture */}
-                        <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-overlay"></div>
-
-                        {/* Content */}
-                        <div className="relative z-10 h-full flex flex-col justify-between p-8">
-                            
-                            {/* Top Row */}
-                            <div className="flex justify-between items-start">
-                                <div>
-                                    <div className="flex items-center gap-2 text-slate-300 mb-1">
-                                        <MapPin size={14} className="text-cyan-400"/>
-                                        <span className="text-sm font-bold tracking-wide">{locationName}</span>
-                                    </div>
-                                    <div className="flex items-center gap-2 text-slate-400 text-xs font-mono">
-                                        <Clock size={12}/>
-                                        {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-                                    </div>
-                                </div>
-                                <div className="glass-panel px-3 py-1 rounded-full flex items-center gap-2 bg-white/5 border border-white/10">
-                                    <currentInfo.icon size={16} className={currentInfo.color}/>
-                                    <span className="text-xs font-bold uppercase tracking-wider text-white">{currentInfo.label}</span>
-                                </div>
-                            </div>
-
-                            {/* Center Temp */}
-                            <div className="flex flex-col items-center justify-center py-4">
-                                <currentInfo.icon size={80} className={clsx("mb-2 drop-shadow-[0_0_30px_rgba(255,255,255,0.2)] animate-float", currentInfo.color)}/>
-                                <h1 className="text-8xl font-black text-transparent bg-clip-text bg-gradient-to-b from-white to-white/60 tracking-tighter drop-shadow-lg">
-                                    {Math.round(weather.current.temperature_2m)}°
-                                </h1>
-                            </div>
-
-                            {/* Bottom Grid */}
-                            <div className="grid grid-cols-3 gap-2">
-                                <WeatherStat icon={Wind} label="Wind" value={`${weather.current.wind_speed_10m} km/h`} color="text-cyan-300" />
-                                <WeatherStat icon={Droplets} label="Humidity" value={`${weather.current.relative_humidity_2m}%`} color="text-blue-300" />
-                                <WeatherStat icon={Navigation} label="Gusts" value={`${(weather.current.wind_speed_10m * 1.5).toFixed(1)} km`} color="text-indigo-300" />
-                            </div>
+                        <h1 className="text-8xl font-bold text-white tracking-tighter mt-4 drop-shadow-2xl">
+                            {Math.round(weather.current.temperature_2m)}°
+                        </h1>
+                        <p className="text-purple-200 text-lg font-medium drop-shadow-md">
+                            {locationName}
+                        </p>
+                        <div className="flex gap-4 mt-2 text-sm text-slate-300 font-bold bg-white/5 px-4 py-1 rounded-full border border-white/5 backdrop-blur-sm">
+                             <span>H:{Math.round(weather.daily.temperature_2m_max[0])}°</span>
+                             <span>L:{Math.round(weather.daily.temperature_2m_min[0])}°</span>
                         </div>
                     </div>
 
-                    {/* Hourly Forecast */}
-                    <div>
-                        <h3 className="text-white font-bold mb-3 flex items-center gap-2 px-2"><Clock size={16} className="text-cyan-400"/> Hourly Forecast</h3>
-                        <div className="flex gap-3 overflow-x-auto hide-scrollbar pb-4 px-2 -mx-2">
-                            {weather.hourly.time.slice(0, 24).map((time: string, i: number) => {
-                                const date = new Date(time);
-                                const isCurrentHour = date.getHours() === new Date().getHours();
-                                // Take every 2nd hour to save space or slice as needed
-                                if (i % 2 !== 0) return null;
-                                const hInfo = getWeatherInfo(weather.hourly.weather_code[i], weather.hourly.is_day[i]);
-                                
-                                return (
-                                    <div key={i} className={clsx(
-                                        "min-w-[70px] p-3 rounded-2xl flex flex-col items-center justify-center border transition-all shrink-0",
-                                        isCurrentHour ? "bg-white/10 border-cyan-400/50 shadow-[0_0_15px_rgba(6,182,212,0.2)]" : "glass-panel bg-white/5 border-white/5"
-                                    )}>
-                                        <span className={clsx("text-xs font-bold mb-2", isCurrentHour ? "text-cyan-300" : "text-slate-400")}>
-                                            {date.toLocaleTimeString([], { hour: 'numeric', hour12: true })}
-                                        </span>
-                                        <hInfo.icon size={20} className={clsx("mb-2", hInfo.color)} />
-                                        <span className="font-bold text-white">{Math.round(weather.hourly.temperature_2m[i])}°</span>
-                                    </div>
-                                );
-                            })}
+                    {/* Hourly Chart Card */}
+                    <div className="glass-panel bg-[#2e2b5e]/40 border border-white/10 rounded-[2.5rem] p-6 shadow-xl mb-6 backdrop-blur-xl">
+                        <div className="flex justify-between items-center mb-6">
+                            <h3 className="text-white font-bold">Hourly Forecast</h3>
+                            <span className="text-xs text-purple-300 bg-purple-500/10 px-2 py-1 rounded-full border border-purple-500/20">Today</span>
+                        </div>
+                        
+                        <div className="h-48 w-full">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <AreaChart data={chartData}>
+                                    <defs>
+                                        <linearGradient id="colorTemp" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.5}/>
+                                            <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0}/>
+                                        </linearGradient>
+                                    </defs>
+                                    <Tooltip 
+                                        contentStyle={{ backgroundColor: '#1e1b4b', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)' }}
+                                        labelStyle={{ color: '#94a3b8' }}
+                                    />
+                                    <XAxis dataKey="time" stroke="#475569" tick={{fill: '#94a3b8', fontSize: 10}} tickLine={false} axisLine={false} />
+                                    <Area 
+                                        type="monotone" 
+                                        dataKey="temp" 
+                                        stroke="#a78bfa" 
+                                        strokeWidth={3} 
+                                        fillOpacity={1} 
+                                        fill="url(#colorTemp)" 
+                                    />
+                                </AreaChart>
+                            </ResponsiveContainer>
                         </div>
                     </div>
-                
-                    {/* Daily Forecast */}
-                    <div className="glass-panel rounded-[2rem] p-5 border border-white/10">
-                        <h3 className="text-white font-bold mb-4 flex items-center gap-2"><Calendar size={16} className="text-fuchsia-400"/> 3-Day Forecast</h3>
-                        <div className="space-y-4">
-                            {weather.daily.time.slice(0, 3).map((time: string, i: number) => {
-                                const dInfo = getWeatherInfo(weather.daily.weather_code[i], 1); // Assume day icon for list
-                                const date = new Date(time);
-                                return (
-                                    <div key={i} className="flex items-center justify-between py-3 border-b border-white/5 last:border-0 hover:bg-white/5 rounded-xl px-2 transition-colors">
-                                        <div className="flex items-center gap-4">
-                                            <div className={`w-10 h-10 rounded-full flex items-center justify-center bg-white/5`}>
-                                                <dInfo.icon size={20} className={dInfo.color}/>
-                                            </div>
-                                            <div>
-                                                <p className="text-white font-bold text-sm">
-                                                    {i === 0 ? 'Today' : i === 1 ? 'Tomorrow' : date.toLocaleDateString([], { weekday: 'long' })}
-                                                </p>
-                                                <p className="text-slate-500 text-xs font-medium">{dInfo.label}</p>
-                                            </div>
-                                        </div>
-                                        <div className="flex items-center gap-3">
-                                            <span className="text-white font-mono font-bold text-lg">{Math.round(weather.daily.temperature_2m_max[i])}°</span>
-                                            <span className="text-slate-500 font-mono text-sm">{Math.round(weather.daily.temperature_2m_min[i])}°</span>
-                                        </div>
-                                    </div>
-                                );
-                            })}
+
+                    {/* Stats Grid */}
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="bg-[#2e2b5e]/40 p-5 rounded-[2rem] border border-white/10 flex flex-col items-center gap-2 backdrop-blur-md">
+                             <span className="text-xs text-slate-400 uppercase font-bold">Wind</span>
+                             <span className="text-xl font-bold text-white">{weather.current.wind_speed_10m} km/h</span>
+                        </div>
+                        <div className="bg-[#2e2b5e]/40 p-5 rounded-[2rem] border border-white/10 flex flex-col items-center gap-2 backdrop-blur-md">
+                             <span className="text-xs text-slate-400 uppercase font-bold">Humidity</span>
+                             <span className="text-xl font-bold text-white">{weather.current.relative_humidity_2m}%</span>
                         </div>
                     </div>
+
                 </div>
-            ) : null}
-        </SimpleView>
+            )}
+        </div>
     );
 };
-
-const WeatherStat = ({ icon: Icon, label, value, color }: any) => (
-    <div className="glass-panel p-2.5 rounded-2xl bg-white/5 border border-white/5 flex flex-col items-center justify-center gap-1">
-        <Icon size={16} className={clsx("opacity-80", color)} />
-        <span className="text-[10px] uppercase font-bold text-slate-400">{label}</span>
-        <span className="text-sm font-bold text-white tracking-tight">{value}</span>
-    </div>
-);
 
 export default WeatherView;

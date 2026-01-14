@@ -6,6 +6,59 @@ import { Button } from '../Button';
 import { UserCircle, MapPin, Ruler, Sprout, Save, User } from 'lucide-react';
 import { triggerHaptic } from '../../utils/common';
 
+// --- CIRCULAR ORB BASE GRAPH (Moved from Dashboard) ---
+const LandAreaOrb = ({ area, unit }: { area: string, unit: string }) => {
+    const num = parseFloat(area) || 0;
+    const percentage = Math.min((num / 10) * 100, 100);
+    const radius = 60;
+    const circumference = 2 * Math.PI * radius;
+    const offset = circumference - (percentage / 100) * circumference;
+
+    return (
+        <div className="relative w-full py-8 flex flex-col items-center justify-center">
+             {/* Glowing Background */}
+             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 bg-emerald-500/10 blur-[60px] rounded-full pointer-events-none"></div>
+             
+             {/* SVG Gauge */}
+             <div className="relative w-48 h-48">
+                 <svg className="w-full h-full rotate-[-90deg]" viewBox="0 0 140 140">
+                     {/* Track */}
+                     <circle cx="70" cy="70" r="60" fill="none" stroke="#1e293b" strokeWidth="12" strokeLinecap="round" />
+                     {/* Progress */}
+                     <circle 
+                        cx="70" cy="70" r="60" 
+                        fill="none" 
+                        stroke="url(#gradient-land-profile)" 
+                        strokeWidth="12" 
+                        strokeLinecap="round"
+                        strokeDasharray={circumference}
+                        strokeDashoffset={offset}
+                        className="transition-all duration-1000 ease-out"
+                     >
+                        <animate attributeName="stroke-dashoffset" from={circumference} to={offset} dur="1.5s" fill="freeze" />
+                     </circle>
+                     <defs>
+                         <linearGradient id="gradient-land-profile" x1="0%" y1="0%" x2="100%" y2="0%">
+                             <stop offset="0%" stopColor="#34d399" />
+                             <stop offset="100%" stopColor="#059669" />
+                         </linearGradient>
+                     </defs>
+                 </svg>
+                 
+                 {/* Center Content */}
+                 <div className="absolute inset-0 flex flex-col items-center justify-center">
+                     <span className="text-4xl font-black text-white drop-shadow-lg">{num}</span>
+                     <span className="text-xs font-bold text-emerald-400 uppercase tracking-widest mt-1">{unit}</span>
+                 </div>
+             </div>
+             
+             <div className="mt-2 text-center">
+                 <h3 className="text-sm font-bold text-slate-300 uppercase tracking-wide">Registered Land</h3>
+             </div>
+        </div>
+    );
+}
+
 const ProfileView = ({ 
     lang, 
     currentUser, 
@@ -40,18 +93,9 @@ const ProfileView = ({
         <SimpleView title="Farmer Profile" onBack={onBack}>
             <div className="pb-24 animate-enter space-y-6">
                 
-                {/* Avatar Section */}
-                <div className="flex flex-col items-center justify-center py-6">
-                    <div className="relative group">
-                        <div className="absolute inset-0 bg-cyan-500/30 rounded-full blur-xl group-hover:bg-cyan-400/50 transition-all duration-500"></div>
-                        <div className="w-28 h-28 rounded-full glass-panel border border-white/20 flex items-center justify-center relative overflow-hidden z-10 shadow-2xl">
-                            <UserCircle className="text-slate-200 w-full h-full p-2 opacity-80" strokeWidth={1} />
-                        </div>
-                        <div className="absolute bottom-0 right-0 z-20 w-8 h-8 bg-cyan-500 rounded-full flex items-center justify-center border-2 border-[#020617] shadow-lg">
-                            <Save size={14} className="text-white"/>
-                        </div>
-                    </div>
-                    <p className="mt-4 text-sm text-slate-400 font-medium">Update your farming details</p>
+                {/* Visual Header with Graph */}
+                <div className="flex flex-col items-center justify-center">
+                    <LandAreaOrb area={landSize.split(' ')[0]} unit="Acres" />
                 </div>
 
                 {/* Form Container */}
@@ -151,3 +195,4 @@ const ProfileView = ({
 };
 
 export default ProfileView;
+        
