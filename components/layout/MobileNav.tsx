@@ -39,19 +39,15 @@ const MobileNav = ({ view, setView }: { view: ViewState, setView: (v: ViewState)
 
   return (
     <>
-    {/* CSS for Wave and Lighting Effects */}
+    {/* CSS for FAB Ripple */}
     <style>{`
-        @keyframes wave-ripple {
-            0% { transform: scale(1); opacity: 0.6; border-width: 2px; }
-            100% { transform: scale(2.5); opacity: 0; border-width: 0px; }
+        @keyframes fab-ripple {
+            0% { transform: scale(1); opacity: 0.6; border-width: 1px; }
+            100% { transform: scale(2.2); opacity: 0; border-width: 0px; }
         }
-        @keyframes neon-glow {
-            0%, 100% { box-shadow: 0 0 10px #22d3ee, 0 0 20px rgba(34, 211, 238, 0.4), inset 0 0 10px rgba(34, 211, 238, 0.2); }
-            50% { box-shadow: 0 0 20px #22d3ee, 0 0 30px rgba(34, 211, 238, 0.6), inset 0 0 20px rgba(34, 211, 238, 0.4); }
-        }
-        @keyframes rotate-ring {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+        @keyframes fab-glow {
+            0%, 100% { box-shadow: 0 0 10px #3d5afe, 0 0 20px rgba(61, 90, 254, 0.4); }
+            50% { box-shadow: 0 0 25px #3d5afe, 0 0 40px rgba(61, 90, 254, 0.6); }
         }
     `}</style>
 
@@ -60,16 +56,16 @@ const MobileNav = ({ view, setView }: { view: ViewState, setView: (v: ViewState)
         isVisible ? "translate-y-0 opacity-100" : "translate-y-[200%] opacity-0"
     )}>
       
-      {/* Container: Premium Glass Floating Island */}
-      <div className="w-full max-w-[420px] h-[4.5rem] rounded-[2.5rem] bg-[#020617]/90 backdrop-blur-2xl border border-white/10 shadow-[0_10px_40px_-10px_rgba(0,0,0,0.8)] flex items-center justify-between px-2 relative z-50 ring-1 ring-white/5">
+      {/* Floating Island Container */}
+      <div className="w-full max-w-[420px] h-[4.5rem] rounded-[2.5rem] bg-[#0a250c]/95 backdrop-blur-2xl border border-white/10 shadow-[0_15px_40px_-10px_rgba(0,0,0,0.9)] flex items-center justify-between px-2 relative z-50 ring-1 ring-white/5">
         
-        {/* Dynamic Horizon Glow Line at Top */}
-        <div className="absolute top-0 inset-x-10 h-[1px] bg-gradient-to-r from-transparent via-cyan-400/50 to-transparent shadow-[0_0_10px_#22d3ee]"></div>
+        {/* Dynamic Horizon Glow Line */}
+        <div className="absolute top-0 inset-x-12 h-[1px] bg-gradient-to-r from-transparent via-jungle-400/50 to-transparent shadow-[0_0_10px_#4ade80]"></div>
 
         {navItems.map((item) => {
            const isActive = view === item.id;
            
-           // --- CENTRAL POWER ORB (Voice) ---
+           // --- CENTRAL FAB (Voice) ---
            if (item.main) {
              return (
                <button key={item.id} onClick={() => { setView(item.id as ViewState); triggerHaptic(); }} 
@@ -77,21 +73,18 @@ const MobileNav = ({ view, setView }: { view: ViewState, setView: (v: ViewState)
                >
                   <div className="relative w-20 h-20 flex items-center justify-center">
                       
-                      {/* 1. Expanding Wave Ripples */}
-                      <div className="absolute inset-0 rounded-full border border-cyan-400 opacity-0 animate-[wave-ripple_2s_infinite]"></div>
-                      <div className="absolute inset-0 rounded-full border border-emerald-400 opacity-0 animate-[wave-ripple_2s_infinite_0.6s]"></div>
-                      
-                      {/* 2. Rotating Energy Ring */}
-                      <div className="absolute inset-[-4px] rounded-full border-2 border-dashed border-cyan-500/30 animate-[rotate-ring_10s_linear_infinite]"></div>
+                      {/* 1. Electric Ripple */}
+                      <div className="absolute inset-0 rounded-full border border-electric-500 opacity-0 animate-[fab-ripple_2s_infinite]"></div>
+                      <div className="absolute inset-0 rounded-full border border-electric-400 opacity-0 animate-[fab-ripple_2s_infinite_0.8s]"></div>
 
-                      {/* 3. The Core Orb Button */}
-                      <div className="relative w-16 h-16 rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center shadow-[0_0_30px_rgba(6,182,212,0.6)] z-20 overflow-hidden ring-4 ring-[#020617] group-active:scale-95 transition-transform duration-200">
+                      {/* 2. The Core FAB Button */}
+                      <div className="relative w-16 h-16 rounded-full bg-gradient-to-br from-electric-500 to-electric-700 flex items-center justify-center shadow-[0_0_30px_rgba(61,90,254,0.5)] z-20 overflow-hidden ring-4 ring-[#051108] group-active:scale-95 transition-transform duration-200 animate-[fab-glow_3s_infinite]">
                           
-                          {/* Inner Plasma */}
-                          <div className="absolute inset-0 bg-white/20 blur-md animate-pulse"></div>
+                          {/* Inner Shine */}
                           <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
+                          <div className="absolute top-0 left-0 w-full h-1/2 bg-white/10 blur-sm rounded-t-full"></div>
 
-                          <Mic size={28} className="relative z-30 text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.3)]" strokeWidth={2.5} />
+                          <Mic size={28} className="relative z-30 text-white drop-shadow-md" strokeWidth={2.5} />
                       </div>
 
                   </div>
@@ -106,25 +99,22 @@ const MobileNav = ({ view, setView }: { view: ViewState, setView: (v: ViewState)
              >
                 <div className={clsx(
                     "w-10 h-10 rounded-2xl flex items-center justify-center transition-all duration-300 relative overflow-hidden",
-                    isActive ? "bg-cyan-500/10 shadow-[0_0_15px_rgba(34,211,238,0.3)] border border-cyan-400/30 translate-y-[-4px]" : "bg-transparent hover:bg-white/5"
+                    isActive ? "bg-jungle-500/20 shadow-[0_0_15px_rgba(74,222,128,0.2)] border border-jungle-500/30 translate-y-[-4px]" : "bg-transparent hover:bg-white/5"
                 )}>
-                    {/* Active Background Glow */}
-                    {isActive && <div className="absolute inset-0 bg-cyan-400/10 blur-sm animate-pulse"></div>}
-
                     <item.icon 
                         size={22} 
                         strokeWidth={isActive ? 2.5 : 2} 
                         className={clsx(
                             "relative z-10 transition-colors duration-300", 
-                            isActive ? "text-cyan-300 drop-shadow-[0_0_5px_rgba(34,211,238,0.8)]" : "text-slate-500 group-hover:text-slate-300"
+                            isActive ? "text-jungle-400" : "text-slate-500 group-hover:text-slate-300"
                         )} 
                     />
                 </div>
                 
-                {/* Active Indicator Dot */}
+                {/* Active Dot */}
                 <div className={clsx(
                     "w-1 h-1 rounded-full transition-all duration-300",
-                    isActive ? "bg-cyan-400 shadow-[0_0_5px_#22d3ee] scale-100" : "bg-transparent scale-0"
+                    isActive ? "bg-jungle-400 shadow-[0_0_5px_#4ade80] scale-100" : "bg-transparent scale-0"
                 )}></div>
              </button>
            );
