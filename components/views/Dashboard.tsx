@@ -236,8 +236,29 @@ const DynamicGreeting = ({ user, lang }: { user: UserProfile, lang: Language }) 
     );
 };
 
+const AppHeaderLogo = () => (
+    <div className="flex items-center gap-3">
+        <div className="relative w-11 h-11 flex items-center justify-center">
+            {/* Outer Glow */}
+            <div className="absolute inset-0 bg-emerald-500/30 blur-xl rounded-full animate-pulse"></div>
+            
+            {/* Spinning Ring */}
+            <div className="absolute inset-0 border border-emerald-500/30 border-t-emerald-400 rounded-full animate-[spin_3s_linear_infinite]"></div>
+            
+            {/* Inner Core */}
+            <div className="relative w-9 h-9 rounded-full bg-gradient-to-b from-slate-800 to-slate-950 flex items-center justify-center shadow-lg border border-white/10 z-10">
+                <Sprout size={18} className="text-emerald-400 drop-shadow-[0_0_8px_rgba(52,211,153,0.5)]" />
+            </div>
+        </div>
+        <div className="flex flex-col">
+            <span className="text-lg font-black text-white leading-none tracking-tight drop-shadow-md">AI KRUSHI</span>
+            <span className="text-[8px] font-bold text-emerald-400 uppercase tracking-[0.25em] ml-0.5">Mitra</span>
+        </div>
+    </div>
+);
+
 // Enhanced Weather Widget with Live Data and Sun Clock
-const WeatherWidget = ({ weather, loading, location, lang }: any) => {
+const WeatherWidget = ({ weather, loading, location, lang, onNavigate }: any) => {
     const isDay = weather?.current?.is_day !== 0;
     const code = weather?.current?.weather_code || 0;
     const txt = DASH_TEXT[lang];
@@ -247,7 +268,7 @@ const WeatherWidget = ({ weather, loading, location, lang }: any) => {
     };
 
     return (
-        <GlassTile className="h-full p-0 overflow-hidden group relative">
+        <GlassTile onClick={() => onNavigate('WEATHER')} className="h-full p-0 overflow-hidden group relative">
              {/* 1. Dynamic Atmosphere Background */}
              <div className={clsx("absolute inset-0 transition-all duration-1000", 
                  isDay ? "bg-gradient-to-br from-blue-500/30 via-sky-400/20 to-amber-400/10" : "bg-gradient-to-br from-indigo-950/80 via-purple-900/40 to-slate-900/60"
@@ -590,30 +611,32 @@ const Dashboard = ({ lang, setLang, user, onNavigate }: { lang: Language, setLan
             <NewsTicker lang={lang} />
             
             {/* 2. HEADER */}
-            <div className="pt-4 px-6 pb-2 flex items-start justify-between">
-                 <div className="flex items-center gap-4 cursor-pointer" onClick={() => onNavigate('PROFILE')}>
-                     <div className="relative group">
-                         <div className="w-14 h-14 rounded-full bg-gradient-to-br from-yellow-400 to-amber-600 p-[2px] shadow-[0_0_20px_rgba(251,191,36,0.3)]">
-                             <div className="w-full h-full rounded-full bg-[#051108] flex items-center justify-center overflow-hidden">
-                                 {/* Initials or Avatar */}
-                                 <span className="text-xl font-black text-white">{user.name.charAt(0)}</span>
-                             </div>
-                         </div>
-                         <div className="absolute bottom-0 right-0 w-4 h-4 rounded-full bg-emerald-500 border-[3px] border-[#020617] animate-pulse"></div>
-                     </div>
-                     <DynamicGreeting user={user} lang={lang} />
-                 </div>
+            <div className="pt-4 px-6 pb-2 flex items-center justify-between z-50">
+                 {/* LEFT: ORB LOGO */}
+                 <AppHeaderLogo />
 
-                 <div className="flex items-center gap-3 mt-1.5">
-                     <button onClick={toggleLang} className="h-10 px-4 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 active:scale-95 transition-all flex items-center gap-2 backdrop-blur-md">
-                         <Languages size={16} className="text-slate-300"/>
-                         <span className="text-xs font-bold uppercase text-white tracking-wide">{lang === 'mr' ? 'मराठी' : lang === 'hi' ? 'हिंदी' : 'ENG'}</span>
+                 {/* RIGHT: ACTIONS */}
+                 <div className="flex items-center gap-3">
+                     <button onClick={toggleLang} className="h-9 px-3 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 active:scale-95 transition-all flex items-center gap-2 backdrop-blur-md">
+                         <Languages size={14} className="text-slate-300"/>
+                         <span className="text-[10px] font-bold uppercase text-white tracking-wide">{lang === 'mr' ? 'मराठी' : lang === 'hi' ? 'हिंदी' : 'ENG'}</span>
                      </button>
-                     <button className="w-10 h-10 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 active:scale-95 transition-all flex items-center justify-center relative">
-                         <BellRing size={18} className="text-white"/>
-                         <span className="absolute top-2.5 right-2.5 w-1.5 h-1.5 rounded-full bg-red-500 shadow-[0_0_5px_red]"></span>
-                     </button>
+                     
+                     {/* Profile Icon (Moved to Right) */}
+                     <div onClick={() => onNavigate('PROFILE')} className="relative cursor-pointer group">
+                         <div className="w-10 h-10 rounded-full bg-gradient-to-br from-yellow-400 to-amber-600 p-[1.5px] shadow-[0_0_15px_rgba(251,191,36,0.2)] group-hover:shadow-[0_0_20px_rgba(251,191,36,0.4)] transition-all">
+                              <div className="w-full h-full rounded-full bg-[#051108] flex items-center justify-center overflow-hidden">
+                                  {/* Initials or Avatar */}
+                                  <span className="text-sm font-black text-white">{user.name.charAt(0)}</span>
+                              </div>
+                         </div>
+                     </div>
                  </div>
+            </div>
+
+            {/* 2.1 GREETING SUB-HEADER (New Section) */}
+            <div className="px-6 py-2 pb-4">
+                <DynamicGreeting user={user} lang={lang} />
             </div>
 
             {/* 3. BENTO GRID */}
@@ -621,7 +644,7 @@ const Dashboard = ({ lang, setLang, user, onNavigate }: { lang: Language, setLan
                 
                 {/* Weather (MD: Col 1-4) - Immersive Scene */}
                 <div className="col-span-1 md:col-span-4 h-56 md:h-64">
-                    <WeatherWidget weather={weather} loading={loadingWeather} location={liveLocation} lang={lang} />
+                    <WeatherWidget weather={weather} loading={loadingWeather} location={liveLocation} lang={lang} onNavigate={onNavigate} />
                 </div>
 
                 {/* Market Trends (MD: Col 5-8) - Trading Cards */}
