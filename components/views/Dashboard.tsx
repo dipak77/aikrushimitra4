@@ -33,22 +33,22 @@ const DASH_TEXT: Record<Language, any> = {
     crop_doctor_sub: "झटपट रोग निदान",
     subsidies: "सबसिडी आणि अर्थसहाय्य",
     weather_desc: {
-      0: "निरभ्र आकाश आणि लख्ख ऊन.",
-      1: "अंशतः ढगाळ आणि मंद वारा.",
-      2: "अंशतः ढगाळ आणि मंद वारा.",
-      3: "अंशतः ढगाळ आणि मंद वारा.",
-      45: "धुके पडले आहे, दृश्यमानता कमी आहे.",
-      48: "धुके पडले आहे, दृश्यमानता कमी आहे.",
-      51: "आज हलक्या पावसाची शक्यता.",
-      53: "आज हलक्या पावसाची शक्यता.",
-      55: "आज हलक्या पावसाची शक्यता.",
-      61: "मध्यम पाऊस, छत्री सोबत ठेवा.",
-      63: "मध्यम पाऊस, छत्री सोबत ठेवा.",
-      65: "जोराचा पाऊस पडू शकतो.",
-      80: "दुपारी पावसाच्या सरी येतील.",
-      81: "दुपारी पावसाच्या सरी येतील.",
-      82: "दुपारी पावसाच्या सरी येतील.",
-      95: "मेघगर्जनेसह पाऊस! सुरक्षित रहा."
+      0: "निरभ्र आकाश",
+      1: "अंशतः ढगाळ",
+      2: "अंशतः ढगाळ",
+      3: "अंशतः ढगाळ",
+      45: "धुके",
+      48: "धुके",
+      51: "हलका पाऊस",
+      53: "हलका पाऊस",
+      55: "हलका पाऊस",
+      61: "मध्यम पाऊस",
+      63: "मध्यम पाऊस",
+      65: "जोराचा पाऊस",
+      80: "पावसाच्या सरी",
+      81: "पावसाच्या सरी",
+      82: "पावसाच्या सरी",
+      95: "मेघगर्जना"
     },
     crops: {
       'Soyabean': 'सोयाबीन', 'Cotton': 'कापूस', 'Onion': 'कांदा', 'Tur': 'तूर', 'Wheat': 'गहू', 'Maize': 'मका', 'Gram': 'हरभरा', 'Tomato': 'टोमॅटो', 'Potato': 'बटाटा', 'Rice': 'तांदूळ'
@@ -78,22 +78,22 @@ const DASH_TEXT: Record<Language, any> = {
     crop_doctor_sub: "त्वरित रोग निदान",
     subsidies: "सब्सिडी और वित्तीय सहायता",
     weather_desc: {
-      0: "साफ आसमान और तेज धूप।",
-      1: "आंशिक रूप से बादल और हल्की हवा।",
-      2: "आंशिक रूप से बादल और हल्की हवा।",
-      3: "आंशिक रूप से बादल और हल्की हवा।",
-      45: "कोहरा है, दृश्यता कम है।",
-      48: "कोहरा है, दृश्यता कम है।",
-      51: "आज हल्की बूंदाबांदी की उम्मीद है।",
-      53: "आज हल्की बूंदाबांदी की उम्मीद है।",
-      55: "आज हल्की बूंदाबांदी की उम्मीद है।",
-      61: "मध्यम बारिश, छाता साथ रखें।",
-      63: "मध्यम बारिश, छाता साथ रखें।",
-      65: "भारी बारिश हो सकती है।",
-      80: "दोपहर में बारिश की बौछारें।",
-      81: "दोपहर में बारिश की बौछारें।",
-      82: "दोपहर में बारिश की बौछारें।",
-      95: "गरज के साथ बारिश! सुरक्षित रहें।"
+      0: "साफ आसमान",
+      1: "आंशिक बादल",
+      2: "आंशिक बादल",
+      3: "आंशिक बादल",
+      45: "कोहरा",
+      48: "कोहरा",
+      51: "हल्की बूंदाबांदी",
+      53: "हल्की बूंदाबांदी",
+      55: "हल्की बूंदाबांदी",
+      61: "मध्यम बारिश",
+      63: "मध्यम बारिश",
+      65: "भारी बारिश",
+      80: "बारिश की बौछारें",
+      81: "बारिश की बौछारें",
+      82: "बारिश की बौछारें",
+      95: "गरज के साथ बारिश"
     },
     crops: {
       'Soyabean': 'सोयाबीन', 'Cotton': 'कपास', 'Onion': 'प्याज', 'Tur': 'तूर', 'Wheat': 'गेहूं', 'Maize': 'मक्का', 'Gram': 'चना', 'Tomato': 'टमाटर', 'Potato': 'आलू', 'Rice': 'चावल'
@@ -123,22 +123,22 @@ const DASH_TEXT: Record<Language, any> = {
     crop_doctor_sub: "Instant Disease Detection",
     subsidies: "Subsidies & Financial Support",
     weather_desc: {
-      0: "Clear sky with bright sunshine.",
-      1: "Partly cloudy with gentle breeze.",
-      2: "Partly cloudy with gentle breeze.",
-      3: "Partly cloudy with gentle breeze.",
-      45: "Foggy conditions, visibility low.",
-      48: "Foggy conditions, visibility low.",
-      51: "Light drizzle expected today.",
-      53: "Light drizzle expected today.",
-      55: "Light drizzle expected today.",
-      61: "Moderate rain, carry an umbrella.",
-      63: "Moderate rain, carry an umbrella.",
-      65: "Heavy rain expected.",
-      80: "Rain showers likely in afternoon.",
-      81: "Rain showers likely in afternoon.",
-      82: "Rain showers likely in afternoon.",
-      95: "Thunderstorm alert! Stay safe."
+      0: "Clear Sky",
+      1: "Partly Cloudy",
+      2: "Partly Cloudy",
+      3: "Partly Cloudy",
+      45: "Foggy",
+      48: "Foggy",
+      51: "Light Drizzle",
+      53: "Light Drizzle",
+      55: "Light Drizzle",
+      61: "Moderate Rain",
+      63: "Moderate Rain",
+      65: "Heavy Rain",
+      80: "Rain Showers",
+      81: "Rain Showers",
+      82: "Rain Showers",
+      95: "Thunderstorm"
     },
     crops: {
       'Soyabean': 'Soyabean', 'Cotton': 'Cotton', 'Onion': 'Onion', 'Tur': 'Tur', 'Wheat': 'Wheat', 'Maize': 'Maize', 'Gram': 'Gram', 'Tomato': 'Tomato', 'Potato': 'Potato', 'Rice': 'Rice'
@@ -159,31 +159,16 @@ const GlassTile = ({ children, className, onClick, delay = 0 }: any) => (
         onClick={onClick}
         style={{ animationDelay: `${delay}ms` }}
         className={clsx(
-            "relative overflow-hidden rounded-[2rem] border border-white/10 shadow-xl transition-all duration-300 group cursor-pointer animate-enter",
-            "bg-[#0f172a]/40 backdrop-blur-xl hover:bg-[#0f172a]/60 hover:border-white/20 hover:scale-[1.02] hover:shadow-[0_10px_40px_-10px_rgba(0,0,0,0.5)]",
+            "relative overflow-hidden rounded-[2.5rem] border border-white/5 shadow-xl transition-all duration-300 group cursor-pointer animate-enter",
+            "bg-[#1e293b]/40 backdrop-blur-xl hover:bg-[#1e293b]/60 hover:border-white/10 hover:scale-[1.01]",
             className
         )}
     >
-        {/* Inner Spotlight Effect */}
-        <div className="absolute -top-20 -right-20 w-40 h-40 bg-white/5 rounded-full blur-[50px] group-hover:bg-white/10 transition-colors pointer-events-none"></div>
         {children}
     </div>
 );
 
-const LiveClock = () => {
-    const [time, setTime] = useState(new Date());
-    useEffect(() => {
-        const timer = setInterval(() => setTime(new Date()), 1000);
-        return () => clearInterval(timer);
-    }, []);
-    return (
-        <span className="font-mono tabular-nums tracking-wide">
-            {time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}
-        </span>
-    );
-};
-
-// --- 3. COMPONENT WIDGETS ---
+// --- 3. WIDGETS ---
 
 const NewsTicker = ({ lang }: { lang: Language }) => {
     return (
@@ -257,7 +242,72 @@ const AppHeaderLogo = () => (
     </div>
 );
 
-// Enhanced Weather Widget with Live Data and Sun Clock
+// --- 3D WEATHER ICONS ---
+const WeatherIcon3D = ({ type, isDay }: { type: string, isDay: boolean }) => {
+    return (
+      <div className="relative w-40 h-40 flex items-center justify-center filter drop-shadow-2xl">
+         {/* SUN/MOON Layer (Behind) */}
+         {isDay && type !== 'rain' && type !== 'storm' && (
+           <div className={clsx("absolute w-24 h-24 rounded-full bg-gradient-to-br from-amber-300 via-amber-400 to-orange-500 shadow-[0_0_50px_rgba(251,191,36,0.6)] animate-pulse-slow transition-transform duration-1000", 
+               type === 'clear' ? "scale-100" : "top-2 right-4 scale-75"
+           )}></div>
+         )}
+         {!isDay && type !== 'rain' && type !== 'storm' && (
+            <div className={clsx("absolute w-20 h-20 rounded-full bg-gradient-to-br from-slate-200 to-slate-400 shadow-[0_0_40px_rgba(255,255,255,0.2)] transition-transform duration-1000",
+                 type === 'clear' ? "scale-100" : "top-2 right-4 scale-75"
+            )}>
+               <div className="absolute top-4 left-3 w-4 h-4 bg-slate-400/20 rounded-full"></div>
+               <div className="absolute bottom-4 right-5 w-2 h-2 bg-slate-400/20 rounded-full"></div>
+            </div>
+         )}
+  
+         {/* CLOUD Layer (Front) */}
+         {(type !== 'clear') && (
+           <div className="relative z-10 transform scale-105">
+              {/* Main Cloud Shape */}
+              <svg width="150" height="100" viewBox="0 0 150 100" className="drop-shadow-[0_20px_20px_rgba(0,0,0,0.5)]">
+                 <defs>
+                    <linearGradient id="cloudBody" x1="0%" y1="0%" x2="0%" y2="100%">
+                       <stop offset="0%" stopColor="#ffffff" />
+                       <stop offset="100%" stopColor="#94a3b8" />
+                    </linearGradient>
+                    <filter id="gloss" x="-20%" y="-20%" width="140%" height="140%">
+                        <feGaussianBlur stdDeviation="3" result="blur"/>
+                        <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+                    </filter>
+                 </defs>
+                 
+                 {/* Cloud Base */}
+                 <path d="M50,85 Q25,85 25,60 Q25,30 55,30 Q65,10 95,10 Q120,10 130,40 Q150,40 150,65 Q150,85 130,85 Z" 
+                       fill="url(#cloudBody)" />
+                 
+                 {/* Highlight/Gloss (Simulated 3D reflection) */}
+                 <path d="M60,35 Q70,20 95,20 Q115,20 125,40" 
+                       fill="none" stroke="white" strokeWidth="4" strokeOpacity="0.5" strokeLinecap="round" filter="url(#gloss)" />
+              </svg>
+              
+              {/* Rain / Storm Elements */}
+              {(type === 'rain' || type === 'storm') && (
+                 <div className="absolute -bottom-2 left-10 flex gap-4 z-0">
+                    {[1,2,3].map(i => (
+                      <div key={i} className="w-3.5 h-6 bg-gradient-to-b from-blue-400 to-blue-600 rounded-full shadow-lg animate-[rain_0.8s_ease-in_infinite]" 
+                           style={{animationDelay: `${i * 0.25}s`, transform: 'rotate(15deg)'}}></div>
+                    ))}
+                 </div>
+              )}
+              
+              {type === 'storm' && (
+                  <svg className="absolute bottom-[-15px] right-12 w-10 h-14 text-yellow-400 drop-shadow-[0_0_15px_rgba(250,204,21,0.8)] animate-[flash_2.5s_infinite]" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M13 2L3 14H12L11 22L21 10H12L13 2Z" />
+                  </svg>
+              )}
+           </div>
+         )}
+      </div>
+    )
+};
+
+// --- UPDATED WEATHER WIDGET ---
 const WeatherWidget = ({ weather, loading, location, lang, onNavigate }: any) => {
     const isDay = weather?.current?.is_day !== 0;
     const code = weather?.current?.weather_code || 0;
@@ -266,117 +316,54 @@ const WeatherWidget = ({ weather, loading, location, lang, onNavigate }: any) =>
     const getWeatherDescription = (c: number) => {
         return txt.weather_desc[c] || txt.weather_desc[0];
     };
+    
+    const getType = (c: number) => {
+        if(c >= 95) return 'storm';
+        if(c >= 51) return 'rain';
+        if(c >= 1 && c <= 3) return 'cloudy';
+        return 'clear';
+    };
+    const type = getType(code);
 
     return (
-        <GlassTile onClick={() => onNavigate('WEATHER')} className="h-full p-0 overflow-hidden group relative">
-             {/* 1. Dynamic Atmosphere Background */}
-             <div className={clsx("absolute inset-0 transition-all duration-1000", 
-                 isDay ? "bg-gradient-to-br from-blue-500/30 via-sky-400/20 to-amber-400/10" : "bg-gradient-to-br from-indigo-950/80 via-purple-900/40 to-slate-900/60"
-             )}></div>
+        <GlassTile onClick={() => onNavigate('WEATHER')} className="h-full p-6 relative overflow-hidden group bg-gradient-to-br from-[#0f172a] to-[#1e293b] border-white/5 shadow-2xl">
+             {/* Background Mesh (Subtle) */}
+             <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-indigo-500/20 via-transparent to-transparent"></div>
              
-             {/* 2. Particle Effects (Subtle) */}
-             <div className="absolute inset-0 opacity-30 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] mix-blend-overlay"></div>
-
-             <div className="relative z-10 p-5 flex flex-col h-full justify-between">
+             {/* Main Layout */}
+             <div className="flex justify-between items-center h-full relative z-10 px-2">
                  
-                 {/* Top Section: Layout Split */}
-                 <div className="flex justify-between items-start">
+                 {/* Left: Info Block */}
+                 <div className="flex flex-col justify-center h-full">
                      
-                     {/* Left: Weather Info (Big Temp) */}
-                     <div className="flex flex-col pt-1">
-                         <div className="flex items-start">
-                             <GoldText className="text-[3.5rem] leading-none font-black tracking-tighter drop-shadow-2xl">
-                                 {loading ? "--" : Math.round(weather.current.temperature_2m)}°
-                             </GoldText>
-                         </div>
-                         <p className="text-sm font-bold text-slate-200 mt-2 leading-tight opacity-90 line-clamp-3 max-w-[120px] shadow-black/50 drop-shadow-md">
-                             {loading ? txt.fetching : getWeatherDescription(code)}
-                         </p>
+                     {/* Location */}
+                     <h2 className="text-lg font-medium text-slate-300 tracking-wide flex items-center gap-1.5 mb-1">
+                         <MapPin size={14} className="text-slate-400"/>
+                         {location}
+                     </h2>
+
+                     {/* Big Temp - Updated Typography */}
+                     <div className="flex items-start -ml-1">
+                         <span className="text-[5.5rem] leading-[0.8] font-thin tracking-tighter text-white drop-shadow-lg">
+                             {loading ? "--" : Math.round(weather.current.temperature_2m)}°
+                         </span>
                      </div>
-
-                     {/* Right: The Sun-Clock Orb & Location */}
-                     <div className="flex flex-col items-center relative -mt-2 -mr-2">
-                        
-                        {/* THE ORB CONTAINER */}
-                        <div className="relative w-28 h-28 flex items-center justify-center">
-                            
-                            {/* Ambient Glow */}
-                            <div className={clsx("absolute inset-0 rounded-full blur-[30px] opacity-50 animate-pulse transition-colors duration-1000", 
-                                isDay ? "bg-amber-500" : "bg-blue-600"
-                            )}></div>
-
-                            {/* Rotating Rays / Rings */}
-                            <div className={clsx("absolute inset-0 flex items-center justify-center transition-opacity duration-1000", 
-                                isDay ? "opacity-100" : "opacity-0"
-                            )}>
-                                 {/* SVG Sun Rays animating */}
-                                 <Sun size={110} strokeWidth={0.5} className="text-amber-300 animate-[spin_20s_linear_infinite]" />
-                                 <Sun size={90} strokeWidth={1} className="absolute text-orange-400/50 animate-[spin_15s_linear_infinite_reverse]" />
-                            </div>
-                            
-                            {/* Moon Elements */}
-                            <div className={clsx("absolute inset-0 flex items-center justify-center transition-opacity duration-1000", 
-                                !isDay ? "opacity-100" : "opacity-0"
-                            )}>
-                                 <div className="w-24 h-24 rounded-full border border-blue-300/20 bg-blue-900/20 backdrop-blur-sm"></div>
-                                 <Moon size={90} strokeWidth={0.5} className="absolute text-blue-200/50" />
-                            </div>
-
-                            {/* CORE: The Glass Clock Orb */}
-                            <div className={clsx("relative w-16 h-16 rounded-full flex items-center justify-center border shadow-[inset_0_2px_10px_rgba(255,255,255,0.3)] backdrop-blur-md z-10 transition-colors duration-1000",
-                                isDay ? "bg-amber-500/10 border-amber-200/40 shadow-amber-500/20" : "bg-indigo-900/40 border-indigo-300/30 shadow-blue-500/20"
-                            )}>
-                                {/* Glass Shine */}
-                                <div className="absolute top-1 left-3 w-6 h-3 bg-white/30 rounded-full blur-[2px]"></div>
-                                
-                                {/* Digital Clock Text */}
-                                <div className="flex flex-col items-center justify-center leading-none">
-                                    <span className={clsx("text-[9px] font-black tracking-widest uppercase mb-[1px]", isDay ? "text-amber-100" : "text-blue-200")}>
-                                        {loading ? "--" : (isDay ? "DAY" : "NIGHT")}
-                                    </span>
-                                    <span className="text-sm font-bold tracking-tighter font-mono tabular-nums text-white drop-shadow-md">
-                                        <LiveClock />
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Location Pill (Below Sun) */}
-                        <div className="relative z-20 -mt-2 bg-black/40 backdrop-blur-xl px-3 py-1 rounded-full border border-white/10 shadow-[0_4px_10px_rgba(0,0,0,0.3)] flex items-center gap-1.5 transform hover:scale-105 transition-transform cursor-pointer">
-                            <span className="relative flex h-2 w-2">
-                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                            </span>
-                            <span className="text-[10px] font-bold text-white uppercase tracking-wider max-w-[80px] truncate">
-                                {location}
-                            </span>
-                        </div>
-
-                     </div>
-                 </div>
-                 
-                 {/* Bottom: Metrics Pill */}
-                 <div className="grid grid-cols-2 gap-2 mt-auto">
-                     <div className="bg-black/20 backdrop-blur-md rounded-xl p-2.5 flex items-center gap-2 border border-white/5 hover:bg-white/5 transition-colors">
-                         <div className="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center text-blue-300 shrink-0">
-                             <Wind size={16}/>
-                         </div>
-                         <div className="leading-none">
-                             <p className="text-xs font-bold text-white mb-0.5">{loading ? "-" : weather.current.wind_speed_10m} <span className="text-[8px] text-slate-400">km/h</span></p>
-                             <p className="text-[8px] text-slate-400 uppercase font-bold tracking-wider">{txt.wind}</p>
-                         </div>
-                     </div>
-                     <div className="bg-black/20 backdrop-blur-md rounded-xl p-2.5 flex items-center gap-2 border border-white/5 hover:bg-white/5 transition-colors">
-                         <div className="w-8 h-8 rounded-lg bg-cyan-500/20 flex items-center justify-center text-cyan-300 shrink-0">
-                             <Droplets size={16}/>
-                         </div>
-                         <div className="leading-none">
-                             <p className="text-xs font-bold text-white mb-0.5">45<span className="text-[8px] text-slate-400">%</span></p>
-                             <p className="text-[8px] text-slate-400 uppercase font-bold tracking-wider">{txt.humidity}</p>
-                         </div>
+                     
+                     {/* Description & Wind */}
+                     <div className="flex flex-col gap-1 mt-3">
+                         <span className="text-base font-medium text-white capitalize">
+                             {loading ? "..." : getWeatherDescription(code)}
+                         </span>
+                         <span className="text-xs font-bold text-slate-500 flex items-center gap-1">
+                             <Wind size={12}/> {loading ? "-" : weather.current.wind_speed_10m} km/h
+                         </span>
                      </div>
                  </div>
 
+                 {/* Right: 3D Icon */}
+                 <div className="flex items-center justify-center transform scale-110 -mr-4 -mt-4">
+                     <WeatherIcon3D type={type} isDay={isDay} />
+                 </div>
              </div>
         </GlassTile>
     );
@@ -504,7 +491,7 @@ const QuickActionTile = ({ icon: Icon, label, colorClass, onClick, delay }: any)
 
 // Illustrative Banner
 const IllustrativeBanner = ({ title, subtitle, icon: Icon, gradient, pattern, onClick }: any) => (
-    <div onClick={onClick} className="relative h-40 rounded-[2rem] overflow-hidden cursor-pointer group shadow-lg border border-white/10">
+    <div onClick={onClick} className="relative h-40 rounded-[2.5rem] overflow-hidden cursor-pointer group shadow-lg border border-white/10">
         {/* Background Gradient */}
         <div className={clsx("absolute inset-0 bg-gradient-to-r opacity-90 transition-opacity group-hover:opacity-100", gradient)}></div>
         

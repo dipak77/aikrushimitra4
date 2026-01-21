@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { UserProfile, Language } from '../../types';
 import { TRANSLATIONS } from '../../constants';
-import { ArrowLeft, RefreshCw, Mic, WifiOff, Sparkles, MessageSquare } from 'lucide-react';
+import { ArrowLeft, RefreshCw, Mic, WifiOff, MessageSquare } from 'lucide-react';
 import { GoogleGenAI, Modality } from '@google/genai';
 import { getGenAIKey } from '../../services/geminiService';
 import { decode, decodeAudioData, createPCMChunk } from '../../utils/audio';
@@ -473,13 +473,15 @@ const VoiceAssistant = ({ lang, user, onBack }: { lang: Language, user: UserProf
                  ) : status === 'idle' ? t.voice_title : status === 'error' ? "Connection Error" : "Connecting..."}
               </h2>
 
-              {/* Suggestions Chips (Visible when connected but no recent transcript or idle) */}
+              {/* Suggestions Chips (Vertical List) */}
               {(status === 'idle' || (status === 'connected' && transcripts.length < 2)) && (
-                 <div className="w-full max-w-md overflow-x-auto hide-scrollbar flex gap-2 mt-4 pb-2 px-1 snap-x">
+                 <div className="w-full max-w-[280px] flex flex-col gap-3 mt-6 animate-enter delay-100">
                     {t.voice_hints.map((hint: string, i: number) => (
-                        <div key={i} className="snap-center shrink-0 px-4 py-2 rounded-full bg-white/10 border border-white/10 backdrop-blur-md text-xs font-medium text-emerald-100 whitespace-nowrap shadow-lg flex items-center gap-2">
-                            <MessageSquare size={12} className="text-emerald-400"/>
-                            "{hint}"
+                        <div key={i} className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 backdrop-blur-md text-sm font-medium text-emerald-100 shadow-lg flex items-center gap-3 hover:bg-white/10 transition-colors cursor-pointer active:scale-[0.98]">
+                            <div className="w-6 h-6 rounded-full bg-emerald-500/20 flex items-center justify-center shrink-0">
+                                <MessageSquare size={12} className="text-emerald-400"/>
+                            </div>
+                            <span className="truncate">{hint}</span>
                         </div>
                     ))}
                  </div>
