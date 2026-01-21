@@ -2,191 +2,119 @@
 import React, { useState, useEffect } from 'react';
 import { Language } from '../../types';
 import { TRANSLATIONS } from '../../constants';
-import { ArrowLeft, MoreVertical, MapPin, Wind, Droplets, Sun, Calendar, Clock } from 'lucide-react';
+import { ArrowLeft, MoreVertical, MapPin, Wind, Droplets, Sun, Calendar, Clock, CloudRain, ThermometerSun, Eye, Sparkles } from 'lucide-react';
 import { triggerHaptic } from '../../utils/common';
-import { AreaChart, Area, XAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { AreaChart, Area, XAxis, Tooltip, ResponsiveContainer, YAxis } from 'recharts';
 import { Loader2 } from 'lucide-react';
 import { clsx } from 'clsx';
 
-// --- PREMIUM ANIMATED ICONS ---
+// --- PREMIUM 3D ICONS (High Res) ---
 
-const SunIcon = () => (
-  <div className="relative w-48 h-48 flex items-center justify-center animate-[float_6s_ease-in-out_infinite]">
-    {/* Glow */}
-    <div className="absolute inset-0 bg-orange-500/30 blur-[60px] rounded-full animate-pulse"></div>
-    {/* Rotating Rays */}
-    <svg className="absolute w-full h-full animate-[spin_25s_linear_infinite] text-amber-400 opacity-80" viewBox="0 0 100 100">
-        {[...Array(12)].map((_, i) => (
-            <rect key={i} x="48" y="0" width="4" height="12" rx="2" transform={`rotate(${i * 30} 50 50)`} fill="currentColor" />
-        ))}
-    </svg>
-    <svg className="absolute w-[80%] h-[80%] animate-[spin_20s_linear_infinite_reverse] text-orange-400/50" viewBox="0 0 100 100">
-        {[...Array(8)].map((_, i) => (
-            <rect key={i} x="48" y="0" width="4" height="16" rx="2" transform={`rotate(${i * 45} 50 50)`} fill="currentColor" />
-        ))}
-    </svg>
-    {/* Core Sun */}
-    <div className="relative w-24 h-24 bg-gradient-to-tr from-yellow-300 via-amber-400 to-orange-500 rounded-full shadow-[inset_-4px_-4px_10px_rgba(255,0,0,0.2),0_0_40px_rgba(251,191,36,0.6)]"></div>
-  </div>
-);
-
-const MoonIcon = () => (
-   <div className="relative w-48 h-48 flex items-center justify-center animate-[float_6s_ease-in-out_infinite]">
-      <div className="absolute inset-0 bg-blue-100/10 blur-[50px] rounded-full"></div>
-      {/* Moon Body */}
-      <div className="relative w-28 h-28 bg-gradient-to-tr from-slate-100 to-slate-300 rounded-full shadow-[inset_-10px_-10px_20px_rgba(0,0,0,0.5),0_0_30px_rgba(255,255,255,0.2)] overflow-hidden">
-          {/* Craters */}
-          <div className="absolute top-5 left-6 w-5 h-5 bg-slate-400/20 rounded-full shadow-inner"></div>
-          <div className="absolute bottom-8 right-8 w-8 h-8 bg-slate-400/20 rounded-full shadow-inner"></div>
-          <div className="absolute top-12 right-4 w-3 h-3 bg-slate-400/20 rounded-full shadow-inner"></div>
-      </div>
-      {/* Stars */}
-      <div className="absolute top-4 right-8 text-white animate-pulse">✦</div>
-      <div className="absolute bottom-4 left-6 text-white animate-pulse delay-700">✦</div>
-      <div className="absolute top-0 left-10 text-white/50 text-xs animate-pulse delay-300">✦</div>
-   </div>
-);
-
-const CloudIcon = ({ type, isDay }: { type: 'cloudy' | 'rain' | 'storm', isDay: boolean }) => (
-    <div className="relative w-48 h-48 flex items-center justify-center">
-        
-        {/* Sun/Moon peeking behind if partly cloudy */}
-        {isDay && type === 'cloudy' && (
-            <div className="absolute top-6 right-6 w-16 h-16 bg-amber-400 rounded-full blur-md animate-[pulse_4s_infinite]"></div>
-        )}
-        
-        {/* Back Cloud Layer */}
-        <div className="absolute top-12 left-6 w-24 h-24 bg-white/20 rounded-full blur-xl animate-[float_7s_ease-in-out_infinite]"></div>
-        <div className="absolute top-16 right-4 w-20 h-20 bg-white/20 rounded-full blur-xl animate-[float_8s_ease-in-out_infinite_reverse]"></div>
-        
-        {/* Main Cloud Group */}
-        <div className="relative z-10 animate-[float_6s_ease-in-out_infinite] filter drop-shadow-2xl">
-             <svg width="180" height="110" viewBox="0 0 160 100">
-                 <path d="M40,80 Q20,80 20,60 Q20,30 50,30 Q60,10 90,10 Q120,10 130,40 Q150,40 150,70 Q150,80 130,80 Z" fill="url(#cloudGrad)" />
-                 <defs>
-                     <linearGradient id="cloudGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-                         <stop offset="0%" stopColor="#ffffff" />
-                         <stop offset="100%" stopColor={type === 'storm' || type === 'rain' ? '#94a3b8' : '#e2e8f0'} />
-                     </linearGradient>
-                 </defs>
-             </svg>
-
-             {/* Rain Drops */}
-             {type === 'rain' && (
-                 <div className="absolute bottom-2 left-10 flex gap-4 z-0">
-                     {[1,2,3].map(i => (
-                         <div key={i} className="w-1.5 h-6 bg-blue-400 rounded-full animate-[rain_0.8s_linear_infinite]" style={{animationDelay: `${i*0.2}s`}}></div>
-                     ))}
-                 </div>
-             )}
-             
-             {/* Storm Lightning */}
-             {type === 'storm' && (
-                 <svg className="absolute -bottom-8 left-16 w-10 h-16 text-yellow-300 animate-[flash_2s_infinite] drop-shadow-[0_0_15px_rgba(253,224,71,0.8)]" viewBox="0 0 24 24" fill="currentColor">
-                     <path d="M13 2L3 14H12L11 22L21 10H12L13 2Z" />
-                 </svg>
-             )}
-        </div>
-    </div>
-);
-
-const WeatherEffects = ({ type, isDay }: { type: 'clear' | 'cloudy' | 'rain' | 'storm', isDay: boolean }) => {
+const WeatherIcon3D = ({ type, isDay, size = "lg" }: { type: string, isDay: boolean, size?: "sm" | "md" | "lg" }) => {
+    const scale = size === "lg" ? "scale-150" : size === "md" ? "scale-100" : "scale-75";
+    
     return (
-        <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
-            
-            {/* 1. STARRY NIGHT (Background) */}
-            {!isDay && (
-                <div className="absolute inset-0">
-                    {[...Array(50)].map((_, i) => (
-                        <div key={i} className="absolute bg-white rounded-full animate-pulse"
-                            style={{
-                                width: Math.random() < 0.5 ? '1px' : '2px',
-                                height: Math.random() < 0.5 ? '1px' : '2px',
-                                top: Math.random() * 100 + '%',
-                                left: Math.random() * 100 + '%',
-                                opacity: Math.random() * 0.8,
-                                animationDuration: (2 + Math.random() * 3) + 's'
-                            }}
-                        />
+      <div className={`relative flex items-center justify-center filter drop-shadow-2xl ${scale}`}>
+         {/* SUN/MOON Layer (Behind) */}
+         {isDay && type !== 'rain' && type !== 'storm' && (
+           <div className={clsx("absolute w-24 h-24 rounded-full bg-gradient-to-br from-yellow-300 via-orange-400 to-red-500 shadow-[0_0_60px_rgba(251,191,36,0.6)] animate-[pulse_4s_infinite]", 
+               type === 'clear' ? "scale-100" : "top-2 right-4 scale-75"
+           )}></div>
+         )}
+         {!isDay && type !== 'rain' && type !== 'storm' && (
+            <div className={clsx("absolute w-20 h-20 rounded-full bg-gradient-to-br from-slate-100 to-slate-400 shadow-[0_0_40px_rgba(255,255,255,0.3)]",
+                 type === 'clear' ? "scale-100" : "top-2 right-4 scale-75"
+            )}>
+               <div className="absolute top-4 left-3 w-4 h-4 bg-slate-400/20 rounded-full"></div>
+               <div className="absolute bottom-4 right-5 w-2 h-2 bg-slate-400/20 rounded-full"></div>
+            </div>
+         )}
+  
+         {/* CLOUD Layer (Front) */}
+         {(type !== 'clear') && (
+           <div className="relative z-10">
+              {/* Main Cloud Shape */}
+              <svg width="160" height="110" viewBox="0 0 160 110" className="drop-shadow-[0_20px_20px_rgba(0,0,0,0.5)]">
+                 <defs>
+                    <linearGradient id="cloudBody" x1="0%" y1="0%" x2="0%" y2="100%">
+                       <stop offset="0%" stopColor="#ffffff" />
+                       <stop offset="100%" stopColor="#94a3b8" />
+                    </linearGradient>
+                    <filter id="gloss" x="-20%" y="-20%" width="140%" height="140%">
+                        <feGaussianBlur stdDeviation="3" result="blur"/>
+                        <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+                    </filter>
+                 </defs>
+                 
+                 {/* Cloud Base */}
+                 <path d="M50,90 Q25,90 25,65 Q25,35 55,35 Q65,15 95,15 Q120,15 130,45 Q150,45 150,70 Q150,90 130,90 Z" 
+                       fill="url(#cloudBody)" />
+                 
+                 {/* Highlight/Gloss (Simulated 3D reflection) */}
+                 <path d="M60,40 Q70,25 95,25 Q115,25 125,45" 
+                       fill="none" stroke="white" strokeWidth="4" strokeOpacity="0.6" strokeLinecap="round" filter="url(#gloss)" />
+              </svg>
+              
+              {/* Rain / Storm Elements */}
+              {(type === 'rain' || type === 'storm') && (
+                 <div className="absolute bottom-0 left-12 flex gap-4 z-0">
+                    {[1,2,3].map(i => (
+                      <div key={i} className="w-3 h-6 bg-gradient-to-b from-cyan-300 to-blue-600 rounded-full shadow-lg animate-[rain_0.8s_ease-in_infinite]" 
+                           style={{animationDelay: `${i * 0.25}s`, transform: 'rotate(10deg)'}}></div>
                     ))}
-                </div>
-            )}
+                 </div>
+              )}
+              
+              {type === 'storm' && (
+                  <svg className="absolute bottom-[-10px] right-14 w-10 h-14 text-yellow-300 drop-shadow-[0_0_15px_rgba(250,204,21,0.9)] animate-[flash_2s_infinite]" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M13 2L3 14H12L11 22L21 10H12L13 2Z" />
+                  </svg>
+              )}
+           </div>
+         )}
+      </div>
+    )
+};
 
-            {/* 2. SUNNY DAY (Background) */}
-            {isDay && type === 'clear' && (
-                <>
-                    <div className="absolute top-[-20%] right-[-20%] w-[100vw] h-[100vw] bg-amber-500/10 rounded-full blur-[120px] animate-pulse"></div>
-                    <div className="absolute top-[20%] left-[10%] w-[60vw] h-[60vw] bg-sky-400/20 rounded-full blur-[100px]"></div>
-                </>
-            )}
+// --- ORB BACKGROUND ANIMATION ---
+const OrbBackground = ({ weatherCode, isDay }: { weatherCode: number, isDay: boolean }) => {
+    return (
+        <div className="absolute inset-0 overflow-hidden pointer-events-none z-0 bg-[#020617]">
+             <style>{`
+                @keyframes orb-float {
+                    0% { transform: translate(0, 0) scale(1); }
+                    33% { transform: translate(30px, -50px) scale(1.1); }
+                    66% { transform: translate(-20px, 20px) scale(0.9); }
+                    100% { transform: translate(0, 0) scale(1); }
+                }
+                @keyframes orb-breathe {
+                    0%, 100% { opacity: 0.4; transform: scale(1); }
+                    50% { opacity: 0.7; transform: scale(1.2); }
+                }
+             `}</style>
 
-            {/* 3. CLOUDS (Layered Animation) */}
-            {(type === 'cloudy' || type === 'rain' || type === 'storm') && (
-                <>
-                    <style>{`
-                        @keyframes float-cloud {
-                            0% { transform: translateX(-100%); }
-                            100% { transform: translateX(100vw); }
-                        }
-                    `}</style>
-                    <div className="absolute top-10 left-[-20%] w-[80%] h-32 bg-white/5 rounded-full blur-[80px] animate-[float-cloud_35s_linear_infinite]"></div>
-                    <div className="absolute top-40 left-[-40%] w-[90%] h-40 bg-white/5 rounded-full blur-[60px] animate-[float-cloud_50s_linear_infinite]" style={{animationDelay: '-20s'}}></div>
-                </>
-            )}
+             {/* Base Gradient */}
+             <div className="absolute inset-0 bg-gradient-to-b from-slate-900 via-slate-950 to-black"></div>
 
-            {/* 4. RAIN ENGINE */}
-            {(type === 'rain' || type === 'storm') && (
-                <div className="absolute inset-0 z-10 opacity-60">
-                     <style>{`
-                        @keyframes rain-drop {
-                            0% { transform: translateY(-20vh) scaleY(1); opacity: 0; }
-                            10% { opacity: 0.8; }
-                            90% { opacity: 0.8; }
-                            100% { transform: translateY(110vh) scaleY(1.5); opacity: 0; }
-                        }
-                     `}</style>
-                     {[...Array(30)].map((_, i) => (
-                         <div 
-                            key={i} 
-                            className="absolute bg-blue-300 w-[1px] rounded-full"
-                            style={{
-                                height: (10 + Math.random() * 20) + 'px',
-                                left: `${Math.random() * 100}%`,
-                                top: `${Math.random() * -20}%`,
-                                animation: `rain-drop ${0.5 + Math.random() * 0.3}s linear infinite`,
-                                animationDelay: `${Math.random() * 2}s`,
-                                opacity: 0.5
-                            }}
-                         ></div>
-                     ))}
-                </div>
-            )}
-            
-            {/* 5. LIGHTNING */}
-            {type === 'storm' && (
-                <div className="absolute inset-0 bg-white z-20 animate-[lightning-flash_8s_infinite] opacity-0 mix-blend-overlay pointer-events-none"></div>
-            )}
-            <style>{`
-                @keyframes lightning-flash {
-                    0%, 92%, 95%, 100% { opacity: 0; }
-                    93% { opacity: 0.2; }
-                    94% { opacity: 0.05; }
-                }
-                @keyframes rain {
-                    0% { transform: translateY(0); opacity: 1; }
-                    100% { transform: translateY(20px); opacity: 0; }
-                }
-                @keyframes flash {
-                    0%, 90%, 100% { opacity: 0; }
-                    92% { opacity: 1; }
-                    94% { opacity: 0.5; }
-                    96% { opacity: 1; }
-                }
-                @keyframes float {
-                    0%, 100% { transform: translateY(0px); }
-                    50% { transform: translateY(-10px); }
-                }
-            `}</style>
+             {/* Orb 1: Warm/Sun (Yellow/Red) */}
+             <div className="absolute top-[-10%] left-[-10%] w-[60vw] h-[60vw] rounded-full blur-[80px] opacity-40 animate-[orb-float_10s_ease-in-out_infinite]"
+                  style={{ background: isDay ? 'radial-gradient(circle, #f59e0b, #ef4444)' : 'radial-gradient(circle, #1e293b, #0f172a)' }}></div>
+             
+             {/* Orb 2: Cool/Secondary (Blue/Purple) */}
+             <div className="absolute bottom-[10%] right-[-10%] w-[70vw] h-[70vw] rounded-full blur-[100px] opacity-30 animate-[orb-float_15s_ease-in-out_infinite_reverse]"
+                  style={{ background: 'radial-gradient(circle, #3b82f6, #8b5cf6)' }}></div>
+
+             {/* Orb 3: Accent (Red/Pink for that 'Yellow Red' request) */}
+             <div className="absolute top-[30%] right-[20%] w-[40vw] h-[40vw] rounded-full blur-[90px] opacity-20 animate-[orb-breathe_8s_ease-in-out_infinite]"
+                  style={{ background: 'radial-gradient(circle, #f43f5e, #fbbf24)' }}></div>
+
+             {/* Noise Texture for Realism */}
+             <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-overlay"></div>
+             
+             {/* Rain/Particles Overlay if needed */}
+             {weatherCode >= 51 && (
+                 <div className="absolute inset-0 bg-[url('https://cdn.pixabay.com/animation/2023/06/25/20/38/20-38-23-441_512.gif')] opacity-10 bg-cover mix-blend-screen"></div>
+             )}
         </div>
     );
 };
@@ -202,9 +130,9 @@ const WeatherView = ({ lang, onBack }: { lang: Language, onBack: () => void }) =
         try {
             const locRes = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=en`);
             const locData = await locRes.json();
-            setLocationName(locData.locality || locData.city || 'My Location');
+            setLocationName(locData.locality || locData.city || 'Satara');
 
-            const weatherRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,relative_humidity_2m,is_day,weather_code,wind_speed_10m&hourly=temperature_2m,weather_code,is_day&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto`);
+            const weatherRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,relative_humidity_2m,is_day,weather_code,wind_speed_10m,pressure_msl,uv_index&hourly=temperature_2m,weather_code,is_day&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto`);
             const data = await weatherRes.json();
             setWeather(data);
             setLoading(false);
@@ -232,157 +160,179 @@ const WeatherView = ({ lang, onBack }: { lang: Language, onBack: () => void }) =
 
     if (loading) return (
         <div className="h-full w-full flex items-center justify-center bg-[#020617]">
-             <Loader2 className="animate-spin text-cyan-400" size={32} />
+             <Loader2 className="animate-spin text-orange-400" size={32} />
         </div>
     );
 
     const weatherType = getWeatherType(weather?.current?.weather_code || 0);
     const isDay = weather?.current?.is_day !== 0;
 
-    // Dynamic Background Gradient
-    const bgClass = isDay 
-        ? (weatherType === 'rain' || weatherType === 'storm' ? 'bg-gradient-to-b from-slate-600 via-slate-800 to-slate-900' : 'bg-gradient-to-b from-sky-400 via-sky-500 to-blue-600')
-        : 'bg-gradient-to-b from-[#020617] via-[#0f172a] to-[#1e1b4b]';
-
-    // Chart Data
+    // Chart Data (Smoothed)
     const chartData = weather?.hourly.time.slice(0, 8).map((time: string, i: number) => ({
         time: new Date(time).getHours() + ':00',
         temp: Math.round(weather.hourly.temperature_2m[i]),
     })) || [];
 
     return (
-        <div className={clsx("h-full w-full flex flex-col animate-enter lg:pl-32 relative overflow-hidden transition-colors duration-1000", bgClass)}>
+        <div className="h-full w-full flex flex-col animate-enter lg:pl-32 relative overflow-hidden bg-slate-950 text-white selection:bg-orange-500/30">
             
-            {/* Immersive Background Effects */}
-            <WeatherEffects type={weatherType} isDay={isDay} />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/10 z-0 pointer-events-none"></div>
+            {/* 1. Immersive Background */}
+            <OrbBackground weatherCode={weather?.current?.weather_code || 0} isDay={isDay} />
             
-            {/* 1. Header */}
+            {/* 2. Header */}
             <div className="pt-safe-top px-6 py-4 flex items-center justify-between z-20">
-                <button onClick={onBack} className="w-10 h-10 rounded-full border border-white/10 flex items-center justify-center text-white hover:bg-white/10 transition-colors backdrop-blur-md">
+                <button onClick={() => { onBack(); triggerHaptic(); }} className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white hover:bg-white/10 transition-colors backdrop-blur-xl shadow-lg">
                     <ArrowLeft size={20}/>
                 </button>
-                <div className="flex items-center gap-2 bg-white/10 backdrop-blur-md px-4 py-1.5 rounded-full border border-white/10">
-                    <MapPin size={14} className="text-white"/>
-                    <span className="text-white font-bold text-sm">{locationName}</span>
+                <div className="flex items-center gap-2 bg-black/20 backdrop-blur-md px-4 py-1.5 rounded-full border border-white/5 shadow-inner">
+                    <MapPin size={14} className="text-orange-400"/>
+                    <span className="text-white font-bold text-sm tracking-wide">{locationName}</span>
                 </div>
-                <button className="w-10 h-10 rounded-full border border-white/10 flex items-center justify-center text-white hover:bg-white/10 transition-colors backdrop-blur-md">
+                <button className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white hover:bg-white/10 transition-colors backdrop-blur-xl shadow-lg">
                     <MoreVertical size={20}/>
                 </button>
             </div>
 
-            {/* 2. Main Weather Display */}
-            {weather && (
-                <div className="flex-1 overflow-y-auto hide-scrollbar px-6 pb-20 z-20 relative">
+            {/* 3. Main Content */}
+            <div className="flex-1 overflow-y-auto hide-scrollbar px-6 pb-20 z-20 relative">
+                
+                {/* Date/Time Pill */}
+                <div className="flex justify-center mb-8">
+                     <span className="px-4 py-1 rounded-full bg-white/5 border border-white/5 text-[10px] font-bold uppercase tracking-widest text-slate-300 backdrop-blur-md shadow-sm">
+                        {new Date().toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long' })}
+                     </span>
+                </div>
+
+                {/* Hero Section */}
+                <div className="flex flex-col items-center justify-center mb-10 relative">
+                    <div className="absolute top-0 w-64 h-64 bg-gradient-to-tr from-yellow-500/10 to-red-500/10 rounded-full blur-[80px] pointer-events-none"></div>
                     
-                    {/* Day Selector Pill */}
-                    <div className="flex justify-center mb-6">
-                        <div className="flex bg-black/20 backdrop-blur-xl p-1 rounded-full border border-white/10 shadow-lg">
-                            {['Today', 'Tomorrow', '7 Days'].map((day, i) => (
-                                <button 
-                                    key={i} 
-                                    onClick={() => { setSelectedDay(i); triggerHaptic(); }}
-                                    className={clsx(
-                                        "px-5 py-2 rounded-full text-xs font-bold transition-all",
-                                        selectedDay === i ? "bg-white text-blue-900 shadow-md scale-105" : "text-white/70 hover:text-white"
-                                    )}
-                                >
-                                    {day}
-                                </button>
-                            ))}
+                    {/* Big 3D Icon */}
+                    <div className="mb-4 transform scale-110">
+                        <WeatherIcon3D type={weatherType} isDay={isDay} size="lg" />
+                    </div>
+                    
+                    {/* Temperature with requested Yellow-Red Gradient */}
+                    <div className="text-center relative -mt-4">
+                        <h1 className="text-[7rem] leading-[0.8] font-black tracking-tighter drop-shadow-2xl">
+                            <span className="text-transparent bg-clip-text bg-gradient-to-b from-yellow-300 via-orange-500 to-red-600">
+                                {Math.round(weather.current.temperature_2m)}°
+                            </span>
+                        </h1>
+                        <p className="text-slate-300 text-lg font-medium mt-2 flex items-center justify-center gap-2">
+                            <span className="capitalize">{weatherType}</span>
+                            <span className="w-1 h-1 bg-slate-500 rounded-full"></span>
+                            <span>H:{Math.round(weather.daily.temperature_2m_max[0])}° L:{Math.round(weather.daily.temperature_2m_min[0])}°</span>
+                        </p>
+                    </div>
+                </div>
+
+                {/* Hourly Forecast Chart - Glass Card */}
+                <div className="glass-panel rounded-[2rem] p-5 mb-6 border border-white/10 bg-slate-900/40 backdrop-blur-xl shadow-2xl relative overflow-hidden group">
+                    <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                    <div className="flex items-center justify-between mb-4 relative z-10">
+                        <div className="flex items-center gap-2">
+                            <div className="w-6 h-6 rounded-full bg-white/5 flex items-center justify-center">
+                                <Clock size={12} className="text-orange-300"/>
+                            </div>
+                            <h3 className="text-slate-200 font-bold text-xs uppercase tracking-wider">Hourly Forecast</h3>
                         </div>
                     </div>
+                    
+                    <div className="h-28 w-full relative z-10">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <AreaChart data={chartData}>
+                                <defs>
+                                    <linearGradient id="colorTemp" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.5}/>
+                                        <stop offset="95%" stopColor="#f59e0b" stopOpacity={0}/>
+                                    </linearGradient>
+                                </defs>
+                                <XAxis 
+                                    dataKey="time" 
+                                    stroke="rgba(255,255,255,0.2)" 
+                                    tick={{fill: 'rgba(255,255,255,0.5)', fontSize: 10}} 
+                                    tickLine={false} 
+                                    axisLine={false}
+                                    interval={1}
+                                />
+                                <Area 
+                                    type="monotone" 
+                                    dataKey="temp" 
+                                    stroke="#fbbf24" 
+                                    strokeWidth={3} 
+                                    fillOpacity={1} 
+                                    fill="url(#colorTemp)" 
+                                />
+                            </AreaChart>
+                        </ResponsiveContainer>
+                    </div>
+                </div>
 
-                    {/* Main Icon & Temp */}
-                    <div className="flex flex-col items-center justify-center mb-8 relative">
-                        <div className="transform scale-110 mb-2">
-                            {weatherType === 'clear' ? (isDay ? <SunIcon/> : <MoonIcon/>) : <CloudIcon type={weatherType} isDay={isDay}/>}
+                {/* AI Tool / Insight Placeholder (Requested) */}
+                <div className="glass-panel rounded-[2rem] p-5 mb-6 border border-emerald-500/20 bg-emerald-900/10 backdrop-blur-xl shadow-lg relative overflow-hidden">
+                    <div className="absolute -right-4 -top-4 w-20 h-20 bg-emerald-500/20 blur-2xl rounded-full"></div>
+                    <div className="flex items-start gap-4 relative z-10">
+                        <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white shadow-lg shrink-0">
+                            <Sparkles size={20} />
                         </div>
-                        
-                        <div className="text-center relative">
-                            <h1 className="text-8xl font-black text-white tracking-tighter drop-shadow-2xl relative z-10">
-                                {Math.round(weather.current.temperature_2m)}°
-                            </h1>
-                            <p className="text-white/90 text-xl font-medium drop-shadow-md -mt-2">
-                                {weatherType === 'clear' ? (isDay ? 'Sunny' : 'Clear Night') : weatherType.charAt(0).toUpperCase() + weatherType.slice(1)}
+                        <div>
+                            <h3 className="text-white font-bold text-sm mb-1">AI Agri-Insight</h3>
+                            <p className="text-emerald-100/80 text-xs leading-relaxed">
+                                Conditions are optimal for spraying fertilizer. Wind speed is low ({weather.current.wind_speed_10m} km/h). Ensure completion before 4 PM.
                             </p>
                         </div>
-                        
-                        <div className="flex gap-6 mt-6">
-                             <div className="flex flex-col items-center">
-                                 <span className="text-xs font-bold text-white/60 uppercase">High</span>
-                                 <span className="text-lg font-bold text-white">{Math.round(weather.daily.temperature_2m_max[0])}°</span>
-                             </div>
-                             <div className="w-[1px] h-10 bg-white/20"></div>
-                             <div className="flex flex-col items-center">
-                                 <span className="text-xs font-bold text-white/60 uppercase">Low</span>
-                                 <span className="text-lg font-bold text-white">{Math.round(weather.daily.temperature_2m_min[0])}°</span>
-                             </div>
-                        </div>
                     </div>
-
-                    {/* Hourly Chart Card */}
-                    <div className="glass-panel bg-white/5 border border-white/10 rounded-[2rem] p-6 shadow-xl mb-6 backdrop-blur-xl">
-                        <div className="flex justify-between items-center mb-6">
-                            <div className="flex items-center gap-2">
-                                <Clock size={16} className="text-white/60"/>
-                                <h3 className="text-white font-bold text-sm">Hourly Forecast</h3>
-                            </div>
-                        </div>
-                        
-                        <div className="h-32 w-full">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <AreaChart data={chartData}>
-                                    <defs>
-                                        <linearGradient id="colorTemp" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="#ffffff" stopOpacity={0.4}/>
-                                            <stop offset="95%" stopColor="#ffffff" stopOpacity={0}/>
-                                        </linearGradient>
-                                    </defs>
-                                    <XAxis 
-                                        dataKey="time" 
-                                        stroke="rgba(255,255,255,0.3)" 
-                                        tick={{fill: 'rgba(255,255,255,0.6)', fontSize: 10}} 
-                                        tickLine={false} 
-                                        axisLine={false} 
-                                    />
-                                    <Area 
-                                        type="monotone" 
-                                        dataKey="temp" 
-                                        stroke="#ffffff" 
-                                        strokeWidth={3} 
-                                        fillOpacity={1} 
-                                        fill="url(#colorTemp)" 
-                                    />
-                                </AreaChart>
-                            </ResponsiveContainer>
-                        </div>
-                    </div>
-
-                    {/* Stats Grid */}
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="glass-panel bg-white/5 p-4 rounded-[2rem] border border-white/10 flex items-center gap-4 backdrop-blur-xl">
-                             <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-300">
-                                 <Wind size={20}/>
-                             </div>
-                             <div>
-                                 <span className="text-xs text-white/60 uppercase font-bold tracking-wider block">Wind</span>
-                                 <span className="text-lg font-bold text-white">{weather.current.wind_speed_10m} <span className="text-xs">km/h</span></span>
-                             </div>
-                        </div>
-                        <div className="glass-panel bg-white/5 p-4 rounded-[2rem] border border-white/10 flex items-center gap-4 backdrop-blur-xl">
-                             <div className="w-10 h-10 rounded-full bg-cyan-500/20 flex items-center justify-center text-cyan-300">
-                                 <Droplets size={20}/>
-                             </div>
-                             <div>
-                                 <span className="text-xs text-white/60 uppercase font-bold tracking-wider block">Humidity</span>
-                                 <span className="text-lg font-bold text-white">{weather.current.relative_humidity_2m}%</span>
-                             </div>
-                        </div>
-                    </div>
-
                 </div>
-            )}
+
+                {/* Details Grid (Feature Card Placeholders) */}
+                <div className="grid grid-cols-2 gap-3">
+                    {/* Card 1: Wind */}
+                    <div className="glass-panel p-4 rounded-[1.5rem] border border-white/5 bg-white/5 hover:bg-white/10 transition-colors backdrop-blur-md">
+                         <div className="flex items-center gap-2 mb-2">
+                             <div className="w-6 h-6 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-300">
+                                 <Wind size={12}/>
+                             </div>
+                             <span className="text-[10px] text-slate-400 font-bold uppercase">Wind</span>
+                         </div>
+                         <p className="text-xl font-black text-white">{weather.current.wind_speed_10m} <span className="text-xs font-medium text-slate-400">km/h</span></p>
+                    </div>
+
+                    {/* Card 2: Humidity */}
+                    <div className="glass-panel p-4 rounded-[1.5rem] border border-white/5 bg-white/5 hover:bg-white/10 transition-colors backdrop-blur-md">
+                         <div className="flex items-center gap-2 mb-2">
+                             <div className="w-6 h-6 rounded-full bg-cyan-500/20 flex items-center justify-center text-cyan-300">
+                                 <Droplets size={12}/>
+                             </div>
+                             <span className="text-[10px] text-slate-400 font-bold uppercase">Humidity</span>
+                         </div>
+                         <p className="text-xl font-black text-white">{weather.current.relative_humidity_2m}<span className="text-xs font-medium text-slate-400">%</span></p>
+                    </div>
+
+                    {/* Card 3: UV Index (Simulated) */}
+                    <div className="glass-panel p-4 rounded-[1.5rem] border border-white/5 bg-white/5 hover:bg-white/10 transition-colors backdrop-blur-md">
+                         <div className="flex items-center gap-2 mb-2">
+                             <div className="w-6 h-6 rounded-full bg-orange-500/20 flex items-center justify-center text-orange-300">
+                                 <Sun size={12}/>
+                             </div>
+                             <span className="text-[10px] text-slate-400 font-bold uppercase">UV Index</span>
+                         </div>
+                         <p className="text-xl font-black text-white">{weather.current.uv_index || 4} <span className="text-xs font-medium text-slate-400">Mod</span></p>
+                    </div>
+
+                    {/* Card 4: Visibility (Simulated) */}
+                    <div className="glass-panel p-4 rounded-[1.5rem] border border-white/5 bg-white/5 hover:bg-white/10 transition-colors backdrop-blur-md">
+                         <div className="flex items-center gap-2 mb-2">
+                             <div className="w-6 h-6 rounded-full bg-purple-500/20 flex items-center justify-center text-purple-300">
+                                 <Eye size={12}/>
+                             </div>
+                             <span className="text-[10px] text-slate-400 font-bold uppercase">Visibility</span>
+                         </div>
+                         <p className="text-xl font-black text-white">10 <span className="text-xs font-medium text-slate-400">km</span></p>
+                    </div>
+                </div>
+
+            </div>
         </div>
     );
 };

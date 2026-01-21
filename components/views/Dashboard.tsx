@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { UserProfile, Language, ViewState } from '../../types';
 import { TRANSLATIONS } from '../../constants';
-import { MapPin, Wind, Droplets, Mic, ArrowUpRight, ScanLine, FlaskConical, Map as MapIcon, Landmark, Store, Sun, Moon, CloudSun, CloudMoon, CloudRain, CloudLightning, TrendingUp, Calendar, AlertTriangle, ChevronRight, BellRing, Sprout, Languages, Leaf, Wheat, ThermometerSun, Clock } from 'lucide-react';
+import { MapPin, Wind, Droplets, Mic, ArrowUpRight, ScanLine, FlaskConical, Map as MapIcon, Landmark, Store, Sun, Moon, CloudSun, CloudMoon, CloudRain, CloudLightning, TrendingUp, TrendingDown, Calendar, AlertTriangle, ChevronRight, BellRing, Sprout, Languages, Leaf, Wheat, ThermometerSun, Clock } from 'lucide-react';
 import { triggerHaptic } from '../../utils/common';
 import { MOCK_MARKET } from '../../data/mock';
 import { clsx } from 'clsx';
@@ -149,7 +149,7 @@ const DASH_TEXT: Record<Language, any> = {
 // --- 2. VISUAL HELPERS ---
 
 const GoldText = ({ children, className }: { children?: React.ReactNode, className?: string }) => (
-    <span className={clsx("text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 via-amber-400 to-yellow-500 drop-shadow-sm", className)}>
+    <span className={clsx("text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 via-orange-400 to-amber-500 drop-shadow-sm font-black", className)}>
         {children}
     </span>
 );
@@ -208,7 +208,7 @@ const DynamicGreeting = ({ user, lang }: { user: UserProfile, lang: Language }) 
     return (
         <div className="flex flex-col z-10">
             <h1 className="text-2xl md:text-3xl font-black text-white leading-tight drop-shadow-lg">
-                {timeGreeting}, <GoldText>{user.name.split(' ')[0]}</GoldText>
+                {timeGreeting}, <span className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-orange-500">{user.name.split(' ')[0]}</span>
             </h1>
             <div className="flex items-center gap-1.5 mt-1">
                 <div className="px-2 py-0.5 rounded-md bg-white/10 border border-white/5 backdrop-blur-md">
@@ -369,87 +369,103 @@ const WeatherWidget = ({ weather, loading, location, lang, onNavigate }: any) =>
     );
 };
 
-// Visual Market Cards
+// --- REFACTORED MARKET WIDGET ---
 const MarketWidget = ({ onNavigate, lang }: any) => {
     const txt = DASH_TEXT[lang];
     
     return (
-        <GlassTile onClick={() => onNavigate('MARKET')} className="h-full p-5 flex flex-col relative overflow-hidden bg-gradient-to-br from-[#0f172a]/60 to-[#1e293b]/60">
-            <div className="flex justify-between items-center mb-4 z-10">
+        <GlassTile onClick={() => onNavigate('MARKET')} className="h-full p-0 flex flex-col relative overflow-hidden bg-[#0f172a] group">
+            {/* Header */}
+            <div className="px-5 pt-5 flex justify-between items-center z-10">
                 <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-400 border border-amber-500/20">
-                        <Store size={16} />
+                    <div className="p-2 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                        <Store size={18} className="text-amber-400" />
                     </div>
-                    <span className="text-sm font-bold text-white tracking-wide">{txt.market_rates}</span>
+                    <span className="text-sm font-bold text-slate-200">{txt.market_rates}</span>
                 </div>
-                <div className="flex items-center gap-1 text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded-md border border-emerald-500/10">
-                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
-                    {txt.live}
+                <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20">
+                    <span className="relative flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                    </span>
+                    <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider">{txt.live}</span>
                 </div>
             </div>
 
-            {/* Horizontal Scroll Snap for Mobile / Grid for Desktop */}
-            <div className="flex-1 flex md:flex-col gap-3 overflow-x-auto md:overflow-hidden hide-scrollbar snap-x z-10">
-                {MOCK_MARKET.slice(0, 2).map((m, i) => (
-                    <div key={i} className="min-w-[85%] md:min-w-full snap-center bg-black/20 border border-white/5 rounded-2xl p-3 flex justify-between items-center hover:bg-white/5 transition-colors">
+            {/* List */}
+            <div className="flex-1 p-5 flex flex-col gap-3 relative z-10 justify-center">
+                 {MOCK_MARKET.slice(0, 2).map((m, i) => (
+                    <div key={i} className="flex items-center justify-between border-b border-white/5 pb-3 last:border-0 last:pb-0">
                         <div className="flex items-center gap-3">
-                            <div className={clsx("w-10 h-10 rounded-xl flex items-center justify-center", m.bg)}>
-                                <m.icon size={18} className={m.color} />
+                            <div className={clsx("w-10 h-10 rounded-xl flex items-center justify-center bg-[#1e293b] border border-white/5", m.color)}>
+                                <m.icon size={18} />
                             </div>
                             <div>
-                                <p className="text-sm font-bold text-white">{txt.crops[m.name] || m.name}</p>
-                                <p className={clsx("text-[10px] font-bold", m.trend.includes('+') ? "text-emerald-400" : "text-red-400")}>
-                                    {m.trend} {txt.this_week}
-                                </p>
+                                <p className="text-sm font-bold text-slate-200">{txt.crops[m.name] || m.name}</p>
+                                <p className="text-[10px] font-medium text-slate-500">{m.arrival} Vol</p>
                             </div>
                         </div>
                         <div className="text-right">
-                            <GoldText className="text-lg font-black block">₹{m.price}</GoldText>
-                            <p className="text-[9px] text-slate-500 font-bold uppercase">{txt.quintal}</p>
+                             {/* Yellow Gradient Price */}
+                             <span className="text-lg font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-orange-400">
+                                ₹{m.price}
+                             </span>
+                             <div className={clsx("text-[10px] font-bold flex items-center justify-end gap-0.5", m.trend.includes('+') ? "text-emerald-400" : "text-red-400")}>
+                                 {m.trend.includes('+') ? <TrendingUp size={10} /> : <TrendingDown size={10} />}
+                                 {m.trend}
+                             </div>
                         </div>
                     </div>
-                ))}
+                 ))}
             </div>
-            
-            {/* Background Chart Effect */}
-            <svg className="absolute bottom-0 left-0 w-full h-24 opacity-10 pointer-events-none text-emerald-500" viewBox="0 0 100 20" preserveAspectRatio="none">
-                <path d="M0 20 L0 10 Q 25 5 50 15 T 100 10 L 100 20 Z" fill="currentColor" />
-            </svg>
+
+            {/* Background Graph Effect */}
+            <div className="absolute bottom-0 left-0 right-0 h-24 opacity-10 pointer-events-none">
+                 <svg viewBox="0 0 100 40" preserveAspectRatio="none" className="w-full h-full text-amber-500 fill-current">
+                     <path d="M0 40 L0 20 Q 20 10 40 25 T 100 15 L 100 40 Z" />
+                 </svg>
+            </div>
         </GlassTile>
     );
 };
 
-// Timeline Style Calendar
+// --- REFACTORED CALENDAR WIDGET ---
 const CalendarWidget = ({ lang }: { lang: Language }) => {
     const txt = DASH_TEXT[lang];
     return (
-        <GlassTile className="h-full p-5 bg-gradient-to-br from-[#0f172a]/60 to-[#1e293b]/60">
-            <div className="flex items-center gap-2 mb-4">
-                <div className="w-8 h-8 rounded-lg bg-indigo-500/10 flex items-center justify-center text-indigo-400 border border-indigo-500/20">
-                    <Calendar size={16} />
+        <GlassTile className="h-full p-5 bg-[#0f172a] relative overflow-hidden group">
+            {/* Background Gradient Spot */}
+            <div className="absolute top-[-50px] right-[-50px] w-32 h-32 bg-indigo-500/20 blur-[60px] rounded-full"></div>
+
+            <div className="flex items-center gap-2 mb-4 relative z-10">
+                <div className="p-2 rounded-lg bg-indigo-500/10 border border-indigo-500/20">
+                    <Calendar size={18} className="text-indigo-400" />
                 </div>
-                <span className="text-sm font-bold text-white tracking-wide">{txt.crop_schedule}</span>
+                <span className="text-sm font-bold text-slate-200">{txt.crop_schedule}</span>
             </div>
 
-            <div className="relative pl-2 space-y-0">
+            <div className="relative pl-3 space-y-4 z-10">
                 {/* Vertical Line */}
-                <div className="absolute left-[11px] top-2 bottom-2 w-[2px] bg-white/10 rounded-full"></div>
+                <div className="absolute left-[19px] top-2 bottom-2 w-[2px] bg-white/5 rounded-full"></div>
 
-                {/* Item 1 (Active) */}
-                <div className="relative pl-8 pb-4 group">
-                    <div className="absolute left-0 top-1 w-6 h-6 rounded-full border-[3px] border-[#020617] bg-indigo-500 shadow-[0_0_10px_#6366f1] z-10 flex items-center justify-center">
-                        <div className="w-2 h-2 rounded-full bg-white"></div>
+                {/* Item 1 (Today - Highlighted) */}
+                <div className="relative pl-8 group">
+                    <div className="absolute left-0 top-1 w-6 h-6 rounded-full border-[3px] border-[#0f172a] bg-gradient-to-br from-yellow-400 to-orange-500 shadow-[0_0_15px_rgba(251,191,36,0.5)] z-10 flex items-center justify-center animate-pulse">
+                         <div className="w-1.5 h-1.5 rounded-full bg-white"></div>
                     </div>
-                    <div className="bg-white/5 p-3 rounded-xl border border-white/5 group-hover:bg-white/10 transition-colors">
-                        <p className="text-[10px] font-bold text-indigo-300 uppercase mb-0.5">{txt.today_urgent}</p>
-                        <h4 className="text-sm font-bold text-white">{txt.irrigation}</h4>
+                    <div className="bg-[#1e293b]/50 p-3 rounded-xl border border-white/5 group-hover:border-yellow-500/30 transition-colors">
+                        <div className="flex justify-between items-start mb-0.5">
+                            <p className="text-[10px] font-black uppercase text-yellow-400 tracking-wider">{txt.today_urgent}</p>
+                            <Clock size={10} className="text-slate-500"/>
+                        </div>
+                        <h4 className="text-sm font-bold text-white mb-0.5">{txt.irrigation}</h4>
                         <p className="text-xs text-slate-400">{txt.cotton_field}</p>
                     </div>
                 </div>
 
-                {/* Item 2 */}
+                {/* Item 2 (Future) */}
                 <div className="relative pl-8 opacity-60 hover:opacity-100 transition-opacity">
-                    <div className="absolute left-1.5 top-2 w-3 h-3 rounded-full bg-slate-600 border-2 border-[#020617] z-10"></div>
+                    <div className="absolute left-1.5 top-2 w-3 h-3 rounded-full bg-slate-600 border-2 border-[#0f172a] z-10"></div>
                     <h4 className="text-sm font-bold text-slate-300">{txt.fertilizer}</h4>
                     <p className="text-[10px] text-slate-500 uppercase font-bold mt-0.5">{txt.fertilizer_sub}</p>
                 </div>
@@ -479,15 +495,44 @@ const VoiceWidget = ({ onNavigate, lang }: any) => {
     );
 };
 
-// Visual Quick Action Tile
-const QuickActionTile = ({ icon: Icon, label, colorClass, onClick, delay }: any) => (
-    <GlassTile onClick={() => { onClick(); triggerHaptic(); }} delay={delay} className="p-4 flex flex-col items-center justify-center gap-3 text-center group bg-[#1e293b]/40 hover:bg-[#1e293b]/60">
-        <div className={clsx("w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg transition-transform group-hover:scale-110 duration-300 border border-white/10", colorClass)}>
-            <Icon size={24} className="text-white drop-shadow-sm" />
-        </div>
-        <span className="text-xs font-bold text-slate-300 group-hover:text-white transition-colors">{label}</span>
-    </GlassTile>
-);
+// --- NEW FEATURE CARD (Replaces QuickActionTile) ---
+const FeatureCard = ({ title, icon: Icon, onClick, delay, variant }: any) => {
+    // Variants: 'soil', 'yield', 'area', 'disease'
+    const colors = {
+        soil: { bg: 'from-orange-500/10 to-amber-500/5', icon: 'text-orange-400', orb: 'bg-orange-500' },
+        yield: { bg: 'from-purple-500/10 to-pink-500/5', icon: 'text-purple-400', orb: 'bg-purple-500' },
+        area: { bg: 'from-cyan-500/10 to-blue-500/5', icon: 'text-cyan-400', orb: 'bg-cyan-500' },
+        disease: { bg: 'from-emerald-500/10 to-green-500/5', icon: 'text-emerald-400', orb: 'bg-emerald-500' },
+    };
+    
+    const c = colors[variant as keyof typeof colors] || colors.soil;
+
+    return (
+        <GlassTile onClick={() => { onClick(); triggerHaptic(); }} delay={delay} className="group relative p-5 h-36 flex flex-col justify-between border-white/5 bg-[#111827]/80 hover:bg-[#1e293b] transition-all duration-500 overflow-hidden">
+             {/* Hover Gradient Overlay */}
+             <div className={clsx("absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-100 transition-opacity duration-500", c.bg)}></div>
+             
+             {/* Glowing Orb Background */}
+             <div className={clsx("absolute -right-6 -top-6 w-24 h-24 rounded-full blur-[40px] opacity-20 group-hover:opacity-40 transition-opacity duration-500", c.orb)}></div>
+             
+             {/* Icon Box */}
+             <div className={clsx("w-12 h-12 rounded-2xl bg-[#020617]/50 border border-white/10 flex items-center justify-center shadow-lg group-hover:scale-110 group-hover:-rotate-3 transition-all duration-300 z-10", c.icon)}>
+                 <Icon size={24} strokeWidth={1.5} className="drop-shadow-lg" />
+             </div>
+
+             {/* Text Content */}
+             <div className="relative z-10">
+                 <h3 className="text-sm font-bold text-slate-200 group-hover:text-white transition-colors leading-tight mb-1">{title}</h3>
+                 <div className="w-8 h-1 rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 opacity-60 group-hover:w-16 group-hover:opacity-100 transition-all duration-500"></div>
+             </div>
+             
+             {/* Subtle Arrow */}
+             <div className="absolute bottom-4 right-4 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-x-2 group-hover:translate-x-0">
+                 <ArrowUpRight size={16} className="text-slate-400" />
+             </div>
+        </GlassTile>
+    );
+};
 
 // Illustrative Banner
 const IllustrativeBanner = ({ title, subtitle, icon: Icon, gradient, pattern, onClick }: any) => (
@@ -630,17 +675,17 @@ const Dashboard = ({ lang, setLang, user, onNavigate }: { lang: Language, setLan
             <div className="p-6 grid grid-cols-1 md:grid-cols-12 gap-5 pb-32 max-w-7xl mx-auto w-full">
                 
                 {/* Weather (MD: Col 1-4) - Immersive Scene */}
-                <div className="col-span-1 md:col-span-4 h-56 md:h-64">
+                <div className="col-span-1 md:col-span-4 h-64">
                     <WeatherWidget weather={weather} loading={loadingWeather} location={liveLocation} lang={lang} onNavigate={onNavigate} />
                 </div>
 
                 {/* Market Trends (MD: Col 5-8) - Trading Cards */}
-                <div className="col-span-1 md:col-span-4 h-56 md:h-64">
+                <div className="col-span-1 md:col-span-4 h-64">
                     <MarketWidget onNavigate={onNavigate} lang={lang} />
                 </div>
 
                 {/* Crop Calendar (MD: Col 9-12) - Timeline */}
-                <div className="col-span-1 md:col-span-4 h-56 md:h-64">
+                <div className="col-span-1 md:col-span-4 h-64">
                     <CalendarWidget lang={lang} />
                 </div>
 
@@ -653,31 +698,31 @@ const Dashboard = ({ lang, setLang, user, onNavigate }: { lang: Language, setLan
 
                 {/* Quick Actions Grid - Glass Tiles */}
                 <div className="col-span-1 md:col-span-9 grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <QuickActionTile 
+                    <FeatureCard 
                         icon={ScanLine} 
-                        label={t.quick_action_doctor} 
-                        colorClass="bg-emerald-500 text-white shadow-emerald-500/30" 
+                        title={t.quick_action_doctor}
+                        variant="disease"
                         onClick={() => onNavigate('DISEASE_DETECTOR')} 
                         delay={100}
                     />
-                    <QuickActionTile 
+                    <FeatureCard 
                         icon={FlaskConical} 
-                        label={t.quick_action_soil} 
-                        colorClass="bg-amber-500 text-white shadow-amber-500/30" 
+                        title={t.quick_action_soil}
+                        variant="soil"
                         onClick={() => onNavigate('SOIL')} 
                         delay={150}
                     />
-                    <QuickActionTile 
+                    <FeatureCard 
                         icon={TrendingUp} 
-                        label={t.menu_yield} 
-                        colorClass="bg-purple-500 text-white shadow-purple-500/30" 
+                        title={t.menu_yield}
+                        variant="yield"
                         onClick={() => onNavigate('YIELD')} 
                         delay={200}
                     />
-                    <QuickActionTile 
+                    <FeatureCard 
                         icon={MapIcon} 
-                        label={t.menu_area} 
-                        colorClass="bg-blue-500 text-white shadow-blue-500/30" 
+                        title={t.menu_area} 
+                        variant="area"
                         onClick={() => onNavigate('AREA_CALCULATOR')} 
                         delay={250}
                     />
