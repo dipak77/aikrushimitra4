@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { UserProfile, Language } from '../../types';
 import { TRANSLATIONS } from '../../constants';
-import { ArrowLeft, RefreshCw, Mic, WifiOff, X, Zap, Activity } from 'lucide-react';
+import { ArrowLeft, RefreshCw, Mic, WifiOff, Sparkles, MessageSquare } from 'lucide-react';
 import { GoogleGenAI, Modality } from '@google/genai';
 import { getGenAIKey } from '../../services/geminiService';
 import { decode, decodeAudioData, createPCMChunk } from '../../utils/audio';
@@ -16,6 +16,9 @@ const VoiceAssistant = ({ lang, user, onBack }: { lang: Language, user: UserProf
   const [errorMessage, setErrorMessage] = useState('');
   const [transcripts, setTranscripts] = useState<{role: 'user'|'model', text: string}[]>([]);
   
+  // Ref to keep track of transcripts for reconnection context without dependency loops
+  const transcriptsRef = useRef<{role: 'user'|'model', text: string}[]>([]);
+
   // Robust Session Management
   const shouldStayConnectedRef = useRef(false);
   const sessionPromiseRef = useRef<Promise<any> | null>(null);
@@ -37,6 +40,11 @@ const VoiceAssistant = ({ lang, user, onBack }: { lang: Language, user: UserProf
   const animationFrameRef = useRef<number>(0);
   const lastVolumeRef = useRef(0); 
   const phaseRef = useRef(0);
+
+  // Sync ref with state
+  useEffect(() => {
+    transcriptsRef.current = transcripts;
+  }, [transcripts]);
 
   // Auto-scroll for transcript
   const transcriptEndRef = useRef<HTMLDivElement>(null);
@@ -188,6 +196,21 @@ const VoiceAssistant = ({ lang, user, onBack }: { lang: Language, user: UserProf
       visualize(inputAnalyser, outputAnalyser);
 
       const ai = new GoogleGenAI({ apiKey });
+
+      // --- CONTEXT RETENTION LOGIC ---
+      // We inject previous turns into system instruction to "restore" context
+      const history = transcriptsRef.current.slice(-8); // Keep last ~8 turns
+      let contextStr = "";
+      if (history.length > 0) {
+        contextStr = "\n\n[PREVIOUS CONVERSATION CONTEXT - Resume from here]:";
+        history.forEach(h => {
+            contextStr += `\n${h.role === 'user' ? 'User' : 'You'}: ${h.text}`;
+        });
+      }
+      
+      const baseInstruction = "You are AI Krushi Mitra, a helpful agricultural expert assistant for Indian farmers. Speak naturally in Marathi, Hindi or English as per the user's language preference. Keep responses concise, practical, and encouraging.";
+      const fullInstruction = history.length > 0 ? `${baseInstruction}${contextStr}` : baseInstruction;
+
       const sessionPromise = ai.live.connect({
         model: 'gemini-2.5-flash-native-audio-preview-12-2025',
         config: { 
@@ -195,7 +218,7 @@ const VoiceAssistant = ({ lang, user, onBack }: { lang: Language, user: UserProf
             speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Puck' } } },
             inputAudioTranscription: {}, 
             outputAudioTranscription: {},
-            systemInstruction: "You are AI Krushi Mitra. Speak Marathi or English based on user. Keep answers concise.",
+            systemInstruction: fullInstruction,
         },
         callbacks: {
            onopen: () => { 
@@ -271,7 +294,8 @@ const VoiceAssistant = ({ lang, user, onBack }: { lang: Language, user: UserProf
   const handleToggle = () => {
       triggerHaptic();
       if (status === 'idle' || status === 'error') {
-          setTranscripts([]);
+          // Only clear if explicitly starting fresh, not retrying
+          if (status !== 'error') setTranscripts([]); 
           connect();
       } else {
           cleanup(true);
@@ -298,14 +322,12 @@ const VoiceAssistant = ({ lang, user, onBack }: { lang: Language, user: UserProf
             perspective: 1000px;
           }
           
-          /* Energy Core - The bright center */
           .orb-core {
             box-shadow: 0 0 calc(30px + var(--audio-level) * 50px) rgba(34, 197, 94, 0.4);
             transform: scale(calc(1 + var(--audio-level) * 0.2));
             transition: transform 0.1s linear;
           }
 
-          /* Liquid Plasma Shells */
           .orb-plasma {
             border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%;
             transition: all 0.2s ease-out;
@@ -325,7 +347,6 @@ const VoiceAssistant = ({ lang, user, onBack }: { lang: Language, user: UserProf
             transform: rotate(calc(var(--phase) * -30deg)) scale(1.1);
           }
           
-          /* Outer Energy Ring */
           .orb-ring {
             border: 2px dashed rgba(255,255,255,0.2);
             border-radius: 50%;
@@ -370,7 +391,7 @@ const VoiceAssistant = ({ lang, user, onBack }: { lang: Language, user: UserProf
             <div className="absolute bottom-[-10%] right-[-10%] w-[90vw] h-[90vw] bg-cyan-900/20 blur-[120px] rounded-full"></div>
        </div>
 
-       {/* 2. Top Navigation Bar (Explicit Back Button - High Z-Index) */}
+       {/* 2. Top Navigation Bar */}
        <div className="absolute top-0 left-0 right-0 p-4 pt-safe-top flex justify-between items-center z-[220] bg-gradient-to-b from-[#020617]/80 to-transparent">
           <button 
              onClick={handleBack} 
@@ -402,7 +423,6 @@ const VoiceAssistant = ({ lang, user, onBack }: { lang: Language, user: UserProf
             className="relative w-[320px] h-[320px] flex items-center justify-center cursor-pointer tap-highlight-transparent group"
             onClick={handleToggle}
           >
-             {/* Dynamic Activity Rings */}
              {status === 'connected' && (
                  <>
                     <div className="absolute inset-[-40px] orb-ring opacity-30 border-emerald-500/50"></div>
@@ -410,15 +430,12 @@ const VoiceAssistant = ({ lang, user, onBack }: { lang: Language, user: UserProf
                  </>
              )}
 
-             {/* Plasma Shells */}
              <div className={clsx("absolute inset-0 plasma-1 orb-plasma transition-opacity duration-700", status === 'idle' ? "opacity-30 scale-90" : "opacity-100")}></div>
              <div className={clsx("absolute inset-4 plasma-2 orb-plasma opacity-80 transition-opacity duration-700", status === 'idle' ? "opacity-20 scale-90" : "opacity-80")}></div>
 
-             {/* The Core Reactor & Text Container */}
              <div className={clsx("absolute inset-0 m-auto w-40 h-40 rounded-full flex items-center justify-center transition-all duration-500",
                  status === 'connected' ? "bg-black/60 orb-core border border-emerald-400/30 backdrop-blur-sm" : "bg-black/40 border border-white/10 backdrop-blur-sm"
              )}>
-                 {/* Branding Text inside the Orb */}
                  <div className="text-center z-50 flex flex-col items-center justify-center p-4">
                      {status === 'idle' ? (
                          <>
@@ -432,7 +449,6 @@ const VoiceAssistant = ({ lang, user, onBack }: { lang: Language, user: UserProf
                             <h1 className="text-xl font-black leading-tight text-transparent bg-clip-text bg-gradient-to-r from-emerald-200 via-white to-cyan-200 text-shimmer drop-shadow-lg">
                                 AI<br/>कृषी मित्र
                             </h1>
-                            {/* Sound Wave Visualization when active */}
                             <div className="flex items-center justify-center gap-1 mt-2 h-4">
                                 {[1,2,3,4,5].map(i => (
                                     <div key={i} className="w-1 bg-emerald-400 rounded-full animate-pulse" 
@@ -447,29 +463,36 @@ const VoiceAssistant = ({ lang, user, onBack }: { lang: Language, user: UserProf
                      )}
                  </div>
              </div>
-
           </div>
           
-          {/* Status Text under orb */}
-          <div className="mt-12 text-center px-6 h-16 flex flex-col items-center justify-start z-40">
+          {/* Status Text & Suggestions */}
+          <div className="mt-8 w-full px-6 flex flex-col items-center z-40">
               <h2 className="text-2xl font-black text-white tracking-tight mb-2 drop-shadow-[0_0_10px_rgba(0,0,0,0.5)]">
                  {status === 'connected' ? (
                     transcripts.length > 0 && transcripts[transcripts.length-1].role === 'user' ? "Listening..." : "I'm Listening..."
                  ) : status === 'idle' ? t.voice_title : status === 'error' ? "Connection Error" : "Connecting..."}
               </h2>
-              <p className="text-emerald-200 text-sm max-w-xs font-medium bg-emerald-900/30 px-4 py-1 rounded-full border border-emerald-500/20 backdrop-blur-md">
-                  {errorMessage || (status === 'idle' ? t.voice_desc : "Speak naturally in Marathi or English")}
-              </p>
-          </div>
 
+              {/* Suggestions Chips (Visible when connected but no recent transcript or idle) */}
+              {(status === 'idle' || (status === 'connected' && transcripts.length < 2)) && (
+                 <div className="w-full max-w-md overflow-x-auto hide-scrollbar flex gap-2 mt-4 pb-2 px-1 snap-x">
+                    {t.voice_hints.map((hint: string, i: number) => (
+                        <div key={i} className="snap-center shrink-0 px-4 py-2 rounded-full bg-white/10 border border-white/10 backdrop-blur-md text-xs font-medium text-emerald-100 whitespace-nowrap shadow-lg flex items-center gap-2">
+                            <MessageSquare size={12} className="text-emerald-400"/>
+                            "{hint}"
+                        </div>
+                    ))}
+                 </div>
+              )}
+          </div>
        </div>
 
        {/* 4. Live Transcription Overlay */}
        <div className={clsx("absolute bottom-0 inset-x-0 bg-gradient-to-t from-black via-black/90 to-transparent pt-16 pb-safe-bottom px-6 z-20 transition-transform duration-500 flex flex-col justify-end min-h-[30vh]", 
            transcripts.length === 0 && "translate-y-full opacity-0"
        )}>
-           <div className="flex flex-col gap-3 max-h-[25vh] overflow-y-auto hide-scrollbar mask-image-gradient pb-4">
-                {transcripts.slice(-4).map((msg, i) => (
+           <div className="flex flex-col gap-3 max-h-[35vh] overflow-y-auto hide-scrollbar mask-image-gradient pb-4">
+                {transcripts.slice(-6).map((msg, i) => (
                    <div key={i} className={clsx("p-4 rounded-2xl backdrop-blur-md border max-w-[90%] text-sm font-medium shadow-lg animate-enter", 
                        msg.role === 'user' ? "self-end bg-emerald-500/20 text-emerald-100 border-emerald-500/30 rounded-tr-sm" : "self-start bg-white/10 text-slate-200 border-white/10 rounded-tl-sm"
                    )}>
