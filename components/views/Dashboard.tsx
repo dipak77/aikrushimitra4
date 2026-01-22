@@ -148,12 +148,6 @@ const DASH_TEXT: Record<Language, any> = {
 
 // --- 2. VISUAL HELPERS ---
 
-const GoldText = ({ children, className }: { children?: React.ReactNode, className?: string }) => (
-    <span className={clsx("text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 via-orange-400 to-amber-500 drop-shadow-sm font-black", className)}>
-        {children}
-    </span>
-);
-
 const GlassTile = ({ children, className, onClick, delay = 0 }: any) => (
     <div 
         onClick={onClick}
@@ -242,18 +236,27 @@ const AppHeaderLogo = () => (
     </div>
 );
 
-// --- 3D WEATHER ICONS ---
+// --- PREMIUM 3D WEATHER ICONS ---
 const WeatherIcon3D = ({ type, isDay }: { type: string, isDay: boolean }) => {
     return (
       <div className="relative w-40 h-40 flex items-center justify-center filter drop-shadow-2xl">
+         {/* Background Glow Orb */}
+         <div className={clsx(
+             "absolute w-28 h-28 rounded-full blur-[40px] opacity-60 animate-pulse",
+             isDay ? "bg-amber-500" : "bg-blue-500"
+         )}></div>
+
          {/* SUN/MOON Layer (Behind) */}
          {isDay && type !== 'rain' && type !== 'storm' && (
-           <div className={clsx("absolute w-24 h-24 rounded-full bg-gradient-to-br from-amber-300 via-amber-400 to-orange-500 shadow-[0_0_50px_rgba(251,191,36,0.6)] animate-pulse-slow transition-transform duration-1000", 
+           <div className={clsx("absolute w-24 h-24 rounded-full bg-gradient-to-br from-yellow-300 via-orange-400 to-red-500 shadow-[0_0_60px_rgba(251,191,36,0.6)] animate-[float_4s_ease-in-out_infinite]", 
                type === 'clear' ? "scale-100" : "top-2 right-4 scale-75"
-           )}></div>
+           )}>
+               {/* Internal Glow */}
+               <div className="absolute inset-0 rounded-full bg-yellow-300 opacity-20 blur-md"></div>
+           </div>
          )}
          {!isDay && type !== 'rain' && type !== 'storm' && (
-            <div className={clsx("absolute w-20 h-20 rounded-full bg-gradient-to-br from-slate-200 to-slate-400 shadow-[0_0_40px_rgba(255,255,255,0.2)] transition-transform duration-1000",
+            <div className={clsx("absolute w-20 h-20 rounded-full bg-gradient-to-br from-slate-100 to-slate-400 shadow-[0_0_40px_rgba(255,255,255,0.3)] animate-[float_5s_ease-in-out_infinite]",
                  type === 'clear' ? "scale-100" : "top-2 right-4 scale-75"
             )}>
                <div className="absolute top-4 left-3 w-4 h-4 bg-slate-400/20 rounded-full"></div>
@@ -265,7 +268,7 @@ const WeatherIcon3D = ({ type, isDay }: { type: string, isDay: boolean }) => {
          {(type !== 'clear') && (
            <div className="relative z-10 transform scale-105">
               {/* Main Cloud Shape */}
-              <svg width="150" height="100" viewBox="0 0 150 100" className="drop-shadow-[0_20px_20px_rgba(0,0,0,0.5)]">
+              <svg width="150" height="100" viewBox="0 0 150 100" className="drop-shadow-[0_15px_15px_rgba(0,0,0,0.6)]">
                  <defs>
                     <linearGradient id="cloudBody" x1="0%" y1="0%" x2="0%" y2="100%">
                        <stop offset="0%" stopColor="#ffffff" />
@@ -290,14 +293,14 @@ const WeatherIcon3D = ({ type, isDay }: { type: string, isDay: boolean }) => {
               {(type === 'rain' || type === 'storm') && (
                  <div className="absolute -bottom-2 left-10 flex gap-4 z-0">
                     {[1,2,3].map(i => (
-                      <div key={i} className="w-3.5 h-6 bg-gradient-to-b from-blue-400 to-blue-600 rounded-full shadow-lg animate-[rain_0.8s_ease-in_infinite]" 
+                      <div key={i} className="w-3.5 h-6 bg-gradient-to-b from-cyan-300 to-blue-600 rounded-full shadow-lg animate-[rain_0.8s_ease-in_infinite]" 
                            style={{animationDelay: `${i * 0.25}s`, transform: 'rotate(15deg)'}}></div>
                     ))}
                  </div>
               )}
               
               {type === 'storm' && (
-                  <svg className="absolute bottom-[-15px] right-12 w-10 h-14 text-yellow-400 drop-shadow-[0_0_15px_rgba(250,204,21,0.8)] animate-[flash_2.5s_infinite]" viewBox="0 0 24 24" fill="currentColor">
+                  <svg className="absolute bottom-[-15px] right-12 w-10 h-14 text-yellow-300 drop-shadow-[0_0_15px_rgba(250,204,21,0.9)] animate-[flash_2.5s_infinite]" viewBox="0 0 24 24" fill="currentColor">
                       <path d="M13 2L3 14H12L11 22L21 10H12L13 2Z" />
                   </svg>
               )}
@@ -327,8 +330,11 @@ const WeatherWidget = ({ weather, loading, location, lang, onNavigate }: any) =>
 
     return (
         <GlassTile onClick={() => onNavigate('WEATHER')} className="h-full p-6 relative overflow-hidden group bg-gradient-to-br from-[#0f172a] to-[#1e293b] border-white/5 shadow-2xl">
+             {/* Dynamic Background Orb */}
+             <div className="absolute top-[-30%] right-[-30%] w-[120%] h-[120%] bg-gradient-to-br from-blue-600/20 to-purple-600/20 blur-[80px] rounded-full animate-[orb-float_10s_ease-in-out_infinite]"></div>
+             
              {/* Background Mesh (Subtle) */}
-             <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-indigo-500/20 via-transparent to-transparent"></div>
+             <div className="absolute inset-0 opacity-20 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] mix-blend-overlay"></div>
              
              {/* Main Layout */}
              <div className="flex justify-between items-center h-full relative z-10 px-2">
@@ -342,9 +348,9 @@ const WeatherWidget = ({ weather, loading, location, lang, onNavigate }: any) =>
                          {location}
                      </h2>
 
-                     {/* Big Temp - Updated Typography */}
+                     {/* Big Temp - Updated Typography with Yellow-Red Gradient */}
                      <div className="flex items-start -ml-1">
-                         <span className="text-[5.5rem] leading-[0.8] font-thin tracking-tighter text-white drop-shadow-lg">
+                         <span className="text-[5.5rem] leading-[0.8] font-thin tracking-tighter text-transparent bg-clip-text bg-gradient-to-b from-yellow-300 via-orange-500 to-red-500 drop-shadow-sm filter">
                              {loading ? "--" : Math.round(weather.current.temperature_2m)}°
                          </span>
                      </div>
@@ -435,7 +441,7 @@ const CalendarWidget = ({ lang }: { lang: Language }) => {
     return (
         <GlassTile className="h-full p-5 bg-[#0f172a] relative overflow-hidden group">
             {/* Background Gradient Spot */}
-            <div className="absolute top-[-50px] right-[-50px] w-32 h-32 bg-indigo-500/20 blur-[60px] rounded-full"></div>
+            <div className="absolute top-[-50px] right-[-50px] w-32 h-32 bg-indigo-500/20 blur-[60px] rounded-full animate-[orb-breathe_6s_infinite]"></div>
 
             <div className="flex items-center gap-2 mb-4 relative z-10">
                 <div className="p-2 rounded-lg bg-indigo-500/10 border border-indigo-500/20">
