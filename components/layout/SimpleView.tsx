@@ -11,10 +11,10 @@ interface SimpleViewProps {
 
 const SimpleView = ({ title, children, onBack }: SimpleViewProps) => {
   return (
-    <div className="h-full w-full flex flex-col bg-gradient-to-b from-[#020617] via-[#0b1120] to-[#020617] animate-enter lg:pl-36">
+    <div className="h-full w-full flex flex-col bg-[#020617]/70 backdrop-blur-sm animate-enter lg:pl-36">
        
        {/* Frosted Glass Sticky Header */}
-       <div className="flex items-center gap-5 p-8 pt-safe-top z-50 sticky top-0 bg-[#020617]/80 backdrop-blur-2xl border-b border-white/5 shadow-[0_10px_30px_rgba(0,0,0,0.5)] transition-all duration-300">
+       <div className="flex items-center gap-5 p-8 pt-safe-top z-50 sticky top-0 bg-[#020617]/60 backdrop-blur-2xl border-b border-white/5 shadow-[0_10px_30px_rgba(0,0,0,0.5)] transition-all duration-300">
           
           {/* Lens-style Back Button */}
           <button onClick={() => { onBack(); triggerHaptic(); }} className="w-12 h-12 rounded-full bg-white/5 backdrop-blur-md flex items-center justify-center text-slate-200 border border-white/10 hover:bg-white/15 active:scale-90 transition-all duration-300 shadow-[0_0_20px_rgba(0,0,0,0.2)] hover:shadow-[0_0_15px_rgba(255,255,255,0.1)] group relative overflow-hidden">

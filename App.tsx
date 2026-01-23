@@ -22,15 +22,13 @@ import ProfileView from './components/views/ProfileView';
 import { SplashScreen } from './components/views/SplashScreen';
 
 const App = () => {
-  // Initialize with SPLASH screen
   const [view, setView] = useState<ViewState>('SPLASH');
   const [lang, setLang] = useState<Language>('mr');
   
-  // Changed default name from 'Suresh Patil' to 'Patil' as requested
   const [user, setUser] = useState<UserProfile>({ 
     name: "Patil", 
-    village: "Satara", 
-    district: "Satara", 
+    village: "Haveli", 
+    district: "Pune", 
     landSize: "5 Acres", 
     crop: "Soyabean" 
   });
@@ -61,19 +59,32 @@ const App = () => {
     }
   };
 
-  // Hide Sidebar/Nav for specific full-screen views (including SPLASH)
+  // Fullscreen views hide the standard nav but may implement their own internal nav
   const isFullScreen = view === 'VOICE_ASSISTANT' || view === 'AREA_CALCULATOR' || view === 'SPLASH';
 
   return (
-    <div className="flex h-[100dvh] w-full font-sans bg-transparent text-slate-100 selection:bg-cyan-500/30">
+    <div className="relative w-full h-[100dvh] bg-transparent overflow-hidden text-slate-100 font-jakarta">
        
-       {/* Feature Notification System (Global) */}
+       {/* 1. Global Background Layers (Fixed, z-0) */}
+       <div className="premium-bg">
+          <div className="planet-orb-main"></div>
+          <div className="planet-ring"></div>
+          <div className="planet-orb-secondary"></div>
+          <div className="star-field"></div>
+       </div>
+
+       {/* 2. Notification System (Highest z-index for alerts) */}
        {!isFullScreen && <NotificationSystem lang={lang} onNavigate={setView} />}
 
+       {/* 3. Navigation Sidebar (Desktop) - Fixed Left, High Z-Index */}
        {!isFullScreen && <Sidebar view={view} setView={setView} lang={lang} />}
-       <main className="flex-1 h-full relative z-0 w-full max-w-[100vw] overflow-hidden">
+
+       {/* 4. Main Content Area */}
+       <main className="relative w-full h-full z-10">
           {getView()}
        </main>
+
+       {/* 5. Mobile Navigation (Floating Bottom, High Z-Index) */}
        {!isFullScreen && <MobileNav view={view} setView={setView} />}
     </div>
   );

@@ -9,116 +9,132 @@
 }
 
 html, body {
-  @apply h-full w-full bg-[#02010a] text-slate-100;
+  width: 100%;
+  height: 100%;
   margin: 0;
   padding: 0;
-  overscroll-behavior-y: none;
+  background-color: #020617;
+  color: #f1f5f9;
+  font-family: 'Plus Jakarta Sans', 'Noto Sans Devanagari', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden; 
 }
 
-/* --- PREMIUM BACKGROUND LAYER (CSS RECREATION OF PROVIDED IMAGE) --- */
+/* --- THE GALACTIC PREMIUM BACKGROUND --- */
 .premium-bg {
-  @apply fixed inset-0 z-0 overflow-hidden pointer-events-none;
-  /* Deep Violet to Black Base */
-  background: radial-gradient(circle at 50% 30%, #170B29 0%, #02010a 100%);
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  background: radial-gradient(circle at 50% 120%, #0f172a 0%, #020617 50%, #000000 100%);
+  overflow: hidden;
+  pointer-events: none;
 }
 
-/* Top Left: Concentric Curved Lines */
-.gradient-orb-1 {
-  @apply absolute top-[-150px] left-[-150px] w-[500px] h-[500px] rounded-full;
-  background: repeating-radial-gradient(
-    circle at center,
-    transparent 0,
-    transparent 24px,
-    rgba(168, 85, 247, 0.15) 25px, /* Purple Line */
-    rgba(168, 85, 247, 0.15) 26px
-  );
-  opacity: 0.5;
-  mask-image: radial-gradient(circle, black 0%, transparent 70%);
-}
-
-/* Top Right: Diagonal Tech Shapes */
-.gradient-orb-2 {
-  @apply absolute top-0 right-0 w-[40vw] h-[40vw];
-  background-image: 
-    /* The thick bar */
-    linear-gradient(225deg, transparent 30%, rgba(192, 38, 211, 0.4) 30%, rgba(192, 38, 211, 0.4) 35%, transparent 35%),
-    /* The thin bars */
-    linear-gradient(225deg, transparent 38%, rgba(168, 85, 247, 0.3) 38%, rgba(168, 85, 247, 0.3) 40%, transparent 40%);
+/* The Planet (Top Right Green/Cyan Orb) */
+.planet-orb-main {
+  position: absolute;
+  top: -10%;
+  right: -10%;
+  width: 50vw;
+  height: 50vw;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, rgba(52, 211, 153, 0.4), rgba(6, 182, 212, 0.1) 60%, transparent 80%);
+  filter: blur(60px);
   opacity: 0.8;
+  animation: float-slow 20s ease-in-out infinite;
 }
 
-/* Center/Right: Ambient Glow */
-.gradient-orb-3 {
-  @apply absolute top-[30%] right-[10%] w-[80vw] h-[80vw] rounded-full bg-indigo-900/10 blur-[100px] mix-blend-screen animate-pulse;
+/* The Ring Effect (Simulated via Shadow/Pseudo) */
+.planet-ring {
+  position: absolute;
+  top: 5%;
+  right: 5%;
+  width: 35vw;
+  height: 35vw;
+  border-radius: 50%;
+  border: 1px solid rgba(52, 211, 153, 0.1);
+  box-shadow: 0 0 100px rgba(52, 211, 153, 0.15), inset 0 0 60px rgba(6, 182, 212, 0.1);
+  transform: rotate(-45deg) scaleY(0.6);
+  filter: blur(2px);
+  animation: rotate-slow 60s linear infinite;
 }
 
-/* Bottom: Perspective Grid */
-.curve-overlay {
-   @apply absolute bottom-0 left-[-50%] w-[200%] h-[45%];
-   /* Neon Purple/Pink Grid Lines */
-   background-image: 
-     linear-gradient(to right, rgba(216, 180, 254, 0.15) 1px, transparent 1px),
-     linear-gradient(to bottom, rgba(216, 180, 254, 0.15) 1px, transparent 1px);
-   background-size: 50px 50px;
-   /* 3D Perspective Tilt */
-   transform: perspective(500px) rotateX(60deg);
-   /* Fade out at the top (horizon) */
-   mask-image: linear-gradient(to top, black 10%, transparent 100%);
-   opacity: 0.6;
+/* Secondary Orb (Bottom Left - Deep Blue/Purple) */
+.planet-orb-secondary {
+  position: absolute;
+  bottom: -10%;
+  left: -10%;
+  width: 60vw;
+  height: 60vw;
+  border-radius: 50%;
+  background: radial-gradient(circle at 70% 70%, rgba(59, 130, 246, 0.15), rgba(99, 102, 241, 0.05) 60%, transparent 80%);
+  filter: blur(80px);
+  opacity: 0.6;
+  animation: float-reverse-slow 25s ease-in-out infinite;
 }
 
-/* --- CONTENT LAYER --- */
-#root {
-  @apply relative z-10 h-full w-full overflow-hidden;
+/* Floating Particles/Stars */
+.star-field {
+  position: absolute;
+  inset: 0;
+  background-image: 
+    radial-gradient(1px 1px at 10% 10%, rgba(255,255,255,0.8) 50%, transparent 100%),
+    radial-gradient(1px 1px at 20% 80%, rgba(255,255,255,0.6) 50%, transparent 100%),
+    radial-gradient(2px 2px at 40% 40%, rgba(255,255,255,0.9) 50%, transparent 100%),
+    radial-gradient(1px 1px at 60% 90%, rgba(255,255,255,0.5) 50%, transparent 100%),
+    radial-gradient(2px 2px at 80% 20%, rgba(255,255,255,0.7) 50%, transparent 100%),
+    radial-gradient(1px 1px at 90% 60%, rgba(255,255,255,0.8) 50%, transparent 100%);
+  background-size: 100% 100%;
+  opacity: 0.4;
+  mask-image: radial-gradient(circle at center, black 60%, transparent 100%);
 }
 
-/* Updated Glass Panel to match Purple Theme */
+/* --- GLASS UTILITIES --- */
+/* Rich Glass: Darker, more contrasty borders, subtle inner glow */
 .glass-panel {
-  @apply backdrop-blur-xl bg-[#1e1b4b]/30 border border-purple-500/20 shadow-xl;
+  @apply backdrop-blur-xl bg-[#0f172a]/60 border border-white/10 shadow-lg;
+  box-shadow: 
+    0 4px 6px -1px rgba(0, 0, 0, 0.1), 
+    0 2px 4px -1px rgba(0, 0, 0, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
-.hide-scrollbar::-webkit-scrollbar {
-  display: none;
-}
-.hide-scrollbar {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
+.glass-panel-gradient {
+  background: linear-gradient(145deg, rgba(30, 41, 59, 0.7) 0%, rgba(15, 23, 42, 0.8) 100%);
 }
 
-.pt-safe-top {
-  padding-top: max(1rem, var(--safe-top));
+.glass-panel-hover {
+  @apply transition-all duration-300;
+}
+.glass-panel-hover:hover {
+  @apply bg-[#1e293b]/80 border-white/20 scale-[1.01] shadow-[0_0_20px_rgba(52,211,153,0.1)];
 }
 
-.pb-safe-bottom {
-  padding-bottom: max(1rem, var(--safe-bottom));
+/* --- ANIMATIONS --- */
+@keyframes float-slow {
+  0%, 100% { transform: translate(0, 0); }
+  50% { transform: translate(20px, 30px); }
+}
+@keyframes float-reverse-slow {
+  0%, 100% { transform: translate(0, 0); }
+  50% { transform: translate(-20px, -30px); }
+}
+@keyframes rotate-slow {
+  0% { transform: rotate(0deg) scaleY(0.6); }
+  100% { transform: rotate(360deg) scaleY(0.6); }
+}
+@keyframes orb-float {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-10px) scale(1.05); }
 }
 
-.mb-safe-bottom {
-  margin-bottom: max(1rem, var(--safe-bottom));
-}
+/* --- UTILS --- */
+.hide-scrollbar::-webkit-scrollbar { display: none; }
+.hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+.pt-safe-top { padding-top: max(1rem, var(--safe-top)); }
+.pb-safe-bottom { padding-bottom: max(1rem, var(--safe-bottom)); }
 
-@keyframes float {
-  0%, 100% { transform: translateY(0px); }
-  50% { transform: translateY(-10px); }
-}
-
-.float-3d {
-  animation: float 6s ease-in-out infinite;
-}
-
-@keyframes enter {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.animate-enter {
-  animation: enter 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
-
-.mask-image-gradient {
-  mask-image: linear-gradient(to bottom, transparent, black 10%, black 90%, transparent);
-}
-
-.mask-image-gradient-bottom {
-  mask-image: linear-gradient(to bottom, black 85%, transparent 100%);
+#root {
+  isolation: isolate;
+  height: 100%;
 }

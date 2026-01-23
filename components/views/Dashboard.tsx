@@ -166,8 +166,8 @@ const GlassTile = ({ children, className, onClick, delay = 0 }: any) => (
 
 const NewsTicker = ({ lang }: { lang: Language }) => {
     return (
-        <div className="w-full bg-[#020617]/90 backdrop-blur-md border-b border-white/5 h-9 flex items-center relative overflow-hidden z-40">
-            <div className="absolute inset-y-0 left-0 bg-[#020617] z-10 px-4 flex items-center gap-2 border-r border-white/5">
+        <div className="w-full bg-[#020617]/50 backdrop-blur-md border-b border-white/5 h-9 flex items-center relative overflow-hidden z-40">
+            <div className="absolute inset-y-0 left-0 bg-[#020617]/80 z-10 px-4 flex items-center gap-2 border-r border-white/5">
                 <span className="relative flex h-2 w-2">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
@@ -643,7 +643,7 @@ const Dashboard = ({ lang, setLang, user, onNavigate }: { lang: Language, setLan
     };
 
     return (
-        <div className="h-full w-full overflow-y-auto overflow-x-hidden hide-scrollbar bg-[#020617] text-slate-100 lg:pl-24 selection:bg-yellow-500/30 flex flex-col">
+        <div className="h-full w-full overflow-y-auto overflow-x-hidden hide-scrollbar bg-transparent text-slate-100 lg:pl-24 selection:bg-yellow-500/30 flex flex-col">
             
             {/* 1. NEWS TICKER (Top) */}
             <NewsTicker lang={lang} />

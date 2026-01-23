@@ -11,44 +11,45 @@ export default {
   theme: {
     extend: {
       colors: {
-        jungle: {
-          50: '#e8f5e9',
-          100: '#c8e6c9',
-          200: '#a5d6a7',
-          300: '#81c784',
-          400: '#66bb6a',
-          500: '#4caf50',
-          600: '#43a047',
-          700: '#2e7d32',
-          800: '#1b5e20', // Deep Jungle Green
-          900: '#144518',
-          950: '#0a250c',
+        void: '#020617', // Deep Space Background
+        glass: {
+          100: 'rgba(255, 255, 255, 0.03)',
+          200: 'rgba(255, 255, 255, 0.08)',
+          border: 'rgba(255, 255, 255, 0.08)'
         },
-        electric: {
-          50: '#e8eaf6',
-          100: '#c5cae9',
-          200: '#9fa8da',
-          300: '#7986cb',
-          400: '#5c6bc0',
-          500: '#3d5afe', // Electric Indigo
-          600: '#304ffe',
-          700: '#283593',
-          800: '#1a237e',
-          900: '#0d1256',
-        },
-        gold: {
-          400: '#ffca28',
-          500: '#ffc107', // Gold Accent
-          600: '#ffb300',
+        neon: {
+          mint: '#00FF9D', // Agri-Tech Green (Growth)
+          cyan: '#06b6d4', // Data Blue (Science)
+          gold: '#FFD700', // Wealth/Sun
+          purple: '#c084fc', // AI
+          danger: '#ff4d4d'
         }
       },
       animation: {
-        'marquee': 'marquee 25s linear infinite',
+        'float': 'float 20s ease-in-out infinite',
+        'float-reverse': 'floatReverse 25s ease-in-out infinite',
+        'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+        'spin-slow': 'spin 12s linear infinite',
+        'spin-reverse-slow': 'spin 15s linear infinite reverse',
+        'shimmer': 'shimmer 2.5s linear infinite',
+        'enter': 'enter 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards',
       },
       keyframes: {
-        marquee: {
-          '0%': { transform: 'translateX(100%)' },
-          '100%': { transform: 'translateX(-100%)' },
+        float: {
+          '0%, 100%': { transform: 'translate(0, 0)' },
+          '50%': { transform: 'translate(30px, -30px)' },
+        },
+        floatReverse: {
+          '0%, 100%': { transform: 'translate(0, 0)' },
+          '50%': { transform: 'translate(-30px, 30px)' },
+        },
+        shimmer: {
+          '0%': { transform: 'translateX(-100%)' },
+          '100%': { transform: 'translateX(100%)' },
+        },
+        enter: {
+          '0%': { opacity: 0, transform: 'translateY(20px)' },
+          '100%': { opacity: 1, transform: 'translateY(0)' }
         }
       }
     },

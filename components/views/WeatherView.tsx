@@ -2,32 +2,33 @@
 import React, { useState, useEffect } from 'react';
 import { Language } from '../../types';
 import { TRANSLATIONS } from '../../constants';
-import { ArrowLeft, MoreVertical, MapPin, Wind, Droplets, Sun, Calendar, Clock, CloudRain, ThermometerSun, Eye, Sparkles } from 'lucide-react';
+import { ArrowLeft, MoreVertical, MapPin, Wind, Droplets, Sun, Clock, CloudRain, Eye, Sparkles, Moon, CloudFog } from 'lucide-react';
 import { triggerHaptic } from '../../utils/common';
-import { AreaChart, Area, XAxis, Tooltip, ResponsiveContainer, YAxis } from 'recharts';
+import { AreaChart, Area, XAxis, ResponsiveContainer } from 'recharts';
 import { Loader2 } from 'lucide-react';
 import { clsx } from 'clsx';
 
 // --- PREMIUM 3D ICONS (High Res) ---
-
 const WeatherIcon3D = ({ type, isDay, size = "lg" }: { type: string, isDay: boolean, size?: "sm" | "md" | "lg" }) => {
     const scale = size === "lg" ? "scale-150" : size === "md" ? "scale-100" : "scale-75";
     
     return (
       <div className={`relative flex items-center justify-center filter drop-shadow-2xl ${scale}`}>
          {/* SUN/MOON Layer (Behind) */}
-         {isDay && type !== 'rain' && type !== 'storm' && (
-           <div className={clsx("absolute w-24 h-24 rounded-full bg-gradient-to-br from-yellow-300 via-orange-400 to-red-500 shadow-[0_0_60px_rgba(251,191,36,0.6)] animate-[pulse_4s_infinite]", 
+         {type !== 'rain' && type !== 'storm' && (
+           <div className={clsx("absolute rounded-full shadow-[0_0_60px_rgba(251,191,36,0.6)] animate-[pulse_4s_infinite] transition-all duration-1000", 
+               isDay 
+                 ? "w-24 h-24 bg-gradient-to-br from-yellow-300 via-orange-400 to-red-500 shadow-orange-500/50" 
+                 : "w-20 h-20 bg-gradient-to-br from-slate-100 via-slate-300 to-slate-400 shadow-blue-300/30",
                type === 'clear' ? "scale-100" : "top-2 right-4 scale-75"
-           )}></div>
-         )}
-         {!isDay && type !== 'rain' && type !== 'storm' && (
-            <div className={clsx("absolute w-20 h-20 rounded-full bg-gradient-to-br from-slate-100 to-slate-400 shadow-[0_0_40px_rgba(255,255,255,0.3)]",
-                 type === 'clear' ? "scale-100" : "top-2 right-4 scale-75"
-            )}>
-               <div className="absolute top-4 left-3 w-4 h-4 bg-slate-400/20 rounded-full"></div>
-               <div className="absolute bottom-4 right-5 w-2 h-2 bg-slate-400/20 rounded-full"></div>
-            </div>
+           )}>
+               {!isDay && (
+                   <>
+                    <div className="absolute top-4 left-3 w-4 h-4 bg-slate-400/20 rounded-full"></div>
+                    <div className="absolute bottom-4 right-5 w-2 h-2 bg-slate-400/20 rounded-full"></div>
+                   </>
+               )}
+           </div>
          )}
   
          {/* CLOUD Layer (Front) */}
@@ -46,11 +47,9 @@ const WeatherIcon3D = ({ type, isDay, size = "lg" }: { type: string, isDay: bool
                     </filter>
                  </defs>
                  
-                 {/* Cloud Base */}
                  <path d="M50,90 Q25,90 25,65 Q25,35 55,35 Q65,15 95,15 Q120,15 130,45 Q150,45 150,70 Q150,90 130,90 Z" 
                        fill="url(#cloudBody)" />
                  
-                 {/* Highlight/Gloss (Simulated 3D reflection) */}
                  <path d="M60,40 Q70,25 95,25 Q115,25 125,45" 
                        fill="none" stroke="white" strokeWidth="4" strokeOpacity="0.6" strokeLinecap="round" filter="url(#gloss)" />
               </svg>
@@ -76,10 +75,10 @@ const WeatherIcon3D = ({ type, isDay, size = "lg" }: { type: string, isDay: bool
     )
 };
 
-// --- ORB BACKGROUND ANIMATION ---
+// --- ORB BACKGROUND ANIMATION ENGINE ---
 const OrbBackground = ({ weatherCode, isDay }: { weatherCode: number, isDay: boolean }) => {
     return (
-        <div className="absolute inset-0 overflow-hidden pointer-events-none z-0 bg-[#020617]">
+        <div className="absolute inset-0 overflow-hidden pointer-events-none z-0 transition-colors duration-1000 ease-in-out">
              <style>{`
                 @keyframes orb-float {
                     0% { transform: translate(0, 0) scale(1); }
@@ -87,33 +86,66 @@ const OrbBackground = ({ weatherCode, isDay }: { weatherCode: number, isDay: boo
                     66% { transform: translate(-20px, 20px) scale(0.9); }
                     100% { transform: translate(0, 0) scale(1); }
                 }
-                @keyframes orb-breathe {
-                    0%, 100% { opacity: 0.4; transform: scale(1); }
-                    50% { opacity: 0.7; transform: scale(1.2); }
+                @keyframes twinkle {
+                    0%, 100% { opacity: 0.2; transform: scale(0.8); }
+                    50% { opacity: 0.8; transform: scale(1.2); }
                 }
              `}</style>
 
-             {/* Base Gradient */}
-             <div className="absolute inset-0 bg-gradient-to-b from-slate-900 via-slate-950 to-black"></div>
+             {/* 1. Base Gradient Layer (The Sky) */}
+             <div className={clsx(
+                 "absolute inset-0 transition-colors duration-1000",
+                 isDay 
+                  ? "bg-gradient-to-b from-blue-400 via-blue-500 to-indigo-900"  // Day Sky
+                  : "bg-gradient-to-b from-[#0f172a] via-[#0b1022] to-black"     // Night Sky
+             )}></div>
 
-             {/* Orb 1: Warm/Sun (Yellow/Red) */}
-             <div className="absolute top-[-10%] left-[-10%] w-[60vw] h-[60vw] rounded-full blur-[80px] opacity-40 animate-[orb-float_10s_ease-in-out_infinite]"
-                  style={{ background: isDay ? 'radial-gradient(circle, #f59e0b, #ef4444)' : 'radial-gradient(circle, #1e293b, #0f172a)' }}></div>
-             
-             {/* Orb 2: Cool/Secondary (Blue/Purple) */}
-             <div className="absolute bottom-[10%] right-[-10%] w-[70vw] h-[70vw] rounded-full blur-[100px] opacity-30 animate-[orb-float_15s_ease-in-out_infinite_reverse]"
-                  style={{ background: 'radial-gradient(circle, #3b82f6, #8b5cf6)' }}></div>
+             {/* 2. Main Celestial Body (Sun / Moon) */}
+             <div 
+                className={clsx(
+                    "absolute rounded-full blur-[60px] animate-[orb-float_20s_ease-in-out_infinite] transition-all duration-1000",
+                    isDay 
+                     ? "top-[-10%] left-[-10%] w-[70vw] h-[70vw] bg-yellow-500/60 opacity-60" // Sun Glow
+                     : "top-[-10%] left-[-10%] w-[60vw] h-[60vw] bg-indigo-500/40 opacity-40" // Moon Glow
+                )}
+             ></div>
 
-             {/* Orb 3: Accent (Red/Pink for that 'Yellow Red' request) */}
-             <div className="absolute top-[30%] right-[20%] w-[40vw] h-[40vw] rounded-full blur-[90px] opacity-20 animate-[orb-breathe_8s_ease-in-out_infinite]"
-                  style={{ background: 'radial-gradient(circle, #f43f5e, #fbbf24)' }}></div>
+             {/* 3. Secondary Atmospheric Glow */}
+             <div 
+                className={clsx(
+                    "absolute rounded-full blur-[80px] animate-[orb-float_25s_ease-in-out_infinite_reverse] transition-all duration-1000",
+                    isDay
+                     ? "bottom-[-10%] right-[-10%] w-[60vw] h-[60vw] bg-cyan-400/40 opacity-40" // Day Haze
+                     : "bottom-[-10%] right-[-10%] w-[80vw] h-[80vw] bg-purple-900/30 opacity-30" // Night Nebula
+                )}
+             ></div>
 
-             {/* Noise Texture for Realism */}
+             {/* 4. Stars (Night Only) */}
+             {!isDay && (
+                 <div className="absolute inset-0">
+                     {[...Array(20)].map((_, i) => (
+                         <div 
+                            key={i}
+                            className="absolute bg-white rounded-full"
+                            style={{
+                                top: `${Math.random() * 60}%`,
+                                left: `${Math.random() * 100}%`,
+                                width: `${Math.random() * 2 + 1}px`,
+                                height: `${Math.random() * 2 + 1}px`,
+                                animation: `twinkle ${Math.random() * 3 + 2}s infinite ease-in-out`,
+                                animationDelay: `${Math.random() * 2}s`
+                            }}
+                         ></div>
+                     ))}
+                 </div>
+             )}
+
+             {/* 5. Weather Effects Overlay */}
              <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-overlay"></div>
              
-             {/* Rain/Particles Overlay if needed */}
+             {/* Rain Overlay */}
              {weatherCode >= 51 && (
-                 <div className="absolute inset-0 bg-[url('https://cdn.pixabay.com/animation/2023/06/25/20/38/20-38-23-441_512.gif')] opacity-10 bg-cover mix-blend-screen"></div>
+                 <div className="absolute inset-0 bg-[url('https://cdn.pixabay.com/animation/2023/06/25/20/38/20-38-23-441_512.gif')] opacity-20 bg-cover mix-blend-screen pointer-events-none"></div>
              )}
         </div>
     );
@@ -124,7 +156,6 @@ const WeatherView = ({ lang, onBack }: { lang: Language, onBack: () => void }) =
     const [loading, setLoading] = useState(true);
     const [weather, setWeather] = useState<any>(null);
     const [locationName, setLocationName] = useState('Locating...');
-    const [selectedDay, setSelectedDay] = useState(0);
 
     const fetchWeather = async (lat: number, lng: number) => {
         try {
@@ -138,6 +169,12 @@ const WeatherView = ({ lang, onBack }: { lang: Language, onBack: () => void }) =
             setLoading(false);
         } catch (err) {
             console.error('Failed to fetch weather');
+            // Mock data fallback if offline
+            setWeather({
+                current: { temperature_2m: 28, weather_code: 1, is_day: 1, wind_speed_10m: 12, relative_humidity_2m: 45, uv_index: 6 },
+                hourly: { time: Array(24).fill(new Date().toISOString()), temperature_2m: Array(24).fill(28) },
+                daily: { temperature_2m_max: [32], temperature_2m_min: [22] }
+            });
             setLoading(false);
         }
     };
@@ -167,28 +204,28 @@ const WeatherView = ({ lang, onBack }: { lang: Language, onBack: () => void }) =
     const weatherType = getWeatherType(weather?.current?.weather_code || 0);
     const isDay = weather?.current?.is_day !== 0;
 
-    // Chart Data (Smoothed)
-    const chartData = weather?.hourly.time.slice(0, 8).map((time: string, i: number) => ({
+    // Chart Data
+    const chartData = weather?.hourly?.time.slice(0, 8).map((time: string, i: number) => ({
         time: new Date(time).getHours() + ':00',
         temp: Math.round(weather.hourly.temperature_2m[i]),
     })) || [];
 
     return (
-        <div className="h-full w-full flex flex-col animate-enter lg:pl-32 relative overflow-hidden bg-slate-950 text-white selection:bg-orange-500/30">
+        <div className="h-full w-full flex flex-col animate-enter lg:pl-32 relative overflow-hidden text-white">
             
-            {/* 1. Immersive Background */}
+            {/* 1. Immersive Dynamic Background */}
             <OrbBackground weatherCode={weather?.current?.weather_code || 0} isDay={isDay} />
             
             {/* 2. Header */}
             <div className="pt-safe-top px-6 py-4 flex items-center justify-between z-20">
-                <button onClick={() => { onBack(); triggerHaptic(); }} className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white hover:bg-white/10 transition-colors backdrop-blur-xl shadow-lg">
+                <button onClick={() => { onBack(); triggerHaptic(); }} className="w-10 h-10 rounded-full bg-white/10 border border-white/20 flex items-center justify-center text-white hover:bg-white/20 transition-colors backdrop-blur-xl shadow-lg">
                     <ArrowLeft size={20}/>
                 </button>
-                <div className="flex items-center gap-2 bg-black/20 backdrop-blur-md px-4 py-1.5 rounded-full border border-white/5 shadow-inner">
-                    <MapPin size={14} className="text-orange-400"/>
+                <div className="flex items-center gap-2 bg-black/20 backdrop-blur-md px-4 py-1.5 rounded-full border border-white/10 shadow-inner">
+                    <MapPin size={14} className={isDay ? "text-orange-400" : "text-blue-400"}/>
                     <span className="text-white font-bold text-sm tracking-wide">{locationName}</span>
                 </div>
-                <button className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white hover:bg-white/10 transition-colors backdrop-blur-xl shadow-lg">
+                <button className="w-10 h-10 rounded-full bg-white/10 border border-white/20 flex items-center justify-center text-white hover:bg-white/20 transition-colors backdrop-blur-xl shadow-lg">
                     <MoreVertical size={20}/>
                 </button>
             </div>
@@ -198,44 +235,40 @@ const WeatherView = ({ lang, onBack }: { lang: Language, onBack: () => void }) =
                 
                 {/* Date/Time Pill */}
                 <div className="flex justify-center mb-8">
-                     <span className="px-4 py-1 rounded-full bg-white/5 border border-white/5 text-[10px] font-bold uppercase tracking-widest text-slate-300 backdrop-blur-md shadow-sm">
+                     <span className="px-4 py-1 rounded-full bg-white/10 border border-white/10 text-[10px] font-bold uppercase tracking-widest text-white/90 backdrop-blur-md shadow-sm">
                         {new Date().toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long' })}
                      </span>
                 </div>
 
                 {/* Hero Section */}
                 <div className="flex flex-col items-center justify-center mb-10 relative">
-                    <div className="absolute top-0 w-64 h-64 bg-gradient-to-tr from-yellow-500/10 to-red-500/10 rounded-full blur-[80px] pointer-events-none"></div>
-                    
                     {/* Big 3D Icon */}
                     <div className="mb-4 transform scale-110">
                         <WeatherIcon3D type={weatherType} isDay={isDay} size="lg" />
                     </div>
                     
-                    {/* Temperature with requested Yellow-Red Gradient */}
+                    {/* Temperature */}
                     <div className="text-center relative -mt-4">
-                        <h1 className="text-[7rem] leading-[0.8] font-black tracking-tighter drop-shadow-2xl">
-                            <span className="text-transparent bg-clip-text bg-gradient-to-b from-yellow-300 via-orange-500 to-red-600">
-                                {Math.round(weather.current.temperature_2m)}°
-                            </span>
+                        <h1 className="text-[7rem] leading-[0.8] font-black tracking-tighter drop-shadow-2xl text-white">
+                            {Math.round(weather.current.temperature_2m)}°
                         </h1>
-                        <p className="text-slate-300 text-lg font-medium mt-2 flex items-center justify-center gap-2">
+                        <p className="text-white/80 text-lg font-medium mt-2 flex items-center justify-center gap-3">
                             <span className="capitalize">{weatherType}</span>
-                            <span className="w-1 h-1 bg-slate-500 rounded-full"></span>
-                            <span>H:{Math.round(weather.daily.temperature_2m_max[0])}° L:{Math.round(weather.daily.temperature_2m_min[0])}°</span>
+                            <span className="w-1.5 h-1.5 bg-white/40 rounded-full"></span>
+                            <span>H:{Math.round(weather.daily.temperature_2m_max[0])}°</span>
+                            <span>L:{Math.round(weather.daily.temperature_2m_min[0])}°</span>
                         </p>
                     </div>
                 </div>
 
                 {/* Hourly Forecast Chart - Glass Card */}
-                <div className="glass-panel rounded-[2rem] p-5 mb-6 border border-white/10 bg-slate-900/40 backdrop-blur-xl shadow-2xl relative overflow-hidden group">
-                    <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                <div className="glass-panel rounded-[2rem] p-5 mb-6 border border-white/10 bg-white/5 backdrop-blur-xl shadow-xl relative overflow-hidden group">
                     <div className="flex items-center justify-between mb-4 relative z-10">
                         <div className="flex items-center gap-2">
-                            <div className="w-6 h-6 rounded-full bg-white/5 flex items-center justify-center">
-                                <Clock size={12} className="text-orange-300"/>
+                            <div className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center">
+                                <Clock size={12} className={isDay ? "text-orange-200" : "text-blue-200"}/>
                             </div>
-                            <h3 className="text-slate-200 font-bold text-xs uppercase tracking-wider">Hourly Forecast</h3>
+                            <h3 className="text-white/90 font-bold text-xs uppercase tracking-wider">Hourly Forecast</h3>
                         </div>
                     </div>
                     
@@ -244,14 +277,14 @@ const WeatherView = ({ lang, onBack }: { lang: Language, onBack: () => void }) =
                             <AreaChart data={chartData}>
                                 <defs>
                                     <linearGradient id="colorTemp" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.5}/>
-                                        <stop offset="95%" stopColor="#f59e0b" stopOpacity={0}/>
+                                        <stop offset="5%" stopColor={isDay ? "#fbbf24" : "#60a5fa"} stopOpacity={0.5}/>
+                                        <stop offset="95%" stopColor={isDay ? "#fbbf24" : "#60a5fa"} stopOpacity={0}/>
                                     </linearGradient>
                                 </defs>
                                 <XAxis 
                                     dataKey="time" 
-                                    stroke="rgba(255,255,255,0.2)" 
-                                    tick={{fill: 'rgba(255,255,255,0.5)', fontSize: 10}} 
+                                    stroke="rgba(255,255,255,0.3)" 
+                                    tick={{fill: 'rgba(255,255,255,0.7)', fontSize: 10}} 
                                     tickLine={false} 
                                     axisLine={false}
                                     interval={1}
@@ -259,7 +292,7 @@ const WeatherView = ({ lang, onBack }: { lang: Language, onBack: () => void }) =
                                 <Area 
                                     type="monotone" 
                                     dataKey="temp" 
-                                    stroke="#fbbf24" 
+                                    stroke={isDay ? "#fbbf24" : "#60a5fa"} 
                                     strokeWidth={3} 
                                     fillOpacity={1} 
                                     fill="url(#colorTemp)" 
@@ -269,66 +302,77 @@ const WeatherView = ({ lang, onBack }: { lang: Language, onBack: () => void }) =
                     </div>
                 </div>
 
-                {/* AI Tool / Insight Placeholder (Requested) */}
-                <div className="glass-panel rounded-[2rem] p-5 mb-6 border border-emerald-500/20 bg-emerald-900/10 backdrop-blur-xl shadow-lg relative overflow-hidden">
-                    <div className="absolute -right-4 -top-4 w-20 h-20 bg-emerald-500/20 blur-2xl rounded-full"></div>
+                {/* AI Insight Card */}
+                <div className={clsx(
+                    "glass-panel rounded-[2rem] p-5 mb-6 border backdrop-blur-xl shadow-lg relative overflow-hidden transition-colors duration-1000",
+                    isDay ? "border-emerald-400/20 bg-emerald-900/10" : "border-indigo-400/20 bg-indigo-900/10"
+                )}>
+                    <div className={clsx(
+                        "absolute -right-4 -top-4 w-20 h-20 blur-2xl rounded-full transition-colors duration-1000",
+                        isDay ? "bg-emerald-400/20" : "bg-indigo-400/20"
+                    )}></div>
                     <div className="flex items-start gap-4 relative z-10">
-                        <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white shadow-lg shrink-0">
+                        <div className={clsx(
+                            "w-10 h-10 rounded-2xl flex items-center justify-center text-white shadow-lg shrink-0 bg-gradient-to-br transition-all duration-1000",
+                            isDay ? "from-emerald-500 to-teal-600" : "from-indigo-500 to-purple-600"
+                        )}>
                             <Sparkles size={20} />
                         </div>
                         <div>
                             <h3 className="text-white font-bold text-sm mb-1">AI Agri-Insight</h3>
-                            <p className="text-emerald-100/80 text-xs leading-relaxed">
-                                Conditions are optimal for spraying fertilizer. Wind speed is low ({weather.current.wind_speed_10m} km/h). Ensure completion before 4 PM.
+                            <p className="text-white/80 text-xs leading-relaxed">
+                                {isDay 
+                                    ? `Good conditions for field work. Wind is ${weather.current.wind_speed_10m} km/h. Perfect for spraying fertilizer before 4 PM.` 
+                                    : `Night time. Temp is dropping to ${Math.round(weather.daily.temperature_2m_min[0])}°. Ensure young crops are protected from dew/cold.`}
                             </p>
                         </div>
                     </div>
                 </div>
 
-                {/* Details Grid (Feature Card Placeholders) */}
+                {/* Details Grid */}
                 <div className="grid grid-cols-2 gap-3">
                     {/* Card 1: Wind */}
-                    <div className="glass-panel p-4 rounded-[1.5rem] border border-white/5 bg-white/5 hover:bg-white/10 transition-colors backdrop-blur-md">
+                    <div className="glass-panel p-4 rounded-[1.5rem] border border-white/5 bg-white/5 backdrop-blur-md">
                          <div className="flex items-center gap-2 mb-2">
                              <div className="w-6 h-6 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-300">
                                  <Wind size={12}/>
                              </div>
-                             <span className="text-[10px] text-slate-400 font-bold uppercase">Wind</span>
+                             <span className="text-[10px] text-white/60 font-bold uppercase">Wind</span>
                          </div>
-                         <p className="text-xl font-black text-white">{weather.current.wind_speed_10m} <span className="text-xs font-medium text-slate-400">km/h</span></p>
+                         <p className="text-xl font-black text-white">{weather.current.wind_speed_10m} <span className="text-xs font-medium text-white/50">km/h</span></p>
                     </div>
 
                     {/* Card 2: Humidity */}
-                    <div className="glass-panel p-4 rounded-[1.5rem] border border-white/5 bg-white/5 hover:bg-white/10 transition-colors backdrop-blur-md">
+                    <div className="glass-panel p-4 rounded-[1.5rem] border border-white/5 bg-white/5 backdrop-blur-md">
                          <div className="flex items-center gap-2 mb-2">
                              <div className="w-6 h-6 rounded-full bg-cyan-500/20 flex items-center justify-center text-cyan-300">
                                  <Droplets size={12}/>
                              </div>
-                             <span className="text-[10px] text-slate-400 font-bold uppercase">Humidity</span>
+                             <span className="text-[10px] text-white/60 font-bold uppercase">Humidity</span>
                          </div>
-                         <p className="text-xl font-black text-white">{weather.current.relative_humidity_2m}<span className="text-xs font-medium text-slate-400">%</span></p>
+                         <p className="text-xl font-black text-white">{weather.current.relative_humidity_2m}<span className="text-xs font-medium text-white/50">%</span></p>
                     </div>
 
-                    {/* Card 3: UV Index (Simulated) */}
-                    <div className="glass-panel p-4 rounded-[1.5rem] border border-white/5 bg-white/5 hover:bg-white/10 transition-colors backdrop-blur-md">
+                    {/* Card 3: UV Index (Day) or Moon Phase (Night) */}
+                    <div className="glass-panel p-4 rounded-[1.5rem] border border-white/5 bg-white/5 backdrop-blur-md">
                          <div className="flex items-center gap-2 mb-2">
-                             <div className="w-6 h-6 rounded-full bg-orange-500/20 flex items-center justify-center text-orange-300">
-                                 <Sun size={12}/>
+                             <div className={clsx("w-6 h-6 rounded-full flex items-center justify-center", isDay ? "bg-orange-500/20 text-orange-300" : "bg-indigo-500/20 text-indigo-300")}>
+                                 {isDay ? <Sun size={12}/> : <Moon size={12}/>}
                              </div>
-                             <span className="text-[10px] text-slate-400 font-bold uppercase">UV Index</span>
+                             <span className="text-[10px] text-white/60 font-bold uppercase">{isDay ? "UV Index" : "Moon Phase"}</span>
                          </div>
-                         <p className="text-xl font-black text-white">{weather.current.uv_index || 4} <span className="text-xs font-medium text-slate-400">Mod</span></p>
+                         <p className="text-xl font-black text-white">{isDay ? (weather.current.uv_index || 4) : "Waxing"} <span className="text-xs font-medium text-white/50">{isDay && "Mod"}</span></p>
                     </div>
 
-                    {/* Card 4: Visibility (Simulated) */}
-                    <div className="glass-panel p-4 rounded-[1.5rem] border border-white/5 bg-white/5 hover:bg-white/10 transition-colors backdrop-blur-md">
+                    {/* Card 4: Visibility */}
+                    <div className="glass-panel p-4 rounded-[1.5rem] border border-white/5 bg-white/5 backdrop-blur-md">
                          <div className="flex items-center gap-2 mb-2">
                              <div className="w-6 h-6 rounded-full bg-purple-500/20 flex items-center justify-center text-purple-300">
                                  <Eye size={12}/>
                              </div>
-                             <span className="text-[10px] text-slate-400 font-bold uppercase">Visibility</span>
+                             <span className="text-[10px] text-white/60 font-bold uppercase">Visibility</span>
                          </div>
-                         <p className="text-xl font-black text-white">10 <span className="text-xs font-medium text-slate-400">km</span></p>
+                         <p className="text-xl font-black text-white">10 <span className="text-xs font-medium text-white/50">km</span></p>
                     </div>
                 </div>
 
