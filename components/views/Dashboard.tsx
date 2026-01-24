@@ -32,6 +32,9 @@ const DASH_TEXT: Record<Language, any> = {
     crop_doctor_title: "पीक डॉक्टर",
     crop_doctor_sub: "झटपट रोग निदान",
     subsidies: "सबसिडी आणि अर्थसहाय्य",
+    vol: "आवक",
+    high: "उच्च",
+    low: "कमी",
     weather_desc: {
       0: "निरभ्र आकाश",
       1: "अंशतः ढगाळ",
@@ -77,6 +80,9 @@ const DASH_TEXT: Record<Language, any> = {
     crop_doctor_title: "फसल डॉक्टर",
     crop_doctor_sub: "त्वरित रोग निदान",
     subsidies: "सब्सिडी और वित्तीय सहायता",
+    vol: "आवक",
+    high: "अधिक",
+    low: "कम",
     weather_desc: {
       0: "साफ आसमान",
       1: "आंशिक बादल",
@@ -122,6 +128,9 @@ const DASH_TEXT: Record<Language, any> = {
     crop_doctor_title: "Crop Doctor AI",
     crop_doctor_sub: "Instant Disease Detection",
     subsidies: "Subsidies & Financial Support",
+    vol: "Vol",
+    high: "H",
+    low: "L",
     weather_desc: {
       0: "Clear Sky",
       1: "Partly Cloudy",
@@ -408,7 +417,7 @@ const MarketWidget = ({ onNavigate, lang }: any) => {
                             </div>
                             <div>
                                 <p className="text-sm font-bold text-slate-200">{txt.crops[m.name] || m.name}</p>
-                                <p className="text-[10px] font-medium text-slate-500">{m.arrival} Vol</p>
+                                <p className="text-[10px] font-medium text-slate-500">{txt.vol}: {m.arrival}</p>
                             </div>
                         </div>
                         <div className="text-right">

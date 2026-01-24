@@ -8,6 +8,39 @@ import { triggerHaptic } from '../../utils/common';
 import { TrendingUp, TrendingDown } from 'lucide-react';
 import { clsx } from 'clsx';
 
+const MARKET_TEXT: Record<Language, any> = {
+    mr: {
+        status: "बाजार स्थिती",
+        apmc_open: "बाजार समिती उघडी आहे",
+        last_updated: "शेवटचे अपडेट",
+        today: "आज",
+        arrival: "आवक",
+        crops: {
+            'Soyabean': 'सोयाबीन', 'Cotton': 'कापूस', 'Onion': 'कांदा', 'Tur': 'तूर', 'Wheat': 'गहू', 'Maize': 'मका', 'Gram': 'हरभरा', 'Tomato': 'टोमॅटो', 'Potato': 'बटाटा', 'Rice': 'तांदूळ'
+        }
+    },
+    hi: {
+        status: "बाजार की स्थिति",
+        apmc_open: "मंडी खुली है",
+        last_updated: "अंतिम अपडेट",
+        today: "आज",
+        arrival: "आवक",
+        crops: {
+            'Soyabean': 'सोयाबीन', 'Cotton': 'कपास', 'Onion': 'प्याज', 'Tur': 'तूर', 'Wheat': 'गेहूं', 'Maize': 'मक्का', 'Gram': 'चना', 'Tomato': 'टमाटर', 'Potato': 'आलू', 'Rice': 'चावल'
+        }
+    },
+    en: {
+        status: "Market Status",
+        apmc_open: "APMC Market Open",
+        last_updated: "Last Updated",
+        today: "Today",
+        arrival: "Arrival",
+        crops: {
+            'Soyabean': 'Soyabean', 'Cotton': 'Cotton', 'Onion': 'Onion', 'Tur': 'Tur', 'Wheat': 'Wheat', 'Maize': 'Maize', 'Gram': 'Gram', 'Tomato': 'Tomato', 'Potato': 'Potato', 'Rice': 'Rice'
+        }
+    }
+};
+
 // Simple SVG Sparkline Component
 const Sparkline = ({ data, trend }: { data: number[], trend: string }) => {
     const width = 120;
@@ -36,13 +69,11 @@ const Sparkline = ({ data, trend }: { data: number[], trend: string }) => {
                     <stop offset="100%" stopColor="currentColor" stopOpacity="0" className={colorClass}/>
                 </linearGradient>
             </defs>
-            {/* Fill Area (Optional, requires closed path) */}
             <path 
                 d={`M0,${height} L0,${height - ((data[0]-min)/range)*(height-10)-5} ${points.split(' ').map((p, i) => `L${p}`).join(' ')} L${width},${height} Z`} 
                 fill={`url(#${gradientId})`} 
                 className={colorClass}
             />
-            {/* Line */}
             <polyline 
                 points={points} 
                 fill="none" 
@@ -52,7 +83,6 @@ const Sparkline = ({ data, trend }: { data: number[], trend: string }) => {
                 strokeLinejoin="round" 
                 className={colorClass} 
             />
-            {/* End Dot */}
             <circle 
                 cx={width} 
                 cy={height - ((data[data.length - 1] - min) / range) * (height - 10) - 5} 
@@ -67,18 +97,19 @@ const Sparkline = ({ data, trend }: { data: number[], trend: string }) => {
 
 const MarketView = ({ lang, onBack }: { lang: Language, onBack: () => void }) => {
     const t = TRANSLATIONS[lang];
+    const mt = MARKET_TEXT[lang];
 
     return (
         <SimpleView title={t.market_title} onBack={onBack}>
             <div className="space-y-4 pb-20 animate-enter">
                  <div className="glass-panel p-4 rounded-2xl bg-gradient-to-r from-blue-900/20 to-indigo-900/20 border border-white/10 flex items-center justify-between mb-6">
                     <div>
-                        <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">Market Status</p>
-                        <p className="text-white font-bold flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span> APMC Satara Open</p>
+                        <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">{mt.status}</p>
+                        <p className="text-white font-bold flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span> {mt.apmc_open}</p>
                     </div>
                     <div className="text-right">
-                        <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">Last Updated</p>
-                        <p className="text-white font-mono">Today, 10:30 AM</p>
+                        <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">{mt.last_updated}</p>
+                        <p className="text-white font-mono">{mt.today}, 10:30 AM</p>
                     </div>
                  </div>
 
@@ -91,8 +122,8 @@ const MarketView = ({ lang, onBack }: { lang: Language, onBack: () => void }) =>
                                     <m.icon size={24} className={m.color}/>
                                 </div>
                                 <div>
-                                    <h3 className="font-bold text-lg text-white">{m.name}</h3>
-                                    <p className="text-slate-400 text-xs font-bold">Arrival: {m.arrival}</p>
+                                    <h3 className="font-bold text-lg text-white">{mt.crops[m.name] || m.name}</h3>
+                                    <p className="text-slate-400 text-xs font-bold">{mt.arrival}: {m.arrival}</p>
                                 </div>
                             </div>
                             <div className="text-right">
@@ -104,7 +135,6 @@ const MarketView = ({ lang, onBack }: { lang: Language, onBack: () => void }) =>
                             </div>
                         </div>
                         
-                        {/* Premium Sparkline Chart */}
                         <div className="w-full pt-2 border-t border-white/5 opacity-80 group-hover:opacity-100 transition-opacity">
                              <Sparkline data={m.history} trend={m.trend} />
                         </div>

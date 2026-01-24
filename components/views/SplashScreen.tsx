@@ -1,136 +1,208 @@
 
-import React, { useEffect, useState } from 'react';
-import { Sprout, Activity, Fingerprint, Zap } from 'lucide-react';
+import React, { useEffect, useState, useRef } from 'react';
+import { Sprout, Fingerprint, Activity, Cpu, SkipForward } from 'lucide-react';
+import { clsx } from 'clsx';
 
 export const SplashScreen = ({ onComplete }: { onComplete: () => void }) => {
-  const [phase, setPhase] = useState(0); // 0=Init, 1=Ignite, 2=Stabilize, 3=Exit
+  // Mode: 'VIDEO' tries to load video first. If error, switches to 'ORB'.
+  const [mode, setMode] = useState<'VIDEO' | 'ORB'>('VIDEO'); 
+  const [videoSrc, setVideoSrc] = useState<string>('');
+  
+  // Animation Phases for ORB Mode
+  const [orbPhase, setOrbPhase] = useState(0); // 0=Init, 1=Grow, 2=Text, 3=Exit
+  const [isExiting, setIsExiting] = useState(false);
 
+  // --- VIDEO LOGIC ---
   useEffect(() => {
-    // Cinematic Timeline
-    const t1 = setTimeout(() => setPhase(1), 100);   // Ignite Orb
-    const t2 = setTimeout(() => setPhase(2), 2000);  // Text Reveal
-    const t3 = setTimeout(() => {
-        setPhase(3); // Exit
-        setTimeout(onComplete, 800); // Unmount
-    }, 4500);
+    const handleResize = () => {
+        const isMobile = window.innerWidth < 768 || window.innerHeight > window.innerWidth;
+        setVideoSrc(isMobile ? '/splash-v.mp4' : '/splash-h.mp4');
+    };
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
-    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); }
-  }, [onComplete]);
+  const handleVideoEnd = () => {
+    setIsExiting(true);
+    setTimeout(onComplete, 800);
+  };
 
+  const handleVideoError = () => {
+    console.warn("Splash video missing or failed. Switching to 5D Orb Animation.");
+    setMode('ORB');
+  };
+
+  // --- ORB ANIMATION SEQUENCER ---
+  useEffect(() => {
+    if (mode === 'ORB') {
+        const t1 = setTimeout(() => setOrbPhase(1), 100);    // Orb/Grid Appear
+        const t2 = setTimeout(() => setOrbPhase(2), 2000);   // Text Reveal
+        const t3 = setTimeout(() => {
+            setIsExiting(true);
+            setTimeout(onComplete, 800); 
+        }, 5000); // Total Orb duration
+
+        return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); }
+    }
+  }, [mode, onComplete]);
+
+  // --- RENDER ---
   return (
-    <div className={`fixed inset-0 z-[9999] bg-[#020617] flex flex-col items-center justify-center overflow-hidden transition-all duration-1000 ease-in-out ${phase === 3 ? 'opacity-0 scale-125 pointer-events-none' : 'opacity-100 scale-100'}`}>
+    <div className={clsx(
+        "fixed inset-0 z-[9999] bg-[#000501] flex flex-col items-center justify-center overflow-hidden transition-all duration-1000 ease-in-out",
+        isExiting ? "opacity-0 scale-110 pointer-events-none" : "opacity-100 scale-100"
+    )}>
         
-        {/* --- 5D ANIMATION ENGINE --- */}
-        <style>{`
-            @keyframes gyro-spin-x { 0% { transform: rotateX(0deg) rotateY(0deg); } 100% { transform: rotateX(360deg) rotateY(180deg); } }
-            @keyframes gyro-spin-y { 0% { transform: rotateX(0deg) rotateZ(0deg); } 100% { transform: rotateX(-180deg) rotateZ(360deg); } }
-            @keyframes gyro-spin-z { 0% { transform: rotateY(0deg) rotateZ(0deg); } 100% { transform: rotateY(360deg) rotateZ(-180deg); } }
-            
-            @keyframes plasma-morph {
-                0% { border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; transform: rotate(0deg); }
-                50% { border-radius: 30% 60% 70% 40% / 50% 60% 30% 60%; transform: rotate(180deg); }
-                100% { border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; transform: rotate(360deg); }
-            }
+        {/* =======================
+            MODE 1: VIDEO PLAYER 
+           ======================= */}
+        {mode === 'VIDEO' && videoSrc && (
+            <>
+                <video
+                    key={videoSrc}
+                    className="w-full h-full object-cover"
+                    autoPlay
+                    muted
+                    playsInline
+                    onEnded={handleVideoEnd}
+                    onError={handleVideoError}
+                >
+                    <source src={videoSrc} type="video/mp4" />
+                </video>
+                
+                {/* Skip Button */}
+                <button 
+                    onClick={handleVideoEnd}
+                    className="absolute bottom-8 right-8 z-50 flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 backdrop-blur-md text-white/50 hover:text-white hover:bg-white/10 transition-all text-[10px] font-bold uppercase tracking-widest group"
+                >
+                    Skip <SkipForward size={12} className="group-hover:translate-x-0.5 transition-transform"/>
+                </button>
+            </>
+        )}
 
-            @keyframes text-cinematic {
-                0% { opacity: 0; letter-spacing: -0.5em; filter: blur(12px); transform: scale(0.8); }
-                40% { opacity: 0.6; }
-                100% { opacity: 1; letter-spacing: 0.15em; filter: blur(0px); transform: scale(1); }
-            }
-            
-            @keyframes scan-beam {
-                0% { top: -100%; opacity: 0; }
-                50% { opacity: 1; }
-                100% { top: 200%; opacity: 0; }
-            }
+        {/* =======================
+            MODE 2: 5D ORB ENGINE (Fallback)
+           ======================= */}
+        {mode === 'ORB' && (
+            <>
+                <style>{`
+                    @keyframes grid-move { 
+                        0% { background-position: 0 0; } 
+                        100% { background-position: 0 40px; } 
+                    }
+                    @keyframes float-orb {
+                        0%, 100% { transform: translateY(0px); }
+                        50% { transform: translateY(-20px); }
+                    }
+                    @keyframes plant-grow {
+                        0% { transform: scale(0) translateY(20px); opacity: 0; }
+                        100% { transform: scale(1) translateY(0); opacity: 1; }
+                    }
+                    @keyframes scan-light {
+                        0% { top: -20%; opacity: 0; }
+                        50% { opacity: 1; box-shadow: 0 0 30px rgba(52, 211, 153, 0.8); }
+                        100% { top: 120%; opacity: 0; }
+                    }
+                    @keyframes gyro-spin-x { 0% { transform: rotateX(0deg) rotateY(0deg); } 100% { transform: rotateX(360deg) rotateY(180deg); } }
+                    @keyframes gyro-spin-y { 0% { transform: rotateX(0deg) rotateZ(0deg); } 100% { transform: rotateX(-180deg) rotateZ(360deg); } }
+                    
+                    .circuit-grid {
+                        background-image: 
+                            linear-gradient(rgba(16, 185, 129, 0.15) 1px, transparent 1px),
+                            linear-gradient(90deg, rgba(16, 185, 129, 0.15) 1px, transparent 1px);
+                        background-size: 50px 50px;
+                        transform: perspective(600px) rotateX(60deg) scale(2);
+                        transform-origin: center top;
+                        animation: grid-move 3s linear infinite;
+                        mask-image: radial-gradient(circle at center top, black 0%, transparent 80%);
+                    }
+                    .preserve-3d { transform-style: preserve-3d; }
+                `}</style>
 
-            .orb-glow {
-                box-shadow: 0 0 80px rgba(16, 185, 129, 0.3), inset 0 0 40px rgba(6, 182, 212, 0.3);
-            }
-            
-            .perspective-1000 { perspective: 1000px; }
-            .preserve-3d { transform-style: preserve-3d; }
-        `}</style>
+                {/* 1. Deep Space & Grid Background */}
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_#064e3b_0%,_#020617_60%,_#000000_100%)] opacity-80"></div>
+                <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-10 mix-blend-overlay"></div>
+                
+                {/* Circuit Floor */}
+                <div className={`absolute bottom-0 left-[-50%] right-[-50%] h-[60%] flex justify-center transition-opacity duration-1000 delay-300 ${orbPhase >= 1 ? 'opacity-100' : 'opacity-0'}`}>
+                    <div className="w-full h-full circuit-grid"></div>
+                </div>
 
-        {/* 1. Deep Space Ambient Background */}
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_#0f172a_0%,_#020617_60%,_#000000_100%)]"></div>
-        <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-10 mix-blend-overlay"></div>
-        
-        {/* Grid Floor */}
-        <div className="absolute inset-0 bg-[linear-gradient(rgba(34,197,94,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(34,197,94,0.03)_1px,transparent_1px)] bg-[size:4rem_4rem] [transform:perspective(500px)_rotateX(60deg)_scale(3)] origin-bottom opacity-20"></div>
+                {/* 2. The 3D Gyro-Orb */}
+                <div className={`relative z-20 w-80 h-80 flex items-center justify-center transition-all duration-1000 cubic-bezier(0.34, 1.56, 0.64, 1) ${orbPhase >= 1 ? 'scale-100 opacity-100' : 'scale-0 opacity-0'}`}>
+                    
+                    {/* Floating Container */}
+                    <div className="absolute inset-0 animate-[float-orb_6s_ease-in-out_infinite] preserve-3d">
+                        
+                        {/* Outer Gyro Rings */}
+                        <div className="absolute inset-[-20px] rounded-full border border-emerald-500/20 shadow-[0_0_15px_rgba(16,185,129,0.1)] animate-[gyro-spin-x_10s_linear_infinite] preserve-3d">
+                            <div className="absolute top-0 left-1/2 w-2 h-2 bg-emerald-400 rounded-full shadow-[0_0_10px_#34d399]"></div>
+                        </div>
+                        <div className="absolute inset-0 rounded-full border border-cyan-500/20 shadow-[0_0_15px_rgba(6,182,212,0.1)] animate-[gyro-spin-y_15s_linear_infinite_reverse] preserve-3d"></div>
 
-        {/* 2. The Quantum Agri-Orb */}
-        <div className="relative w-80 h-80 flex items-center justify-center perspective-1000 z-20">
-            
-            {/* Gyroscope Rings */}
-            <div className={`absolute inset-0 rounded-full border border-emerald-500/30 shadow-[0_0_20px_rgba(16,185,129,0.2)] transition-all duration-1000 ease-out preserve-3d ${phase >= 1 ? 'scale-100 opacity-100' : 'scale-0 opacity-0'}`} 
-                 style={{ animation: 'gyro-spin-x 12s linear infinite' }}>
-                 <div className="absolute top-0 left-1/2 -translate-x-1/2 w-1.5 h-1.5 bg-emerald-400 rounded-full shadow-[0_0_10px_#34d399]"></div>
-            </div>
-            
-            <div className={`absolute inset-6 rounded-full border border-cyan-500/30 shadow-[0_0_20px_rgba(6,182,212,0.2)] transition-all duration-1000 delay-100 ease-out preserve-3d ${phase >= 1 ? 'scale-100 opacity-100' : 'scale-0 opacity-0'}`}
-                 style={{ animation: 'gyro-spin-y 15s linear infinite reverse' }}>
-                 <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1.5 h-1.5 bg-cyan-400 rounded-full shadow-[0_0_10px_#22d3ee]"></div>
-            </div>
-            
-            <div className={`absolute inset-12 rounded-full border border-white/10 border-dashed transition-all duration-1000 delay-200 ease-out preserve-3d ${phase >= 1 ? 'scale-100 opacity-100' : 'scale-0 opacity-0'}`}
-                 style={{ animation: 'gyro-spin-z 20s linear infinite' }}>
-            </div>
+                        {/* THE GLASS ORB */}
+                        <div className="absolute inset-4 rounded-full bg-gradient-to-b from-white/10 to-emerald-950/60 backdrop-blur-[3px] border border-white/10 shadow-[inset_0_0_40px_rgba(16,185,129,0.2),_0_0_50px_rgba(16,185,129,0.3)] overflow-hidden">
+                            
+                            {/* Inner Plasma */}
+                            <div className="absolute inset-0 bg-gradient-to-tr from-emerald-500/10 to-cyan-500/10 mix-blend-overlay"></div>
+                            
+                            {/* Specular Highlight */}
+                            <div className="absolute top-4 left-1/2 -translate-x-1/2 w-40 h-20 bg-gradient-to-b from-white/20 to-transparent rounded-full blur-md"></div>
 
-            {/* Core Plasma */}
-            <div className={`relative w-40 h-40 orb-glow rounded-full transition-all duration-700 ease-out ${phase >= 1 ? 'scale-100 opacity-100' : 'scale-0 opacity-0'}`}>
-                {/* Liquid Morphing blobs */}
-                <div className="absolute inset-0 bg-gradient-to-tr from-emerald-600 to-teal-500 opacity-80 mix-blend-screen"
-                     style={{ animation: 'plasma-morph 6s ease-in-out infinite' }}></div>
-                <div className="absolute inset-0 bg-gradient-to-bl from-cyan-600 to-blue-500 opacity-60 mix-blend-overlay"
-                     style={{ animation: 'plasma-morph 8s ease-in-out infinite reverse' }}></div>
-
-                {/* Central Icon */}
-                <div className="absolute inset-0 flex items-center justify-center z-50">
-                    <div className="relative">
-                         <div className="absolute inset-0 bg-white/30 blur-2xl rounded-full"></div>
-                         <Sprout size={64} className="text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.9)] relative z-10" strokeWidth={1.5} />
+                            {/* Holographic Plant */}
+                            <div className="absolute inset-0 flex items-center justify-center pt-6">
+                                <div style={{ animation: orbPhase >= 1 ? 'plant-grow 1.2s cubic-bezier(0.34, 1.56, 0.64, 1) forwards' : 'none', opacity: 0 }}>
+                                    <div className="relative">
+                                        <div className="absolute inset-0 bg-emerald-400/30 blur-2xl rounded-full"></div>
+                                        <Sprout size={130} className="text-emerald-400 drop-shadow-[0_0_20px_rgba(52,211,153,1)] relative z-10" strokeWidth={1} />
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            {/* Scanning Beam */}
+                            <div className="absolute left-0 right-0 h-[2px] bg-emerald-300 shadow-[0_0_30px_#6ee7b7] blur-[1px] opacity-0"
+                                style={{ animation: 'scan-light 3s ease-in-out infinite 1.5s' }}></div>
+                        </div>
                     </div>
                 </div>
-                
-                {/* Holographic Scan Beam */}
-                <div className="absolute inset-0 overflow-hidden rounded-full">
-                    <div className="absolute left-0 right-0 h-[30%] bg-gradient-to-b from-transparent via-white/20 to-transparent w-full"
-                         style={{ animation: 'scan-beam 3s ease-in-out infinite' }}></div>
-                </div>
-            </div>
-        </div>
 
-        {/* 3. Cinematic Typography */}
-        <div className="mt-16 text-center z-30 relative">
-            <h1 className={`text-5xl md:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-emerald-200 via-white to-cyan-200 drop-shadow-2xl ${phase >= 2 ? 'opacity-100' : 'opacity-0'}`}
-                style={{ animation: phase >= 2 ? 'text-cinematic 1.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards' : 'none' }}>
-                AI KRUSHI
-            </h1>
-            
-            {/* Subtitle with Tech Lines */}
-            <div className={`mt-6 flex items-center justify-center gap-4 transition-all duration-700 delay-300 ${phase >= 2 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
-                <div className="h-[1px] w-16 bg-gradient-to-r from-transparent to-emerald-500/50"></div>
-                <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 backdrop-blur-sm">
-                    <Fingerprint size={12} className="text-emerald-400 animate-pulse"/>
-                    <span className="text-[10px] font-bold text-emerald-300 uppercase tracking-[0.25em]">
-                        Quantum Engine 4.0
-                    </span>
+                {/* 3. Cinematic Text */}
+                <div className={`mt-20 relative z-30 text-center transition-all duration-1000 delay-500 ${orbPhase >= 2 ? 'opacity-100 translate-y-0 blur-0' : 'opacity-0 translate-y-10 blur-sm'}`}>
+                    <div className="flex items-center justify-center gap-2 mb-3">
+                        <div className="px-3 py-0.5 rounded-full border border-emerald-500/30 bg-emerald-900/30 backdrop-blur-md flex items-center gap-2">
+                            <Activity size={10} className="text-emerald-400 animate-pulse"/> 
+                            <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-emerald-300">System Online</span>
+                        </div>
+                    </div>
+                    
+                    <h1 className="text-5xl md:text-7xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-b from-white via-emerald-100 to-emerald-400 drop-shadow-[0_0_25px_rgba(52,211,153,0.4)]">
+                        AI KRUSHI
+                    </h1>
+                    <div className="flex items-center justify-center gap-4 mt-2">
+                         <div className="h-[1px] w-12 bg-emerald-500/50"></div>
+                         <span className="text-sm font-bold text-emerald-400 tracking-[0.5em] uppercase">Mitra</span>
+                         <div className="h-[1px] w-12 bg-emerald-500/50"></div>
+                    </div>
                 </div>
-                <div className="h-[1px] w-16 bg-gradient-to-l from-transparent to-emerald-500/50"></div>
-            </div>
-        </div>
 
-        {/* 4. Bottom Loader */}
-        <div className={`absolute bottom-12 w-64 flex flex-col items-center gap-3 transition-opacity duration-500 delay-500 ${phase >= 2 ? 'opacity-100' : 'opacity-0'}`}>
-            <div className="w-full h-[2px] bg-slate-800 rounded-full overflow-hidden relative">
-                <div className="absolute inset-y-0 left-0 bg-gradient-to-r from-emerald-500 via-cyan-400 to-emerald-500 w-1/2 animate-[shimmer_1.5s_infinite]"></div>
-            </div>
-            <div className="flex justify-between w-full text-[9px] font-mono text-slate-500 uppercase">
-                <span className="flex items-center gap-1"><Activity size={8} className="text-emerald-500"/> System Check</span>
-                <span>100%</span>
-            </div>
-        </div>
+                {/* 4. Bottom HUD */}
+                <div className={`absolute bottom-10 w-full px-10 flex justify-between items-end transition-opacity duration-1000 delay-700 ${orbPhase >= 2 ? 'opacity-100' : 'opacity-0'}`}>
+                    <div className="flex flex-col gap-1">
+                        <Cpu size={20} className="text-emerald-500/50"/>
+                        <div className="h-1 w-12 bg-emerald-500/20 rounded-full overflow-hidden">
+                            <div className="h-full w-2/3 bg-emerald-500/50"></div>
+                        </div>
+                        <span className="text-[8px] font-mono text-emerald-500/50 uppercase">Core: Active</span>
+                    </div>
+                    
+                    <div className="flex flex-col gap-1 items-end">
+                        <Fingerprint size={20} className="text-emerald-500/50"/>
+                         <span className="text-[8px] font-mono text-emerald-500/50 uppercase">Ver: 4.0.2</span>
+                    </div>
+                </div>
+            </>
+        )}
 
     </div>
   );

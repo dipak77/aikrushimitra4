@@ -8,6 +8,48 @@ import { AreaChart, Area, XAxis, ResponsiveContainer } from 'recharts';
 import { Loader2 } from 'lucide-react';
 import { clsx } from 'clsx';
 
+const WEATHER_V_TEXT: Record<Language, any> = {
+    mr: {
+        hourly: "तासाभराचा अंदाज",
+        insight_title: "AI कृषी सल्ला",
+        visibility: "दृश्यमानता",
+        uv: "UV इंडेक्स",
+        moon: "चंद्राची कला",
+        km: "किमी",
+        high: "उच्च",
+        low: "कमी",
+        waxing: "शुक्ल पक्ष",
+        spraying_tip: "फवारणीसाठी योग्य वेळ आहे. दुपारी ४ वाजेपर्यंत काम उरका.",
+        night_tip: "रात्रीची वेळ आहे. थंडी वाढू शकते, पिकांची काळजी घ्या."
+    },
+    hi: {
+        hourly: "घंटेवार पूर्वानुमान",
+        insight_title: "AI कृषि सलाह",
+        visibility: "दृश्यता",
+        uv: "UV इंडेक्स",
+        moon: "चंद्रमा की स्थिति",
+        km: "किमी",
+        high: "अधिक",
+        low: "कम",
+        waxing: "शुक्ल पक्ष",
+        spraying_tip: "छिड़काव के लिए अच्छा समय है। शाम 4 बजे तक काम पूरा करें।",
+        night_tip: "रात का समय है। ठंड बढ़ सकती है, फसलों का ध्यान रखें।"
+    },
+    en: {
+        hourly: "Hourly Forecast",
+        insight_title: "AI Agri-Insight",
+        visibility: "Visibility",
+        uv: "UV Index",
+        moon: "Moon Phase",
+        km: "km",
+        high: "H",
+        low: "L",
+        waxing: "Waxing",
+        spraying_tip: "Good conditions for spraying. Finish tasks before 4 PM.",
+        night_tip: "Night time. Temp may drop, protect young crops."
+    }
+};
+
 // --- PREMIUM 3D ICONS (High Res) ---
 const WeatherIcon3D = ({ type, isDay, size = "lg" }: { type: string, isDay: boolean, size?: "sm" | "md" | "lg" }) => {
     const scale = size === "lg" ? "scale-150" : size === "md" ? "scale-100" : "scale-75";
@@ -91,36 +133,28 @@ const OrbBackground = ({ weatherCode, isDay }: { weatherCode: number, isDay: boo
                     50% { opacity: 0.8; transform: scale(1.2); }
                 }
              `}</style>
-
-             {/* 1. Base Gradient Layer (The Sky) */}
              <div className={clsx(
                  "absolute inset-0 transition-colors duration-1000",
                  isDay 
-                  ? "bg-gradient-to-b from-blue-400 via-blue-500 to-indigo-900"  // Day Sky
-                  : "bg-gradient-to-b from-[#0f172a] via-[#0b1022] to-black"     // Night Sky
+                  ? "bg-gradient-to-b from-blue-400 via-blue-500 to-indigo-900" 
+                  : "bg-gradient-to-b from-[#0f172a] via-[#0b1022] to-black"
              )}></div>
-
-             {/* 2. Main Celestial Body (Sun / Moon) */}
              <div 
                 className={clsx(
                     "absolute rounded-full blur-[60px] animate-[orb-float_20s_ease-in-out_infinite] transition-all duration-1000",
                     isDay 
-                     ? "top-[-10%] left-[-10%] w-[70vw] h-[70vw] bg-yellow-500/60 opacity-60" // Sun Glow
-                     : "top-[-10%] left-[-10%] w-[60vw] h-[60vw] bg-indigo-500/40 opacity-40" // Moon Glow
+                     ? "top-[-10%] left-[-10%] w-[70vw] h-[70vw] bg-yellow-500/60 opacity-60" 
+                     : "top-[-10%] left-[-10%] w-[60vw] h-[60vw] bg-indigo-500/40 opacity-40"
                 )}
              ></div>
-
-             {/* 3. Secondary Atmospheric Glow */}
              <div 
                 className={clsx(
                     "absolute rounded-full blur-[80px] animate-[orb-float_25s_ease-in-out_infinite_reverse] transition-all duration-1000",
                     isDay
-                     ? "bottom-[-10%] right-[-10%] w-[60vw] h-[60vw] bg-cyan-400/40 opacity-40" // Day Haze
-                     : "bottom-[-10%] right-[-10%] w-[80vw] h-[80vw] bg-purple-900/30 opacity-30" // Night Nebula
+                     ? "bottom-[-10%] right-[-10%] w-[60vw] h-[60vw] bg-cyan-400/40 opacity-40" 
+                     : "bottom-[-10%] right-[-10%] w-[80vw] h-[80vw] bg-purple-900/30 opacity-30"
                 )}
              ></div>
-
-             {/* 4. Stars (Night Only) */}
              {!isDay && (
                  <div className="absolute inset-0">
                      {[...Array(20)].map((_, i) => (
@@ -139,11 +173,7 @@ const OrbBackground = ({ weatherCode, isDay }: { weatherCode: number, isDay: boo
                      ))}
                  </div>
              )}
-
-             {/* 5. Weather Effects Overlay */}
              <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-overlay"></div>
-             
-             {/* Rain Overlay */}
              {weatherCode >= 51 && (
                  <div className="absolute inset-0 bg-[url('https://cdn.pixabay.com/animation/2023/06/25/20/38/20-38-23-441_512.gif')] opacity-20 bg-cover mix-blend-screen pointer-events-none"></div>
              )}
@@ -153,6 +183,7 @@ const OrbBackground = ({ weatherCode, isDay }: { weatherCode: number, isDay: boo
 
 const WeatherView = ({ lang, onBack }: { lang: Language, onBack: () => void }) => {
     const t = TRANSLATIONS[lang];
+    const vt = WEATHER_V_TEXT[lang];
     const [loading, setLoading] = useState(true);
     const [weather, setWeather] = useState<any>(null);
     const [locationName, setLocationName] = useState('Locating...');
@@ -169,7 +200,6 @@ const WeatherView = ({ lang, onBack }: { lang: Language, onBack: () => void }) =
             setLoading(false);
         } catch (err) {
             console.error('Failed to fetch weather');
-            // Mock data fallback if offline
             setWeather({
                 current: { temperature_2m: 28, weather_code: 1, is_day: 1, wind_speed_10m: 12, relative_humidity_2m: 45, uv_index: 6 },
                 hourly: { time: Array(24).fill(new Date().toISOString()), temperature_2m: Array(24).fill(28) },
@@ -204,7 +234,6 @@ const WeatherView = ({ lang, onBack }: { lang: Language, onBack: () => void }) =
     const weatherType = getWeatherType(weather?.current?.weather_code || 0);
     const isDay = weather?.current?.is_day !== 0;
 
-    // Chart Data
     const chartData = weather?.hourly?.time.slice(0, 8).map((time: string, i: number) => ({
         time: new Date(time).getHours() + ':00',
         temp: Math.round(weather.hourly.temperature_2m[i]),
@@ -212,11 +241,7 @@ const WeatherView = ({ lang, onBack }: { lang: Language, onBack: () => void }) =
 
     return (
         <div className="h-full w-full flex flex-col animate-enter lg:pl-32 relative overflow-hidden text-white">
-            
-            {/* 1. Immersive Dynamic Background */}
             <OrbBackground weatherCode={weather?.current?.weather_code || 0} isDay={isDay} />
-            
-            {/* 2. Header */}
             <div className="pt-safe-top px-6 py-4 flex items-center justify-between z-20">
                 <button onClick={() => { onBack(); triggerHaptic(); }} className="w-10 h-10 rounded-full bg-white/10 border border-white/20 flex items-center justify-center text-white hover:bg-white/20 transition-colors backdrop-blur-xl shadow-lg">
                     <ArrowLeft size={20}/>
@@ -229,25 +254,16 @@ const WeatherView = ({ lang, onBack }: { lang: Language, onBack: () => void }) =
                     <MoreVertical size={20}/>
                 </button>
             </div>
-
-            {/* 3. Main Content */}
             <div className="flex-1 overflow-y-auto hide-scrollbar px-6 pb-20 z-20 relative">
-                
-                {/* Date/Time Pill */}
                 <div className="flex justify-center mb-8">
                      <span className="px-4 py-1 rounded-full bg-white/10 border border-white/10 text-[10px] font-bold uppercase tracking-widest text-white/90 backdrop-blur-md shadow-sm">
-                        {new Date().toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long' })}
+                        {new Date().toLocaleDateString(lang === 'mr' ? 'mr-IN' : lang === 'hi' ? 'hi-IN' : 'en-US', { weekday: 'long', day: 'numeric', month: 'long' })}
                      </span>
                 </div>
-
-                {/* Hero Section */}
                 <div className="flex flex-col items-center justify-center mb-10 relative">
-                    {/* Big 3D Icon */}
                     <div className="mb-4 transform scale-110">
                         <WeatherIcon3D type={weatherType} isDay={isDay} size="lg" />
                     </div>
-                    
-                    {/* Temperature */}
                     <div className="text-center relative -mt-4">
                         <h1 className="text-[7rem] leading-[0.8] font-black tracking-tighter drop-shadow-2xl text-white">
                             {Math.round(weather.current.temperature_2m)}°
@@ -255,23 +271,20 @@ const WeatherView = ({ lang, onBack }: { lang: Language, onBack: () => void }) =
                         <p className="text-white/80 text-lg font-medium mt-2 flex items-center justify-center gap-3">
                             <span className="capitalize">{weatherType}</span>
                             <span className="w-1.5 h-1.5 bg-white/40 rounded-full"></span>
-                            <span>H:{Math.round(weather.daily.temperature_2m_max[0])}°</span>
-                            <span>L:{Math.round(weather.daily.temperature_2m_min[0])}°</span>
+                            <span>{vt.high}:{Math.round(weather.daily.temperature_2m_max[0])}°</span>
+                            <span>{vt.low}:{Math.round(weather.daily.temperature_2m_min[0])}°</span>
                         </p>
                     </div>
                 </div>
-
-                {/* Hourly Forecast Chart - Glass Card */}
                 <div className="glass-panel rounded-[2rem] p-5 mb-6 border border-white/10 bg-white/5 backdrop-blur-xl shadow-xl relative overflow-hidden group">
                     <div className="flex items-center justify-between mb-4 relative z-10">
                         <div className="flex items-center gap-2">
                             <div className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center">
                                 <Clock size={12} className={isDay ? "text-orange-200" : "text-blue-200"}/>
                             </div>
-                            <h3 className="text-white/90 font-bold text-xs uppercase tracking-wider">Hourly Forecast</h3>
+                            <h3 className="text-white/90 font-bold text-xs uppercase tracking-wider">{vt.hourly}</h3>
                         </div>
                     </div>
-                    
                     <div className="h-28 w-full relative z-10">
                         <ResponsiveContainer width="100%" height="100%">
                             <AreaChart data={chartData}>
@@ -301,8 +314,6 @@ const WeatherView = ({ lang, onBack }: { lang: Language, onBack: () => void }) =
                         </ResponsiveContainer>
                     </div>
                 </div>
-
-                {/* AI Insight Card */}
                 <div className={clsx(
                     "glass-panel rounded-[2rem] p-5 mb-6 border backdrop-blur-xl shadow-lg relative overflow-hidden transition-colors duration-1000",
                     isDay ? "border-emerald-400/20 bg-emerald-900/10" : "border-indigo-400/20 bg-indigo-900/10"
@@ -319,63 +330,51 @@ const WeatherView = ({ lang, onBack }: { lang: Language, onBack: () => void }) =
                             <Sparkles size={20} />
                         </div>
                         <div>
-                            <h3 className="text-white font-bold text-sm mb-1">AI Agri-Insight</h3>
+                            <h3 className="text-white font-bold text-sm mb-1">{vt.insight_title}</h3>
                             <p className="text-white/80 text-xs leading-relaxed">
-                                {isDay 
-                                    ? `Good conditions for field work. Wind is ${weather.current.wind_speed_10m} km/h. Perfect for spraying fertilizer before 4 PM.` 
-                                    : `Night time. Temp is dropping to ${Math.round(weather.daily.temperature_2m_min[0])}°. Ensure young crops are protected from dew/cold.`}
+                                {isDay ? vt.spraying_tip : vt.night_tip}
                             </p>
                         </div>
                     </div>
                 </div>
-
-                {/* Details Grid */}
                 <div className="grid grid-cols-2 gap-3">
-                    {/* Card 1: Wind */}
                     <div className="glass-panel p-4 rounded-[1.5rem] border border-white/5 bg-white/5 backdrop-blur-md">
                          <div className="flex items-center gap-2 mb-2">
                              <div className="w-6 h-6 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-300">
                                  <Wind size={12}/>
                              </div>
-                             <span className="text-[10px] text-white/60 font-bold uppercase">Wind</span>
+                             <span className="text-[10px] text-white/60 font-bold uppercase">{t.wind}</span>
                          </div>
-                         <p className="text-xl font-black text-white">{weather.current.wind_speed_10m} <span className="text-xs font-medium text-white/50">km/h</span></p>
+                         <p className="text-xl font-black text-white">{weather.current.wind_speed_10m} <span className="text-xs font-medium text-white/50">{vt.km}/h</span></p>
                     </div>
-
-                    {/* Card 2: Humidity */}
                     <div className="glass-panel p-4 rounded-[1.5rem] border border-white/5 bg-white/5 backdrop-blur-md">
                          <div className="flex items-center gap-2 mb-2">
                              <div className="w-6 h-6 rounded-full bg-cyan-500/20 flex items-center justify-center text-cyan-300">
                                  <Droplets size={12}/>
                              </div>
-                             <span className="text-[10px] text-white/60 font-bold uppercase">Humidity</span>
+                             <span className="text-[10px] text-white/60 font-bold uppercase">{t.humidity}</span>
                          </div>
                          <p className="text-xl font-black text-white">{weather.current.relative_humidity_2m}<span className="text-xs font-medium text-white/50">%</span></p>
                     </div>
-
-                    {/* Card 3: UV Index (Day) or Moon Phase (Night) */}
                     <div className="glass-panel p-4 rounded-[1.5rem] border border-white/5 bg-white/5 backdrop-blur-md">
                          <div className="flex items-center gap-2 mb-2">
                              <div className={clsx("w-6 h-6 rounded-full flex items-center justify-center", isDay ? "bg-orange-500/20 text-orange-300" : "bg-indigo-500/20 text-indigo-300")}>
                                  {isDay ? <Sun size={12}/> : <Moon size={12}/>}
                              </div>
-                             <span className="text-[10px] text-white/60 font-bold uppercase">{isDay ? "UV Index" : "Moon Phase"}</span>
+                             <span className="text-[10px] text-white/60 font-bold uppercase">{isDay ? vt.uv : vt.moon}</span>
                          </div>
-                         <p className="text-xl font-black text-white">{isDay ? (weather.current.uv_index || 4) : "Waxing"} <span className="text-xs font-medium text-white/50">{isDay && "Mod"}</span></p>
+                         <p className="text-xl font-black text-white">{isDay ? (weather.current.uv_index || 4) : vt.waxing}</p>
                     </div>
-
-                    {/* Card 4: Visibility */}
                     <div className="glass-panel p-4 rounded-[1.5rem] border border-white/5 bg-white/5 backdrop-blur-md">
                          <div className="flex items-center gap-2 mb-2">
                              <div className="w-6 h-6 rounded-full bg-purple-500/20 flex items-center justify-center text-purple-300">
                                  <Eye size={12}/>
                              </div>
-                             <span className="text-[10px] text-white/60 font-bold uppercase">Visibility</span>
+                             <span className="text-[10px] text-white/60 font-bold uppercase">{vt.visibility}</span>
                          </div>
-                         <p className="text-xl font-black text-white">10 <span className="text-xs font-medium text-white/50">km</span></p>
+                         <p className="text-xl font-black text-white">10 <span className="text-xs font-medium text-white/50">{vt.km}</span></p>
                     </div>
                 </div>
-
             </div>
         </div>
     );
