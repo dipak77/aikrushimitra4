@@ -192,18 +192,21 @@ const NewsTicker = ({ lang }: { lang: Language }) => {
 
 const DynamicGreeting = ({ user, lang }: { user: UserProfile, lang: Language }) => {
     const hour = new Date().getHours();
-    let timeGreeting = 'Good Morning';
+    let timeGreeting = '';
     
     if (lang === 'mr') {
-        if (hour < 12) timeGreeting = 'शुभ सकाळ';
+        if (hour >= 21 || hour < 5) timeGreeting = 'शुभ रात्री';
+        else if (hour < 12) timeGreeting = 'शुभ सकाळ';
         else if (hour < 17) timeGreeting = 'शुभ दुपार';
         else timeGreeting = 'शुभ संध्याकाळ';
     } else if (lang === 'hi') {
-        if (hour < 12) timeGreeting = 'शुभ प्रभात';
+        if (hour >= 21 || hour < 5) timeGreeting = 'शुभ रात्रि';
+        else if (hour < 12) timeGreeting = 'शुभ प्रभात';
         else if (hour < 17) timeGreeting = 'शुभ दोपहर';
         else timeGreeting = 'शुभ संध्या';
     } else {
-        if (hour < 12) timeGreeting = 'Good Morning';
+        if (hour >= 21 || hour < 5) timeGreeting = 'Good Night';
+        else if (hour < 12) timeGreeting = 'Good Morning';
         else if (hour < 17) timeGreeting = 'Good Afternoon';
         else timeGreeting = 'Good Evening';
     }
