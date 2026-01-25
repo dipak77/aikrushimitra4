@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { UserProfile, Language, ViewState } from '../../types';
 import { TRANSLATIONS } from '../../constants';
-import { MapPin, Wind, Droplets, Mic, ArrowUpRight, ScanLine, FlaskConical, Map as MapIcon, Landmark, Store, Sun, Moon, CloudSun, CloudMoon, CloudRain, CloudLightning, TrendingUp, TrendingDown, Calendar, AlertTriangle, ChevronRight, BellRing, Sprout, Languages, Leaf, Wheat, ThermometerSun, Clock } from 'lucide-react';
+import { MapPin, Wind, Mic, ScanLine, FlaskConical, Map as MapIcon, Landmark, Store, TrendingUp, TrendingDown, Calendar, Sprout, Languages, Leaf, Clock, ArrowUpRight } from 'lucide-react';
 import { triggerHaptic } from '../../utils/common';
 import { MOCK_MARKET } from '../../data/mock';
 import { clsx } from 'clsx';
@@ -227,26 +227,46 @@ const DynamicGreeting = ({ user, lang }: { user: UserProfile, lang: Language }) 
     );
 };
 
-const AppHeaderLogo = () => (
-    <div className="flex items-center gap-3">
-        <div className="relative w-11 h-11 flex items-center justify-center">
-            {/* Outer Glow */}
-            <div className="absolute inset-0 bg-emerald-500/30 blur-xl rounded-full animate-pulse"></div>
-            
-            {/* Spinning Ring */}
-            <div className="absolute inset-0 border border-emerald-500/30 border-t-emerald-400 rounded-full animate-[spin_3s_linear_infinite]"></div>
-            
-            {/* Inner Core */}
-            <div className="relative w-9 h-9 rounded-full bg-gradient-to-b from-slate-800 to-slate-950 flex items-center justify-center shadow-lg border border-white/10 z-10">
-                <Sprout size={18} className="text-emerald-400 drop-shadow-[0_0_8px_rgba(52,211,153,0.5)]" />
+const AppHeaderLogo = () => {
+    const [videoError, setVideoError] = useState(false);
+
+    if (videoError) {
+        // Fallback to original design
+        return (
+            <div className="flex items-center gap-4">
+                <div className="relative w-14 h-14 md:w-16 md:h-16 rounded-full overflow-hidden border-2 border-emerald-500/30 shadow-[0_0_20px_rgba(16,185,129,0.3)] bg-black group shrink-0">
+                    <div className="w-full h-full bg-gradient-to-tr from-emerald-500 to-cyan-600 flex items-center justify-center">
+                         <span className="text-xl font-black text-white">AI</span>
+                    </div>
+                </div>
+                
+                <div className="flex flex-col justify-center">
+                    <h1 className="text-2xl md:text-3xl font-black text-white leading-none tracking-tight flex items-center gap-1 drop-shadow-lg">
+                        AI <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-cyan-400">KRUSHI</span>
+                    </h1>
+                    <span className="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-[0.3em] ml-1">Mitra</span>
+                </div>
             </div>
+        );
+    }
+
+    // New Video-only design (Wider & Larger)
+    return (
+        <div className="relative h-14 md:h-16 w-48 md:w-64 rounded-full overflow-hidden border border-emerald-500/20 shadow-[0_0_25px_rgba(16,185,129,0.2)] bg-black/40 group shrink-0 cursor-pointer">
+            <video 
+                src="/header.mp4" 
+                className="w-full h-full object-cover transform scale-105 group-hover:scale-110 transition-transform duration-700"
+                autoPlay 
+                loop 
+                muted 
+                playsInline
+                onError={() => setVideoError(true)}
+            />
+             {/* Fallback gloss/shine */}
+             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent pointer-events-none"></div>
         </div>
-        <div className="flex flex-col">
-            <span className="text-lg font-black text-white leading-none tracking-tight drop-shadow-md">AI KRUSHI</span>
-            <span className="text-[8px] font-bold text-emerald-400 uppercase tracking-[0.25em] ml-0.5">Mitra</span>
-        </div>
-    </div>
-);
+    );
+};
 
 // --- PREMIUM 3D WEATHER ICONS ---
 const WeatherIcon3D = ({ type, isDay }: { type: string, isDay: boolean }) => {
@@ -662,7 +682,7 @@ const Dashboard = ({ lang, setLang, user, onNavigate }: { lang: Language, setLan
             
             {/* 2. HEADER */}
             <div className="pt-4 px-6 pb-2 flex items-center justify-between z-50">
-                 {/* LEFT: ORB LOGO */}
+                 {/* LEFT: CSS BRANDING LOGO */}
                  <AppHeaderLogo />
 
                  {/* RIGHT: ACTIONS */}
