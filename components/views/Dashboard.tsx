@@ -135,13 +135,7 @@ const Dashboard = ({ lang, setLang, user, onNavigate }: { lang: Language, setLan
                  <AppHeaderLogo />
 
                  {/* CENTER: SMART BANNER (Desktop Only - In Header) */}
-                 <SmartBanner 
-                    lang={lang} 
-                    className="hidden lg:flex" 
-                    user={user} 
-                    location={liveLocation} 
-                    weather={weather} 
-                 />
+                 <SmartBanner lang={lang} className="hidden lg:flex" />
 
                  {/* RIGHT: ACTIONS */}
                  <div className="flex items-center gap-3">
@@ -169,13 +163,7 @@ const Dashboard = ({ lang, setLang, user, onNavigate }: { lang: Language, setLan
 
             {/* 2.2 SMART BANNER (Mobile Only - Above Weather) */}
             <div className="px-4 mb-4 lg:hidden">
-                <SmartBanner 
-                    lang={lang} 
-                    className="mx-0 w-full" 
-                    user={user} 
-                    location={liveLocation} 
-                    weather={weather} 
-                />
+                <SmartBanner lang={lang} className="mx-0 w-full" />
             </div>
 
             {/* 3. BENTO GRID */}
