@@ -1,16 +1,36 @@
-import React, { useState, useEffect } from 'react';
-import { CloudRain, TrendingUp, Lightbulb, Activity, ArrowRight, Flag, Heart, Sparkles, Star, Gift, Crown } from 'lucide-react';
-import { Language } from '../../types';
-import { clsx } from 'clsx';
 
-export const SmartBanner = ({ lang, className }: { lang: Language, className?: string }) => {
+import React, { useState, useEffect } from 'react';
+import { CloudRain, TrendingUp, Lightbulb, Activity, ArrowRight, Flag, Heart, Sparkles, Star, Sun, Moon, Wind } from 'lucide-react';
+import { Language, UserProfile } from '../../types';
+import { clsx } from 'clsx';
+import { MOCK_MARKET } from '../../data/mock';
+import { DASH_TEXT } from './constants';
+
+export const SmartBanner = ({ lang, className, weather, user }: { lang: Language, className?: string, weather?: any, user?: UserProfile }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
+  const txt = DASH_TEXT[lang];
   
   // Check if it's Republic Day (January 26)
   const today = new Date();
   const isRepublicDay = today.getMonth() === 0 && today.getDate() === 26;
+
+  // --- DYNAMIC DATA PREPARATION --- //
   
+  // 1. Weather Logic
+  const temp = weather?.current?.temperature_2m ? Math.round(weather.current.temperature_2m) : '--';
+  const wCode = weather?.current?.weather_code || 0;
+  const isDay = weather?.current?.is_day !== 0;
+  const wDesc = txt.weather_desc[wCode] || txt.weather_desc[0];
+  const isRainy = wCode >= 51; // Codes 51+ are drizzle/rain/storm in OpenMeteo
+
+  // 2. Market Logic (Match user crop or fallback to first)
+  const userCropName = user?.crop || 'Soyabean';
+  const marketData = MOCK_MARKET.find(m => m.name.toLowerCase().includes(userCropName.toLowerCase())) || MOCK_MARKET[0];
+  const displayCropName = txt.crops[marketData.name] || marketData.name;
+  const isPositiveTrend = marketData.trend.includes('+');
+
+  // --- MESSAGE CONSTRUCTION --- //
   const messages = [
     // Special Republic Day Message
     ...(isRepublicDay ? [{
@@ -37,70 +57,91 @@ export const SmartBanner = ({ lang, className }: { lang: Language, className?: s
       isSpecial: true
     }] : []),
     
+    // Dynamic Weather Message
     { 
-      id: 'alert',
-      category: { mr: 'हवामान सूचना', hi: 'मौसम अलर्ट', en: 'Weather Alert' },
-      title: { 
-        mr: 'जोरदार पावसाचा इशारा', 
-        hi: 'भारी बारिश की चेतावनी', 
-        en: 'Heavy Rain Warning' 
+      id: 'weather',
+      category: { mr: 'हवामान अपडेट', hi: 'मौसम अपडेट', en: 'Weather Update' },
+      title: isRainy ? { 
+        mr: 'पावसाची शक्यता', 
+        hi: 'बारिश की संभावना', 
+        en: 'Rain Expected' 
+      } : { 
+        mr: `${wDesc} • ${temp}°C`, 
+        hi: `${wDesc} • ${temp}°C`, 
+        en: `${wDesc} • ${temp}°C` 
       },
-      subtitle: { 
-        mr: 'पुढील २ तासात जोरदार पावसाची शक्यता • सुरक्षित रहा', 
-        hi: 'अगले 2 घंटों में भारी बारिश संभव • सुरक्षित रहें', 
-        en: 'Heavy rainfall expected in next 2 hours • Stay Safe' 
+      subtitle: isRainy ? { 
+        mr: `पुढील काही तासात पावसाचा अंदाज आहे. पिकांची काळजी घ्या.`, 
+        hi: `अगले कुछ घंटों में बारिश का अनुमान है। फसल की सुरक्षा करें।`, 
+        en: `Rain expected in next few hours. Protect harvested crops.` 
+      } : {
+        mr: `सध्याचे तापमान ${temp}°C आहे. शेतातील कामांसाठी हवामान ${isDay ? 'चांगले' : 'शांत'} आहे.`,
+        hi: `वर्तमान तापमान ${temp}°C है। खेत के काम के लिए मौसम ${isDay ? 'अच्छा' : 'शांत'} है।`,
+        en: `Current temp is ${temp}°C. Weather is ${isDay ? 'good' : 'calm'} for field activities.`
       },
-      cta: { mr: 'सूचना पहा', hi: 'विवरण देखें', en: 'View Details' },
-      gradient: 'from-red-600 via-rose-600 to-pink-600',
-      accentGradient: 'from-red-400 to-rose-500',
-      icon: CloudRain,
+      cta: { mr: 'तपशील पहा', hi: 'विवरण देखें', en: 'View Forecast' },
+      gradient: isRainy ? 'from-slate-700 via-blue-800 to-slate-900' : isDay ? 'from-sky-400 via-blue-500 to-indigo-600' : 'from-indigo-900 via-slate-900 to-purple-900',
+      accentGradient: isRainy ? 'from-blue-400 to-cyan-500' : isDay ? 'from-yellow-300 to-orange-400' : 'from-indigo-400 to-purple-500',
+      icon: isRainy ? CloudRain : isDay ? Sun : Moon,
       badges: [
-        { text: { mr: 'तत्काळ', hi: 'तुरंत', en: 'Urgent' }, color: 'bg-red-500' },
-        { text: { mr: 'उच्च प्राधान्यता', hi: 'उच्च प्राथमिकता', en: 'High Priority' }, color: 'bg-orange-500' }
+        { text: { mr: isDay ? 'दिवस' : 'रात्र', hi: isDay ? 'दिन' : 'रात', en: isDay ? 'Day' : 'Night' }, color: isDay ? 'bg-orange-500' : 'bg-indigo-500' },
+        { text: { mr: `${temp}°C`, hi: `${temp}°C`, en: `${temp}°C` }, color: isRainy ? 'bg-blue-500' : isDay ? 'bg-yellow-500' : 'bg-purple-500' }
       ]
     },
+
+    // Dynamic Market Message
     { 
       id: 'market',
       category: { mr: 'बाजार अपडेट', hi: 'मार्केट अपडेट', en: 'Market Update' },
       title: { 
-        mr: 'सोयाबीन भाव वाढ', 
-        hi: 'सोयाबीन दाम बढ़ोतरी', 
-        en: 'Soyabean Price Surge' 
+        mr: `${displayCropName} भाव: ₹${marketData.price}`, 
+        hi: `${displayCropName} भाव: ₹${marketData.price}`, 
+        en: `${displayCropName}: ₹${marketData.price}` 
       },
       subtitle: { 
-        mr: '₹4,850 (+₹120) • आजच्या तेजीमध्ये विक्री करा', 
-        hi: '₹4,850 (+₹120) • आज की तेजी में बेचें', 
-        en: '₹4,850 (+₹120) • Sell in Today\'s Bullish Market' 
+        mr: `आवक: ${marketData.arrival} • कल: ${marketData.trend} (${isPositiveTrend ? 'तेजीत' : 'घसरण'})`, 
+        hi: `आवक: ${marketData.arrival} • रुझान: ${marketData.trend} (${isPositiveTrend ? 'तेजी' : 'गिरावट'})`, 
+        en: `Arrival: ${marketData.arrival} • Trend: ${marketData.trend}` 
       },
       cta: { mr: 'भाव पहा', hi: 'कीमत देखें', en: 'View Rates' },
-      gradient: 'from-emerald-600 via-teal-600 to-cyan-600',
-      accentGradient: 'from-emerald-400 to-teal-500',
+      gradient: isPositiveTrend ? 'from-emerald-600 via-teal-600 to-cyan-600' : 'from-rose-600 via-red-600 to-orange-600',
+      accentGradient: isPositiveTrend ? 'from-emerald-400 to-teal-500' : 'from-rose-400 to-orange-500',
       icon: TrendingUp,
       badges: [
-        { text: { mr: 'तेजी', hi: 'बुलिश', en: 'Bullish' }, color: 'bg-emerald-500' },
-        { text: { mr: '+2.5%', hi: '+2.5%', en: '+2.5%' }, color: 'bg-teal-500' }
+        { text: { mr: isPositiveTrend ? 'तेजी' : 'मंदी', hi: isPositiveTrend ? 'बढ़त' : 'गिरावट', en: isPositiveTrend ? 'Bullish' : 'Bearish' }, color: isPositiveTrend ? 'bg-emerald-500' : 'bg-red-500' },
+        { text: { mr: marketData.trend, hi: marketData.trend, en: marketData.trend }, color: 'bg-white/20' }
       ]
     },
+
+    // Dynamic Tip
     { 
       id: 'tip',
       category: { mr: 'स्मार्ट टीप', hi: 'स्मार्ट टिप', en: 'Smart Tip' },
-      title: { 
-        mr: 'आज फवारणी करा', 
-        hi: 'आज स्प्रे करें', 
-        en: 'Spray Crops Today' 
+      title: isDay ? { 
+        mr: 'फवारणीसाठी योग्य वेळ', 
+        hi: 'छिड़काव के लिए सही समय', 
+        en: 'Good Time to Spray' 
+      } : {
+        mr: 'पिकांना थंडीपासून वाचवा',
+        hi: 'फसलों को ठंड से बचाएं',
+        en: 'Protect from Cold'
       },
-      subtitle: { 
-        mr: 'आदर्श परिस्थिती • दुपारी 1:00 PM वा. • 85% यश दर', 
-        hi: 'आदर्श स्थिति • दोपहर 1:00 बजे • 85% सफलता दर', 
-        en: 'Ideal Conditions • 1:00 PM Today • 85% Success Rate' 
+      subtitle: isDay ? { 
+        mr: 'वारा कमी आहे, फवारणी प्रभावी ठरेल. (दुपारी ४ पर्यंत)', 
+        hi: 'हवा कम है, छिड़काव प्रभावी होगा। (शाम 4 बजे तक)', 
+        en: 'Low wind speed, spraying will be effective. (Before 4 PM)' 
+      } : {
+        mr: 'रात्री तापमान कमी होऊ शकते, पाणी देऊन पिकांचे रक्षण करा.',
+        hi: 'रात में तापमान गिर सकता है, सिंचाई करके फसलों को बचाएं।',
+        en: 'Temp may drop tonight, irrigate to protect crops.'
       },
-      cta: { mr: 'रिमाइंडर सेट करा', hi: 'रिमाइंडर सेट करें', en: 'Set Reminder' },
+      cta: { mr: 'सल्ला वाचा', hi: 'सलाह पढ़ें', en: 'Read Tip' },
       gradient: 'from-amber-600 via-orange-600 to-yellow-600',
       accentGradient: 'from-amber-400 to-orange-500',
       icon: Lightbulb,
       badges: [
         { text: { mr: 'AI सुचवलेले', hi: 'AI सुझाव', en: 'AI Suggested' }, color: 'bg-amber-500' },
-        { text: { mr: 'सर्वोत्तम वेळ', hi: 'बेस्ट टाइम', en: 'Best Time' }, color: 'bg-yellow-500' }
+        { text: { mr: '100% उपयुक्त', hi: '100% उपयोगी', en: '100% Useful' }, color: 'bg-yellow-500' }
       ]
     }
   ];
@@ -112,10 +153,10 @@ export const SmartBanner = ({ lang, className }: { lang: Language, className?: s
         setCurrentIndex((prev) => (prev + 1) % messages.length);
         setIsAnimating(false);
       }, 600);
-    }, 7000);
+    }, 8000); // 8 seconds per slide for readability
     
     return () => clearInterval(interval);
-  }, []);
+  }, [messages.length]);
 
   const msg = messages[currentIndex];
   const Icon = msg.icon;
@@ -174,37 +215,14 @@ export const SmartBanner = ({ lang, className }: { lang: Language, className?: s
         }
         
         @keyframes flag-flutter {
-          0%, 100% { 
-            transform: rotateY(0deg) scale(1); 
-          }
-          25% { 
-            transform: rotateY(-5deg) scale(1.05); 
-          }
-          75% { 
-            transform: rotateY(5deg) scale(1.05); 
-          }
+          0%, 100% { transform: rotateY(0deg) scale(1); }
+          25% { transform: rotateY(-5deg) scale(1.05); }
+          75% { transform: rotateY(5deg) scale(1.05); }
         }
         
         @keyframes sparkle-burst {
-          0%, 100% { 
-            transform: scale(0) rotate(0deg); 
-            opacity: 0; 
-          }
-          50% { 
-            transform: scale(1.5) rotate(180deg); 
-            opacity: 1; 
-          }
-        }
-        
-        @keyframes confetti-fall {
-          0% { 
-            transform: translateY(-100%) rotate(0deg); 
-            opacity: 1; 
-          }
-          100% { 
-            transform: translateY(100vh) rotate(720deg); 
-            opacity: 0; 
-          }
+          0%, 100% { transform: scale(0) rotate(0deg); opacity: 0; }
+          50% { transform: scale(1.5) rotate(180deg); opacity: 1; }
         }
         
         @keyframes ashoka-chakra-spin {
@@ -213,12 +231,8 @@ export const SmartBanner = ({ lang, className }: { lang: Language, className?: s
         }
         
         @keyframes patriotic-glow {
-          0%, 100% { 
-            text-shadow: 0 0 10px rgba(255, 103, 31, 0.5), 0 0 20px rgba(19, 136, 8, 0.5);
-          }
-          50% { 
-            text-shadow: 0 0 20px rgba(255, 103, 31, 0.8), 0 0 40px rgba(19, 136, 8, 0.8), 0 0 60px rgba(255, 255, 255, 0.6);
-          }
+          0%, 100% { text-shadow: 0 0 10px rgba(255, 103, 31, 0.5), 0 0 20px rgba(19, 136, 8, 0.5); }
+          50% { text-shadow: 0 0 20px rgba(255, 103, 31, 0.8), 0 0 40px rgba(19, 136, 8, 0.8), 0 0 60px rgba(255, 255, 255, 0.6); }
         }
       `}</style>
 
@@ -242,13 +256,10 @@ export const SmartBanner = ({ lang, className }: { lang: Language, className?: s
             {/* Decorative Patterns (Rangoli-style) */}
             <div className="absolute inset-0 opacity-15">
               <svg className="w-full h-full" viewBox="0 0 800 200" preserveAspectRatio="none">
-                {/* Corner Decorations */}
                 <circle cx="50" cy="50" r="30" fill="rgba(255, 103, 31, 0.4)" />
                 <circle cx="750" cy="50" r="30" fill="rgba(19, 136, 8, 0.4)" />
                 <circle cx="50" cy="150" r="30" fill="rgba(19, 136, 8, 0.4)" />
                 <circle cx="750" cy="150" r="30" fill="rgba(255, 103, 31, 0.4)" />
-                
-                {/* Decorative Lines */}
                 <path d="M0,100 Q200,80 400,100 T800,100" stroke="rgba(255, 255, 255, 0.3)" strokeWidth="2" fill="none" />
                 <path d="M0,100 Q200,120 400,100 T800,100" stroke="rgba(255, 255, 255, 0.3)" strokeWidth="2" fill="none" />
               </svg>
@@ -261,15 +272,7 @@ export const SmartBanner = ({ lang, className }: { lang: Language, className?: s
                   <circle cx="50" cy="50" r="45" fill="none" stroke="#003893" strokeWidth="3" />
                   <circle cx="50" cy="50" r="35" fill="none" stroke="#003893" strokeWidth="2" />
                   {[...Array(24)].map((_, i) => (
-                    <line 
-                      key={i}
-                      x1="50" 
-                      y1="50" 
-                      x2={50 + 40 * Math.cos((i * 15 * Math.PI) / 180)}
-                      y2={50 + 40 * Math.sin((i * 15 * Math.PI) / 180)}
-                      stroke="#003893" 
-                      strokeWidth="1.5"
-                    />
+                    <line key={i} x1="50" y1="50" x2={50 + 40 * Math.cos((i * 15 * Math.PI) / 180)} y2={50 + 40 * Math.sin((i * 15 * Math.PI) / 180)} stroke="#003893" strokeWidth="1.5" />
                   ))}
                 </svg>
               </div>
@@ -299,8 +302,7 @@ export const SmartBanner = ({ lang, className }: { lang: Language, className?: s
             
             {/* Overlay Pattern */}
             <div className="absolute inset-0 opacity-10" style={{
-              backgroundImage: `radial-gradient(circle at 25% 25%, rgba(255,255,255,0.2) 0%, transparent 50%),
-                               radial-gradient(circle at 75% 75%, rgba(255,255,255,0.15) 0%, transparent 50%)`
+              backgroundImage: `radial-gradient(circle at 25% 25%, rgba(255,255,255,0.2) 0%, transparent 50%), radial-gradient(circle at 75% 75%, rgba(255,255,255,0.15) 0%, transparent 50%)`
             }}></div>
           </>
         )}
