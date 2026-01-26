@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { getAnalyticsStats, hashPassword, TARGET_HASH } from '../../services/analyticsService';
-import { ShieldCheck, Lock, Unlock, Activity, MapPin, Smartphone, Calendar, Eye, AlertTriangle } from 'lucide-react';
+import { ShieldCheck, Lock, Unlock, Activity, MapPin, Smartphone, Calendar, Eye, EyeOff, AlertTriangle } from 'lucide-react';
 import { Button } from '../Button';
 import SimpleView from '../layout/SimpleView';
 import { clsx } from 'clsx';
@@ -9,19 +9,39 @@ import { clsx } from 'clsx';
 const AdminDashboard = ({ onBack }: { onBack: () => void }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [stats, setStats] = useState<any>(null);
 
   // Authentication Handler
   const handleLogin = async () => {
-    const hash = await hashPassword(password);
-    if (hash === TARGET_HASH) {
-      setIsAuthenticated(true);
-      setStats(getAnalyticsStats());
-    } else {
-      setError('Access Denied: Invalid Credentials');
-      setPassword('');
+    // Sanitize input
+    const cleanPassword = password.trim();
+
+    if (!cleanPassword) {
+        setError('Please enter password');
+        return;
     }
+    
+    try {
+      const hash = await hashPassword(cleanPassword);
+      
+      if (hash === TARGET_HASH) {
+        setIsAuthenticated(true);
+        setStats(getAnalyticsStats());
+        setError('');
+      } else {
+        setError('Access Denied: Incorrect Password');
+        setPassword('');
+      }
+    } catch (e) {
+      console.error("Hashing failed", e);
+      setError('System Error: Authentication Failed');
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+      if (e.key === 'Enter') handleLogin();
   };
 
   if (!isAuthenticated) {
@@ -45,13 +65,22 @@ const AdminDashboard = ({ onBack }: { onBack: () => void }) => {
            <p className="text-slate-400 text-sm mb-8 text-center">Restricted Area. Enter administrator passkey to access activity logs.</p>
 
            <div className="w-full space-y-4">
-              <input 
-                type="password" 
-                value={password}
-                onChange={(e) => { setPassword(e.target.value); setError(''); }}
-                placeholder="Enter Passkey"
-                className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-center text-white tracking-[0.5em] focus:outline-none focus:border-emerald-500/50 transition-all font-mono placeholder:tracking-normal placeholder:text-slate-600"
-              />
+              <div className="relative">
+                  <input 
+                    type={showPassword ? "text" : "password"}
+                    value={password}
+                    onChange={(e) => { setPassword(e.target.value); setError(''); }}
+                    onKeyDown={handleKeyDown}
+                    placeholder="Enter Passkey"
+                    className="w-full bg-black/40 border border-white/10 rounded-xl pl-4 pr-12 py-3 text-center text-white tracking-[0.2em] focus:outline-none focus:border-emerald-500/50 transition-all font-mono placeholder:tracking-normal placeholder:text-slate-600"
+                  />
+                  <button 
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white transition-colors"
+                  >
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+              </div>
               
               {error && (
                 <div className="flex items-center justify-center gap-2 text-red-400 text-xs font-bold animate-pulse">
