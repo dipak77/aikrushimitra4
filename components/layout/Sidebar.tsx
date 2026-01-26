@@ -1,6 +1,7 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { ViewState, Language } from '../../types';
-import { LayoutDashboard, Store, CloudSun, Landmark, ScanLine, FlaskConical, TrendingUp, Map as MapIcon, Mic, Zap, Sparkles, Crown } from 'lucide-react';
+import { LayoutDashboard, Store, CloudSun, Landmark, ScanLine, FlaskConical, TrendingUp, Map as MapIcon, Mic, Zap, Sparkles, Crown, Shield } from 'lucide-react';
 import { clsx } from 'clsx';
 import { triggerHaptic } from '../../utils/common';
 
@@ -33,6 +34,7 @@ const Sidebar = ({ view, setView, lang }: { view: ViewState, setView: (v: ViewSt
     { id: 'SOIL', icon: FlaskConical, color: 'lime', gradient: 'from-lime-400 to-green-500' },
     { id: 'YIELD', icon: TrendingUp, color: 'fuchsia', gradient: 'from-fuchsia-400 to-purple-500' },
     { id: 'AREA_CALCULATOR', icon: MapIcon, color: 'sky', gradient: 'from-sky-400 to-indigo-500' },
+    { id: 'ADMIN', icon: Shield, color: 'slate', gradient: 'from-slate-400 to-gray-500' },
   ];
 
   return (

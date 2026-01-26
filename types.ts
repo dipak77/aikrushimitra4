@@ -20,7 +20,8 @@ export type ViewState =
   | 'NEWS'
   | 'AGRI_KNOWLEDGE'
   | 'BLOG'
-  | 'BLOG_DETAIL';
+  | 'BLOG_DETAIL'
+  | 'ADMIN';
 
 export interface UserProfile {
   name: string;
@@ -62,6 +63,14 @@ export interface BlogPost {
   conclusion: string;
   faqs?: FAQ[];
   relatedPosts?: string[];
+}
+
+export interface ActivityLog {
+  id: string;
+  timestamp: number;
+  view: string;
+  location: string;
+  userAgent: string;
 }
 
 declare global {

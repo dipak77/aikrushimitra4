@@ -1,6 +1,7 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ViewState, Language, UserProfile } from './types';
+import { logActivity } from './services/analyticsService';
 
 // Layout
 import Sidebar from './components/layout/Sidebar';
@@ -20,6 +21,7 @@ import MarketView from './components/views/MarketView';
 import WeatherView from './components/views/WeatherView';
 import ProfileView from './components/views/ProfileView';
 import CropCalendarView from './components/views/CropCalendarView';
+import AdminDashboard from './components/views/AdminDashboard';
 import { SplashScreen } from './components/views/SplashScreen';
 
 const App = () => {
@@ -36,6 +38,15 @@ const App = () => {
   
   const [selectedScheme, setSelectedScheme] = useState<any>(null);
 
+  // --- ANALYTICS TRACKING ---
+  useEffect(() => {
+    if (view !== 'SPLASH') {
+       // Try to get cached location or default to user profile village
+       const location = localStorage.getItem('last_known_loc') || user.village;
+       logActivity(view, location);
+    }
+  }, [view, user.village]);
+
   const getView = () => {
     switch(view) {
        case 'SPLASH': return <SplashScreen onComplete={() => setView('DASHBOARD')} />;
@@ -46,6 +57,7 @@ const App = () => {
        case 'YIELD': return <YieldPredictor lang={lang} onBack={() => setView('DASHBOARD')} />;
        case 'AREA_CALCULATOR': return <AreaCalculator lang={lang} onBack={() => setView('DASHBOARD')} />;
        case 'CALENDAR': return <CropCalendarView lang={lang} onBack={() => setView('DASHBOARD')} />;
+       case 'ADMIN': return <AdminDashboard onBack={() => setView('DASHBOARD')} />;
        case 'SCHEMES': 
           if(selectedScheme) {
              return <SchemeDetailView scheme={selectedScheme} lang={lang} onBack={() => setSelectedScheme(null)} />;
@@ -62,7 +74,7 @@ const App = () => {
   };
 
   // Fullscreen views hide the standard nav but may implement their own internal nav
-  const isFullScreen = view === 'VOICE_ASSISTANT' || view === 'AREA_CALCULATOR' || view === 'SPLASH';
+  const isFullScreen = view === 'VOICE_ASSISTANT' || view === 'AREA_CALCULATOR' || view === 'SPLASH' || view === 'ADMIN';
 
   return (
     <div className="relative w-full h-[100dvh] bg-transparent overflow-hidden text-slate-100 font-jakarta">
