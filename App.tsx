@@ -41,7 +41,6 @@ const App = () => {
   // --- ANALYTICS TRACKING ---
   useEffect(() => {
     if (view !== 'SPLASH') {
-       // Try to get cached location or default to user profile village
        const location = localStorage.getItem('last_known_loc') || user.village;
        logActivity(view, location);
     }
@@ -68,18 +67,15 @@ const App = () => {
        case 'WEATHER':
          return <WeatherView lang={lang} onBack={() => setView('DASHBOARD')} />;
        case 'PROFILE':
-         return <ProfileView lang={lang} currentUser={user} onSave={(u) => { setUser(u); setView('DASHBOARD'); }} onBack={() => setView('DASHBOARD')} />;
+         return <ProfileView lang={lang} currentUser={user} onSave={(u) => { setUser(u); setView('DASHBOARD'); }} onBack={() => setView('DASHBOARD')} onNavigate={setView} />;
        default: return <Dashboard lang={lang} setLang={setLang} user={user} onNavigate={setView} />;
     }
   };
 
-  // Fullscreen views hide the standard nav but may implement their own internal nav
   const isFullScreen = view === 'VOICE_ASSISTANT' || view === 'AREA_CALCULATOR' || view === 'SPLASH' || view === 'ADMIN';
 
   return (
     <div className="relative w-full h-[100dvh] bg-transparent overflow-hidden text-slate-100 font-jakarta">
-       
-       {/* 1. Global Background Layers (Fixed, z-0) */}
        <div className="premium-bg">
           <div className="planet-orb-main"></div>
           <div className="planet-ring"></div>
@@ -87,18 +83,13 @@ const App = () => {
           <div className="star-field"></div>
        </div>
 
-       {/* 2. Notification System (Highest z-index for alerts) */}
        {!isFullScreen && <NotificationSystem lang={lang} onNavigate={setView} />}
-
-       {/* 3. Navigation Sidebar (Desktop) - Fixed Left, High Z-Index */}
        {!isFullScreen && <Sidebar view={view} setView={setView} lang={lang} />}
 
-       {/* 4. Main Content Area */}
        <main className="relative w-full h-full z-10">
           {getView()}
        </main>
 
-       {/* 5. Mobile Navigation (Floating Bottom, High Z-Index) */}
        {!isFullScreen && <MobileNav view={view} setView={setView} />}
     </div>
   );
