@@ -97,7 +97,7 @@ export const AppHeaderLogo = () => {
         
         @keyframes icon-hover {
           0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-3px); }
+          50% { transform: translateY(-2px); }
         }
         
         @keyframes glow-soft {
@@ -108,20 +108,15 @@ export const AppHeaderLogo = () => {
             filter: drop-shadow(0 0 15px rgba(16, 185, 129, 0.6)); 
           }
         }
-        
-        @keyframes text-shimmer {
-          0%, 100% { background-position: 0% 50%; }
-          50% { background-position: 100% 50%; }
-        }
       `}</style>
 
-      <div className="relative flex items-center gap-4 md:gap-5 group/logo">
+      <div className="relative flex items-center gap-3 md:gap-4 group/logo">
         
         {/* Subtle Ambient Glow */}
-        <div className="absolute inset-0 -inset-x-8 bg-gradient-to-r from-emerald-500/10 via-yellow-500/8 to-cyan-500/10 blur-3xl opacity-40 group-hover/logo:opacity-60 transition-opacity duration-700 rounded-full"></div>
+        <div className="absolute inset-0 -inset-x-6 bg-gradient-to-r from-emerald-500/10 via-yellow-500/8 to-cyan-500/10 blur-3xl opacity-40 group-hover/logo:opacity-60 transition-opacity duration-700 rounded-full"></div>
         
         {/* Professional Globe Container */}
-        <div className="relative w-14 h-14 md:w-16 md:h-16 shrink-0">
+        <div className="relative w-10 h-10 md:w-12 md:h-12 shrink-0">
           
           {/* Soft Glow Ring */}
           <div className="absolute inset-0 rounded-full bg-gradient-to-br from-emerald-400/20 via-yellow-400/15 to-cyan-500/20 blur-xl animate-[glow-soft_3s_ease-in-out_infinite]"></div>
@@ -132,7 +127,7 @@ export const AppHeaderLogo = () => {
           </div>
           
           {/* Main Globe */}
-          <div className="relative w-full h-full rounded-full overflow-hidden border border-emerald-400/30 shadow-[0_0_25px_rgba(16,185,129,0.3),0_4px_16px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(255,255,255,0.1)] bg-gradient-to-br from-emerald-950/80 via-slate-900/90 to-cyan-950/80 backdrop-blur-xl group-hover/logo:border-emerald-400/50 group-hover/logo:shadow-[0_0_35px_rgba(16,185,129,0.4)] transition-all duration-500">
+          <div className="relative w-full h-full rounded-full overflow-hidden border border-emerald-400/30 shadow-[0_0_20px_rgba(16,185,129,0.3),0_4px_16px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(255,255,255,0.1)] bg-gradient-to-br from-emerald-950/80 via-slate-900/90 to-cyan-950/80 backdrop-blur-xl group-hover/logo:border-emerald-400/50 group-hover/logo:shadow-[0_0_30px_rgba(16,185,129,0.4)] transition-all duration-500">
             
             {videoError ? (
               <>
@@ -144,7 +139,7 @@ export const AppHeaderLogo = () => {
                 />
                 
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <span className="text-xl md:text-2xl font-black text-transparent bg-clip-text bg-gradient-to-br from-emerald-300 via-yellow-300 to-cyan-300 drop-shadow-[0_0_12px_rgba(16,185,129,0.6)]">
+                  <span className="text-sm md:text-lg font-black text-transparent bg-clip-text bg-gradient-to-br from-emerald-300 via-yellow-300 to-cyan-300 drop-shadow-[0_0_12px_rgba(16,185,129,0.6)]">
                     AI
                   </span>
                 </div>
@@ -165,16 +160,16 @@ export const AppHeaderLogo = () => {
           </div>
           
           {/* Small Icon Badges */}
-          <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center shadow-[0_0_12px_rgba(16,185,129,0.5)] border border-emerald-300/20 animate-[icon-hover_2.5s_ease-in-out_infinite]">
-            <Leaf size={11} className="text-white" strokeWidth={2.5} />
+          <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center shadow-[0_0_10px_rgba(16,185,129,0.5)] border border-emerald-300/20 animate-[icon-hover_2.5s_ease-in-out_infinite]">
+            <Leaf size={9} className="text-white" strokeWidth={2.5} />
           </div>
           
-          <div className="absolute -bottom-1 -left-1 w-5 h-5 rounded-full bg-gradient-to-br from-yellow-400 to-amber-500 flex items-center justify-center shadow-[0_0_12px_rgba(251,191,36,0.5)] border border-yellow-300/20 animate-[icon-hover_2.5s_ease-in-out_infinite]" style={{ animationDelay: '0.8s' }}>
-            <TrendingUp size={11} className="text-white" strokeWidth={2.5} />
+          <div className="absolute -bottom-1 -left-1 w-4 h-4 rounded-full bg-gradient-to-br from-yellow-400 to-amber-500 flex items-center justify-center shadow-[0_0_10px_rgba(251,191,36,0.5)] border border-yellow-300/20 animate-[icon-hover_2.5s_ease-in-out_infinite]" style={{ animationDelay: '0.8s' }}>
+            <TrendingUp size={9} className="text-white" strokeWidth={2.5} />
           </div>
           
           {/* Minimal Circuit Lines */}
-          <svg className="absolute -top-4 left-1/2 -translate-x-1/2 w-24 h-8 opacity-40 pointer-events-none" viewBox="0 0 96 32">
+          <svg className="absolute -top-3 left-1/2 -translate-x-1/2 w-20 h-6 opacity-40 pointer-events-none" viewBox="0 0 96 32">
             <path 
               d="M0,16 L20,16 L28,8 L40,8 L48,16 L96,16" 
               stroke="url(#circuit1)" 
@@ -194,9 +189,9 @@ export const AppHeaderLogo = () => {
         </div>
         
         {/* Clean Brand Typography */}
-        <div className="flex flex-col gap-1.5">
-          {/* Main Title - Professional Size */}
-          <h1 className="text-2xl md:text-3xl lg:text-4xl font-black leading-none tracking-tight flex items-center gap-2 md:gap-2.5">
+        <div className="flex flex-col gap-0.5">
+          {/* Main Title - Compact Size */}
+          <h1 className="text-xl md:text-2xl font-black leading-none tracking-tight flex items-center gap-1.5">
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-300 to-emerald-400 drop-shadow-[0_2px_12px_rgba(16,185,129,0.5)]">
               AI
             </span>
@@ -209,15 +204,15 @@ export const AppHeaderLogo = () => {
           </h1>
           
           {/* Refined Subtitle */}
-          <div className="flex items-center gap-2">
-            <div className="h-[1px] w-8 bg-gradient-to-r from-emerald-400/50 to-transparent"></div>
-            <p className="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-[0.2em]">
+          <div className="flex items-center gap-1.5">
+            <div className="h-[1px] w-5 bg-gradient-to-r from-emerald-400/50 to-transparent"></div>
+            <p className="text-[9px] md:text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] leading-none">
               AI Powered Agricultorm
             </p>
           </div>
           
           {/* Compact Feature Badges */}
-          <div className="flex items-center gap-1.5 mt-1">
+          <div className="flex items-center gap-1 mt-0.5">
             {[
               { icon: Leaf, color: 'from-emerald-500 to-teal-500', bg: 'bg-emerald-500/10' },
               { icon: TrendingUp, color: 'from-yellow-500 to-amber-500', bg: 'bg-yellow-500/10' },
@@ -225,10 +220,10 @@ export const AppHeaderLogo = () => {
             ].map((badge, i) => (
               <div
                 key={i}
-                className={`w-6 h-6 md:w-7 md:h-7 rounded-lg ${badge.bg} backdrop-blur-sm border border-white/10 flex items-center justify-center hover:scale-110 transition-transform duration-300 cursor-pointer group/icon`}
+                className={`w-5 h-5 rounded-md ${badge.bg} backdrop-blur-sm border border-white/10 flex items-center justify-center hover:scale-110 transition-transform duration-300 cursor-pointer group/icon`}
               >
-                <div className={`w-4 h-4 md:w-5 md:h-5 rounded-md bg-gradient-to-br ${badge.color} flex items-center justify-center shadow-[0_0_8px_currentColor] group-hover/icon:shadow-[0_0_12px_currentColor] transition-shadow`}>
-                  <badge.icon size={10} className="text-white" strokeWidth={2.5} />
+                <div className={`w-3.5 h-3.5 rounded-sm bg-gradient-to-br ${badge.color} flex items-center justify-center shadow-[0_0_6px_currentColor] group-hover/icon:shadow-[0_0_10px_currentColor] transition-shadow`}>
+                  <badge.icon size={8} className="text-white" strokeWidth={3} />
                 </div>
               </div>
             ))}
