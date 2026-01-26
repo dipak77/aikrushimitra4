@@ -8,7 +8,9 @@ import { triggerHaptic } from '../../utils/common';
 // Segregated Components
 import { DASH_TEXT } from '../dashboard/constants';
 import { NewsTicker } from '../dashboard/NewsTicker';
-import { AppHeaderLogo, DynamicGreeting } from '../dashboard/HeaderSections';
+import { AppHeaderLogo } from '../dashboard/AppHeaderLogo';
+import { DynamicGreeting } from '../dashboard/DynamicGreeting';
+import { SmartBanner } from '../dashboard/SmartBanner';
 import { WeatherWidget } from '../dashboard/WeatherWidget';
 import { MarketWidget } from '../dashboard/MarketWidget';
 import { CalendarWidget } from '../dashboard/CalendarWidget';
@@ -128,9 +130,12 @@ const Dashboard = ({ lang, setLang, user, onNavigate }: { lang: Language, setLan
             <NewsTicker lang={lang} />
             
             {/* 2. HEADER */}
-            <div className="pt-4 px-6 pb-2 flex items-center justify-between z-50">
+            <div className="pt-4 px-6 pb-2 flex items-center justify-between z-50 gap-4">
                  {/* LEFT: CSS BRANDING LOGO */}
                  <AppHeaderLogo />
+
+                 {/* CENTER: SMART BANNER (Desktop Only - In Header) */}
+                 <SmartBanner lang={lang} className="hidden lg:flex" />
 
                  {/* RIGHT: ACTIONS */}
                  <div className="flex items-center gap-3">
@@ -152,12 +157,17 @@ const Dashboard = ({ lang, setLang, user, onNavigate }: { lang: Language, setLan
             </div>
 
             {/* 2.1 GREETING SUB-HEADER */}
-            <div className="px-6 py-2 pb-4">
+            <div className="px-6 py-2">
                 <DynamicGreeting user={user} lang={lang} />
             </div>
 
+            {/* 2.2 SMART BANNER (Mobile Only - Above Weather) */}
+            <div className="px-4 mb-4 lg:hidden">
+                <SmartBanner lang={lang} className="mx-0 w-full" />
+            </div>
+
             {/* 3. BENTO GRID */}
-            <div className="p-6 grid grid-cols-1 md:grid-cols-12 gap-5 pb-32 max-w-7xl mx-auto w-full">
+            <div className="px-6 grid grid-cols-1 md:grid-cols-12 gap-5 pb-32 max-w-7xl mx-auto w-full">
                 
                 {/* Weather (MD: Col 1-4) - Immersive Scene */}
                 <div className="col-span-1 md:col-span-4 h-64">

@@ -19,6 +19,7 @@ import SchemeDetailView from './components/views/SchemeDetailView';
 import MarketView from './components/views/MarketView';
 import WeatherView from './components/views/WeatherView';
 import ProfileView from './components/views/ProfileView';
+import CropCalendarView from './components/views/CropCalendarView';
 import { SplashScreen } from './components/views/SplashScreen';
 
 const App = () => {
@@ -44,6 +45,7 @@ const App = () => {
        case 'SOIL': return <SoilAnalysis lang={lang} onBack={() => setView('DASHBOARD')} />;
        case 'YIELD': return <YieldPredictor lang={lang} onBack={() => setView('DASHBOARD')} />;
        case 'AREA_CALCULATOR': return <AreaCalculator lang={lang} onBack={() => setView('DASHBOARD')} />;
+       case 'CALENDAR': return <CropCalendarView lang={lang} onBack={() => setView('DASHBOARD')} />;
        case 'SCHEMES': 
           if(selectedScheme) {
              return <SchemeDetailView scheme={selectedScheme} lang={lang} onBack={() => setSelectedScheme(null)} />;
