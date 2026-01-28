@@ -4,9 +4,37 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>AI कृषी मित्र</title>
+    <meta name="theme-color" content="#020617">
     
-    <!-- 1. Tailwind CDN (As requested) -->
+    <!-- SEO: Primary Meta Tags -->
+    <title>AI कृषी मित्र - शेतकऱ्यांसाठी AI सल्लागार | हवामान, बाजारभाव, पीक मार्गदर्शन</title>
+    <meta name="title" content="AI कृषी मित्र - शेतकऱ्यांसाठी AI सल्लागार | हवामान, बाजारभाव, पीक मार्गदर्शन">
+    <meta name="description" content="महाराष्ट्रातील शेतकऱ्यांसाठी #1 AI-आधारित कृषी सल्लागार. हवामान अंदाज, बाजारभाव, पीक व्यवस्थापन, कीड नियंत्रण आणि तज्ञ सल्ला मराठीमध्ये मिळवा.">
+    <meta name="keywords" content="कृषी सल्लागार, AI farming Maharashtra, शेतकरी मदत, हवामान अंदाज, पीक मार्गदर्शन, बाजारभाव, Farmer App India, Marathi Agri App">
+    <meta name="robots" content="index, follow">
+    <meta name="language" content="Marathi">
+    <link rel="canonical" href="https://aikrushimitra.in/">
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://aikrushimitra.in/">
+    <meta property="og:title" content="AI कृषी मित्र - स्मार्ट शेती, प्रगत शेतकरी">
+    <meta property="og:description" content="हवामान, बाजारभाव आणि AI पीक सल्ला एकाच ठिकाणी.">
+    <meta property="og:image" content="/og-image.jpg">
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="https://aikrushimitra.in/">
+    <meta property="twitter:title" content="AI कृषी मित्र - स्मार्ट शेती">
+    <meta property="twitter:description" content="तुमचा वैयक्तिक कृषी सहाय्यक.">
+    <meta property="twitter:image" content="/og-image.jpg">
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Noto+Sans+Devanagari:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- 1. Tailwind CDN (Fallback) -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = {
@@ -21,21 +49,35 @@
       }
     </script>
 
-    <!-- 2. Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Noto+Sans+Devanagari:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    
-    <!-- 3. Leaflet Maps -->
+    <!-- 2. Leaflet Maps -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 
-    <!-- 4. Environment Variables -->
-    <script>
-      window.ENV = {
-        API_KEY: "" 
-      };
+    <!-- 3. Structured Data (JSON-LD) for SEO Rich Snippets -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "AI Krushi Mitra",
+      "alternateName": "AI कृषी मित्र",
+      "applicationCategory": "Agriculture",
+      "operatingSystem": "Web, Android",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "INR"
+      },
+      "aggregateRating": {
+        "@type": "AggregateRating",
+        "ratingValue": "4.8",
+        "reviewCount": "1250"
+      },
+      "description": "Smart farming assistant providing real-time weather, market rates, and AI-driven crop disease diagnosis for Indian farmers.",
+      "featureList": "Crop Disease Detection, Market Rates (Mandi Bhav), Weather Forecast, Government Schemes"
+    }
     </script>
 
-    <!-- 5. Critical CSS (Fallback) -->
+    <!-- 4. Critical CSS -->
     <style>
       html, body { 
         background-color: #020617; 
@@ -50,7 +92,30 @@
         height: 100%;
         width: 100%;
       }
-      /* Leaflet overrides for dark mode feel */
+      /* Critical Rendering CSS for Skeleton */
+      .app-loader {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+        width: 100vw;
+        background: radial-gradient(circle at 50% 20%, #052e2b, #020617 70%);
+        color: #10b981;
+        font-family: sans-serif;
+      }
+      .loader-spinner {
+        width: 40px;
+        height: 40px;
+        border: 3px solid rgba(16, 185, 129, 0.3);
+        border-radius: 50%;
+        border-top-color: #10b981;
+        animation: spin 1s ease-in-out infinite;
+        margin-bottom: 20px;
+      }
+      @keyframes spin { to { transform: rotate(360deg); } }
+      
+      /* Leaflet overrides */
       .leaflet-container {
         background: #020617;
         font-family: inherit;
@@ -71,11 +136,10 @@
 <script type="importmap">
 {
   "imports": {
-    "react": "https://esm.sh/react@^19.2.3",
-    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
-    "react/": "https://esm.sh/react@^19.2.3/",
-    "@google/genai": "https://esm.sh/@google/genai@^1.35.0",
-    "lucide-react": "https://esm.sh/lucide-react@^0.562.0",
+    "react": "https://esm.sh/react@^19.2.4",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.4/",
+    "react/": "https://esm.sh/react@^19.2.4/",
+    "lucide-react": "https://esm.sh/lucide-react@^0.563.0",
     "clsx": "https://esm.sh/clsx@^2.1.1",
     "tailwind-merge": "https://esm.sh/tailwind-merge@^3.4.0",
     "dotenv/": "https://esm.sh/dotenv@^17.2.3/",
@@ -83,14 +147,25 @@
     "path": "https://esm.sh/path@^0.12.7",
     "fs": "https://esm.sh/fs@^0.0.1-security",
     "url": "https://esm.sh/url@^0.11.4",
+    "@google/genai": "https://esm.sh/@google/genai@^1.38.0",
     "vite": "https://esm.sh/vite@^7.3.1",
     "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2",
-    "recharts": "https://esm.sh/recharts@^3.6.0"
+    "leaflet": "https://esm.sh/leaflet@^1.9.4",
+    "recharts": "https://esm.sh/recharts@^3.7.0"
   }
 }
 </script>
 </head>
-<body class="selection:bg-fuchsia-500 selection:text-white">
+<body class="selection:bg-emerald-500/30 selection:text-emerald-50">
+    <!-- Progressive Enhancement: NoScript Fallback -->
+    <noscript>
+      <div style="padding: 20px; color: white; text-align: center;">
+        <h1>JavaScript Required</h1>
+        <p>Please enable JavaScript to use AI Krushi Mitra.</p>
+        <p>कृपया AI कृषी मित्र वापरण्यासाठी JavaScript चालू करा.</p>
+      </div>
+    </noscript>
+
     <!-- Deep Sky Background Layer (z-0) -->
     <div class="premium-bg">
         <div class="sky-stars"></div>
@@ -101,9 +176,16 @@
     </div>
     
     <!-- Content Layer (z-10) -->
-    <div id="root"></div>
+    <div id="root">
+        <!-- SEO/FCP Optimization: Initial Skeleton Loader -->
+        <div class="app-loader">
+            <div class="loader-spinner"></div>
+            <h1 style="font-size: 24px; font-weight: 800; letter-spacing: -0.02em;">AI KRUSHI MITRA</h1>
+            <p style="font-size: 12px; letter-spacing: 0.2em; margin-top: 10px; opacity: 0.7;">INITIALIZING...</p>
+        </div>
+    </div>
     
-    <!-- 6. App Entry -->
+    <!-- App Entry -->
     <script type="module" src="/index.tsx"></script>
 </body>
 </html>

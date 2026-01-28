@@ -1,10 +1,11 @@
+
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   CloudRain, TrendingUp, Lightbulb, Activity, ArrowRight, Flag, Heart, Sparkles,
   Star, Sun, Moon, Zap, Crown, Calendar as CalendarIcon, AlertTriangle
 } from 'lucide-react';
 import { Language, UserProfile } from '../../types';
-import { clsx } from 'clsx';
+import clsx from 'clsx';
 import { MOCK_MARKET } from '../../data/mock';
 import { DASH_TEXT } from './constants';
 import { getLiveAgriUpdates } from '../../services/geminiService';
@@ -642,3 +643,4 @@ export const SmartBanner = ({
     </div>
   );
 };
+    

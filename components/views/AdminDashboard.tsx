@@ -4,7 +4,7 @@ import { getAnalyticsStats, hashPassword, TARGET_HASH } from '../../services/ana
 import { ShieldCheck, Lock, Unlock, Activity, MapPin, Smartphone, Calendar, Eye, EyeOff, AlertTriangle } from 'lucide-react';
 import { Button } from '../Button';
 import SimpleView from '../layout/SimpleView';
-import { clsx } from 'clsx';
+import clsx from 'clsx';
 
 const AdminDashboard = ({ onBack }: { onBack: () => void }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -195,3 +195,4 @@ const StatCard = ({ label, value, icon: Icon, color, bg }: any) => (
 );
 
 export default AdminDashboard;
+    

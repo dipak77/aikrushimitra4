@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Language, ViewState } from '../types';
 import { PROMO_NOTIFICATIONS } from '../constants';
 import { X, Sparkles, ArrowRight } from 'lucide-react';
-import { clsx } from 'clsx';
+import clsx from 'clsx';
 import { triggerHaptic } from '../utils/common';
 
 interface NotificationSystemProps {

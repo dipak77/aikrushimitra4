@@ -6,7 +6,7 @@ import SimpleView from '../layout/SimpleView';
 import { MOCK_MARKET } from '../../data/mock';
 import { triggerHaptic } from '../../utils/common';
 import { TrendingUp, TrendingDown } from 'lucide-react';
-import { clsx } from 'clsx';
+import clsx from 'clsx';
 
 const MARKET_TEXT: Record<Language, any> = {
     mr: {

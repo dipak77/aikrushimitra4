@@ -2,10 +2,9 @@
 import React from 'react';
 import { GlassTile } from './GlassTile';
 import { DASH_TEXT } from './constants';
-import { MapPin, Wind } from 'lucide-react';
+import { MapPin, Wind, Sparkles, Clock, Droplets, Sun, Moon, Eye } from 'lucide-react';
 import { AreaChart, Area, XAxis, ResponsiveContainer } from 'recharts';
-import { clsx } from 'clsx';
-import { Sparkles, Clock, Droplets, Sun, Moon, Eye } from 'lucide-react';
+import clsx from 'clsx';
 
 const WeatherIcon3D = ({ type, isDay }: { type: string, isDay: boolean }) => (
   <div className="relative w-44 h-44 flex items-center justify-center filter drop-shadow-2xl">
@@ -227,3 +226,4 @@ export const WeatherWidget = ({ weather, loading, location, lang, onNavigate }: 
     </GlassTile>
   );
 };
+    

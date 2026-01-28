@@ -4,10 +4,8 @@ import { Language } from '../../types';
 import { TRANSLATIONS } from '../../constants';
 import { RotateCcw, Undo2, MapPin, Layers, Crosshair, Plus, ArrowLeft, Ruler, ChevronDown, ChevronUp } from 'lucide-react';
 import { triggerHaptic } from '../../utils/common';
-import { clsx } from 'clsx';
-
-// Declare Leaflet global
-declare const L: any;
+import clsx from 'clsx';
+import L from 'leaflet';
 
 const AreaCalculator = ({ lang, onBack }: { lang: Language, onBack: () => void }) => {
     const t = TRANSLATIONS[lang];
@@ -60,7 +58,7 @@ const AreaCalculator = ({ lang, onBack }: { lang: Language, onBack: () => void }
 
         // Draw Polygon
         if (points.length > 0) {
-            const latLngs = points.map(p => [p.lat, p.lng]);
+            const latLngs = points.map(p => [p.lat, p.lng] as [number, number]);
             
             // Draw Polygon
             polygonRef.current = L.polygon(latLngs, {

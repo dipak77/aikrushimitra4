@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { clsx } from 'clsx';
+import clsx from 'clsx';
 import { Store, TrendingUp, TrendingDown } from 'lucide-react';
 import { MOCK_MARKET } from '../../data/mock';
 import { DASH_TEXT } from './constants';
@@ -65,3 +65,4 @@ export const MarketWidget = ({ onNavigate, lang }: { onNavigate: (v: string) => 
         </GlassTile>
     );
 };
+    

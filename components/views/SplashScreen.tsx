@@ -1,8 +1,8 @@
 
 import React, { useEffect, useRef, useState } from "react";
-import { Sprout, Zap, Hexagon, Cpu } from "lucide-react";
+import { Tractor, Wheat, Sparkles } from "lucide-react";
 
-const DURATION = 4500; // Slightly longer for cinematic feel
+const DURATION = 3500; // Optimized duration
 
 const easeOutExpo = (x: number) =>
   x === 1 ? 1 : 1 - Math.pow(2, -10 * x);
@@ -13,219 +13,193 @@ export default function SplashScreen({
   onComplete: () => void;
 }) {
   const [progress, setProgress] = useState(0);
-  const [isReady, setIsReady] = useState(false);
   const [exit, setExit] = useState(false);
   const raf = useRef<number>(0);
   const start = useRef<number>(0);
+  const completedRef = useRef(false); // Prevent double completion
 
   useEffect(() => {
+    // 1. Completion Handler
+    const finish = () => {
+      if (completedRef.current) return;
+      completedRef.current = true;
+      setExit(true);
+      setTimeout(() => {
+        onComplete();
+      }, 700); // Wait for exit animation
+    };
+
+    // 2. Animation Loop
     const animate = (t: number) => {
       if (!start.current) start.current = t;
       const elapsed = t - start.current;
       const p = Math.min(elapsed / DURATION, 1);
       
-      // Non-linear progress for realism
-      const easedProgress = easeOutExpo(p) * 100;
-      setProgress(easedProgress);
+      setProgress(Math.round(easeOutExpo(p) * 100));
 
       if (p < 1) {
         raf.current = requestAnimationFrame(animate);
       } else {
-        setIsReady(true);
-        setTimeout(() => {
-          setExit(true);
-          setTimeout(onComplete, 800); // Wait for exit animation
-        }, 600);
+        // Animation finished naturally
+        setTimeout(finish, 200);
       }
     };
 
+    // Start Animation
     raf.current = requestAnimationFrame(animate);
+
+    // 3. SAFETY TIMEOUT: Force proceed if tab is inactive or logic stalls
+    // This fixes the "stuck on splash screen" issue
+    const safetyTimer = setTimeout(finish, DURATION + 1500);
+
+    // Cleanup
     return () => {
       if (raf.current) cancelAnimationFrame(raf.current);
+      clearTimeout(safetyTimer);
     };
   }, [onComplete]);
 
   return (
     <div
-      className={`fixed inset-0 z-[9999] flex items-center justify-center bg-[#020617] overflow-hidden`}
+      className={`fixed inset-0 z-[9999] flex items-center justify-center transition-all duration-700 ease-in-out ${
+        exit ? "opacity-0 scale-110 filter blur-sm" : "opacity-100 scale-100"
+      }`}
+      style={{
+        background:
+          "radial-gradient(circle at 50% 20%, #052e2b, #020617 70%)",
+      }}
     >
-      {/* --- CSS & KEYFRAMES --- */}
-      <style>{`
-        @keyframes drift {
-          0% { background-position: 0% 0%; }
-          100% { background-position: 100% 100%; }
-        }
-        @keyframes spin-slow {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-        @keyframes spin-reverse {
-          from { transform: rotate(360deg); }
-          to { transform: rotate(0deg); }
-        }
-        @keyframes pulse-glow {
-          0%, 100% { opacity: 0.5; transform: scale(1); filter: blur(40px); }
-          50% { opacity: 0.8; transform: scale(1.2); filter: blur(50px); }
-        }
-        @keyframes text-reveal {
-          0% { opacity: 0; transform: translateY(20px); letter-spacing: 0em; }
-          100% { opacity: 1; transform: translateY(0); letter-spacing: 0.1em; }
-        }
-        @keyframes scanline {
-          0% { transform: translateY(-100%); }
-          100% { transform: translateY(100%); }
-        }
-        @keyframes warp-out {
-          0% { transform: scale(1); opacity: 1; }
-          100% { transform: scale(20); opacity: 0; }
-        }
-      `}</style>
+      {/* Grain overlay */}
+      <div className="absolute inset-0 pointer-events-none opacity-[0.03] bg-[url('/noise.png')]" />
 
-      {/* --- BACKGROUND LAYERS --- */}
-      
-      {/* 1. Animated Grid Floor (Cyber Farm) */}
-      <div 
-        className={`absolute inset-0 opacity-20 pointer-events-none transition-all duration-1000 ${exit ? 'opacity-0' : ''}`}
-        style={{
-          backgroundImage: `
-            linear-gradient(to right, rgba(16, 185, 129, 0.1) 1px, transparent 1px),
-            linear-gradient(to bottom, rgba(16, 185, 129, 0.1) 1px, transparent 1px)
-          `,
-          backgroundSize: '60px 60px',
-          transform: 'perspective(500px) rotateX(60deg) translateY(0) translateZ(-200px)',
-          transformOrigin: 'center 80%',
-          animation: 'drift 20s linear infinite'
-        }}
-      />
+      {/* MAIN CONTENT */}
+      <div className="relative w-full max-w-5xl h-[420px] flex flex-col items-center justify-center">
 
-      {/* 2. Ambient Nebula Orbs */}
-      <div className={`absolute inset-0 pointer-events-none transition-opacity duration-700 ${exit ? 'opacity-0' : ''}`}>
-        <div className="absolute top-[-10%] left-[20%] w-[500px] h-[500px] bg-emerald-600/20 rounded-full blur-[100px] animate-[pulse-glow_8s_ease-in-out_infinite]" />
-        <div className="absolute bottom-[-10%] right-[20%] w-[600px] h-[600px] bg-cyan-600/20 rounded-full blur-[100px] animate-[pulse-glow_10s_ease-in-out_infinite_reverse]" />
-      </div>
-
-      {/* --- MAIN CONTENT CONTAINER --- */}
-      <div 
-        className={`relative z-10 flex flex-col items-center justify-center transform transition-all duration-700 ease-in-out ${exit ? 'scale-[5] opacity-0 blur-xl' : 'scale-100 opacity-100'}`}
-      >
-        
-        {/* CENTERPIECE: THE AI SEED */}
-        <div className="relative w-64 h-64 flex items-center justify-center mb-12">
-          
-          {/* Outer Rotating Ring (Data Stream) */}
-          <div className="absolute inset-0 rounded-full border border-emerald-500/20 border-dashed animate-[spin-slow_20s_linear_infinite]" />
-          <div className="absolute inset-4 rounded-full border border-cyan-500/20 border-dashed animate-[spin-reverse_15s_linear_infinite]" />
-          
-          {/* Progress Circle (SVG) */}
-          <svg className="absolute inset-0 w-full h-full -rotate-90 drop-shadow-[0_0_15px_rgba(16,185,129,0.5)]">
-             <circle cx="128" cy="128" r="120" fill="none" stroke="#0f172a" strokeWidth="2" />
-             <circle 
-                cx="128" cy="128" r="120" 
-                fill="none" 
-                stroke="url(#splash-grad)" 
-                strokeWidth="4" 
-                strokeLinecap="round"
-                strokeDasharray="754"
-                strokeDashoffset={754 - (754 * (progress / 100))}
-                className="transition-all duration-75 ease-linear"
-             />
-             <defs>
-               <linearGradient id="splash-grad" x1="0%" y1="0%" x2="100%" y2="0%">
-                 <stop offset="0%" stopColor="#10b981" />
-                 <stop offset="50%" stopColor="#22d3ee" />
-                 <stop offset="100%" stopColor="#10b981" />
-               </linearGradient>
-             </defs>
-          </svg>
-
-          {/* Hexagon Core */}
-          <div className="relative w-32 h-32 flex items-center justify-center">
-             {/* Glow Behind */}
-             <div className="absolute inset-0 bg-emerald-500/20 blur-2xl rounded-full animate-pulse" />
-             
-             {/* Hexagon Shape */}
-             <div className="relative z-10 text-emerald-400 drop-shadow-[0_0_20px_rgba(16,185,129,0.6)]">
-               <Hexagon size={100} strokeWidth={1} fill="rgba(6, 78, 59, 0.3)" className="animate-[pulse_3s_ease-in-out_infinite]" />
-             </div>
-
-             {/* Inner Icon Swapping */}
-             <div className="absolute inset-0 flex items-center justify-center z-20">
-               {progress < 40 && <Cpu size={40} className="text-cyan-300 animate-pulse" />}
-               {progress >= 40 && progress < 80 && <Zap size={40} className="text-yellow-300 animate-bounce" />}
-               {progress >= 80 && <Sprout size={48} className="text-emerald-300 animate-[bounce_1s_infinite]" strokeWidth={2.5} />}
-             </div>
-          </div>
-
-          {/* Floating Particles */}
-          <div className="absolute w-full h-full animate-[spin-slow_10s_linear_infinite]">
-             <div className="absolute top-0 left-1/2 w-1.5 h-1.5 bg-emerald-400 rounded-full blur-[1px] shadow-[0_0_10px_white]" />
-             <div className="absolute bottom-10 right-10 w-1 h-1 bg-cyan-400 rounded-full blur-[1px]" />
-          </div>
-        </div>
-
-        {/* BRANDING TEXT */}
-        <div className="flex flex-col items-center gap-2">
-          <h1 className="text-5xl md:text-7xl font-black tracking-tight flex items-center gap-4">
-            <span 
-              className="text-transparent bg-clip-text bg-gradient-to-br from-emerald-400 via-white to-cyan-400 drop-shadow-[0_0_25px_rgba(16,185,129,0.4)]"
-              style={{ animation: 'text-reveal 1s cubic-bezier(0.2, 0.8, 0.2, 1) forwards' }}
-            >
-              AI
-            </span>
-            <span 
-              className="text-transparent bg-clip-text bg-gradient-to-br from-white via-emerald-200 to-slate-400"
-              style={{ 
-                animation: 'text-reveal 1s cubic-bezier(0.2, 0.8, 0.2, 1) forwards',
-                animationDelay: '0.2s',
-                opacity: 0
-              }}
-            >
-              KRUSHI
-            </span>
-          </h1>
-          
-          <div 
-            className="flex items-center gap-3 overflow-hidden"
-            style={{ 
-              animation: 'text-reveal 1s cubic-bezier(0.2, 0.8, 0.2, 1) forwards',
-              animationDelay: '0.5s',
-              opacity: 0
+        {/* LOGO */}
+        <div className="relative mb-14">
+          <h1
+            className="text-6xl md:text-8xl font-black tracking-[-0.04em]"
+            style={{
+              background:
+                "linear-gradient(135deg,#34d399,#22d3ee,#34d399)",
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+              filter:
+                "drop-shadow(0 0 30px rgba(52,211,153,.4))",
+              opacity: progress > 5 ? 1 : 0,
+              transform:
+                progress > 5 ? "scale(1)" : "scale(0.96)",
+              transition: "all 1s cubic-bezier(.2,.8,.2,1)",
             }}
           >
-            <div className="h-[1px] w-12 bg-gradient-to-r from-transparent via-emerald-500 to-transparent" />
-            <span className="text-sm font-bold text-emerald-400 tracking-[0.5em] uppercase">
-              Mitra
-            </span>
-            <div className="h-[1px] w-12 bg-gradient-to-r from-transparent via-emerald-500 to-transparent" />
+            AI KRUSHI
+          </h1>
+
+          <p
+            className="absolute left-1/2 -bottom-8 -translate-x-1/2 text-sm tracking-[0.35em] font-bold text-emerald-400 whitespace-nowrap"
+            style={{
+              opacity: progress > 20 ? 1 : 0,
+              transform:
+                progress > 20
+                  ? "translateX(-50%) translateY(0)"
+                  : "translateX(-50%) translateY(6px)",
+              transition: "all 800ms ease",
+            }}
+          >
+            MITRA
+          </p>
+        </div>
+
+        {/* FIELD */}
+        <div className="absolute bottom-24 w-full flex justify-between px-10">
+          {[...Array(18)].map((_, i) => (
+            <Wheat
+              key={i}
+              size={36}
+              className="text-emerald-400"
+              style={{
+                opacity: progress > i * 3 ? 1 : 0,
+                transform:
+                  progress > i * 3
+                    ? "scaleY(1)"
+                    : "scaleY(0)",
+                transformOrigin: "bottom",
+                transition:
+                  "all 400ms cubic-bezier(.17,.89,.32,1.4)",
+                filter:
+                  "drop-shadow(0 0 8px rgba(52,211,153,.3))",
+              }}
+            />
+          ))}
+        </div>
+
+        {/* TRACTOR */}
+        <div
+          className="absolute bottom-14"
+          style={{
+            left: `${progress}%`,
+            transform: "translateX(-50%)",
+            transition: "left 100ms linear",
+            filter:
+              "drop-shadow(0 16px 30px rgba(0,0,0,.6))",
+          }}
+        >
+          <div
+            style={{
+              animation:
+                "suspension 1.3s infinite cubic-bezier(.4,0,.2,1)",
+            }}
+          >
+            <Tractor
+              size={96}
+              strokeWidth={1}
+              className="text-cyan-400"
+            />
           </div>
         </div>
 
-        {/* STATUS INDICATOR */}
-        <div className="mt-12 flex flex-col items-center gap-2 h-10">
-           {!isReady ? (
-             <div className="flex items-center gap-3 text-cyan-400/80 font-mono text-xs uppercase tracking-widest">
-               <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-500"></span>
-               </span>
-               <span>
-                 {progress < 30 ? "Initializing Neural Net..." : 
-                  progress < 60 ? "Syncing Satellite Data..." : 
-                  progress < 90 ? "Calibrating Sensors..." : "Finalizing..."}
-               </span>
-               <span className="font-bold text-white">{Math.round(progress)}%</span>
-             </div>
-           ) : (
-             <div className="text-emerald-400 font-bold text-sm tracking-[0.2em] animate-pulse">
-               SYSTEM READY
-             </div>
-           )}
-        </div>
+        {/* STATUS */}
+        <div className="absolute bottom-6 flex flex-col items-center gap-4">
+          <div className="flex items-center gap-2 text-emerald-400 text-xs tracking-[0.25em] font-mono font-bold">
+            <Sparkles size={14} className={progress > 90 ? "animate-spin" : "animate-pulse"} />
+            {progress < 30
+              ? "INITIALIZING"
+              : progress < 60
+              ? "SYNCING DATA"
+              : progress < 90
+              ? "OPTIMIZING FARM"
+              : "READY"}
+          </div>
 
+          {/* PROGRESS BAR */}
+          <div className="w-72 h-2 rounded-full bg-slate-800 overflow-hidden">
+            <div
+              className="h-full"
+              style={{
+                width: `${progress}%`,
+                background:
+                  "linear-gradient(90deg,#34d399,#22d3ee)",
+                boxShadow:
+                  "0 0 20px rgba(52,211,153,.5)",
+                transition: "width 100ms linear",
+              }}
+            />
+          </div>
+
+          <div className="text-emerald-400 font-mono text-sm">
+            {progress}%
+          </div>
+        </div>
       </div>
-      
-      {/* FINAL FLASH OVERLAY */}
-      <div className={`absolute inset-0 bg-white pointer-events-none transition-opacity duration-700 ease-out ${exit ? 'opacity-10' : 'opacity-0'}`} />
+
+      {/* CSS */}
+      <style>{`
+        @keyframes suspension {
+          0%,100% { transform: translateY(0) }
+          30% { transform: translateY(-1px) }
+          60% { transform: translateY(0.5px) }
+        }
+      `}</style>
     </div>
   );
 }

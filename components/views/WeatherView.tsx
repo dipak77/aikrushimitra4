@@ -6,7 +6,7 @@ import { ArrowLeft, MoreVertical, MapPin, Wind, Droplets, Sun, Clock, CloudRain,
 import { triggerHaptic } from '../../utils/common';
 import { AreaChart, Area, XAxis, ResponsiveContainer } from 'recharts';
 import { Loader2 } from 'lucide-react';
-import { clsx } from 'clsx';
+import clsx from 'clsx';
 
 const WEATHER_V_TEXT: Record<Language, any> = {
     mr: {

@@ -7,7 +7,7 @@ import { GoogleGenAI, Modality } from '@google/genai';
 import { getGenAIKey } from '../../services/geminiService';
 import { decode, decodeAudioData, createPCMChunk } from '../../utils/audio';
 import { triggerHaptic } from '../../utils/common';
-import { clsx } from 'clsx';
+import clsx from 'clsx';
 
 const VoiceAssistant = ({ lang, user, onBack }: { lang: Language, user: UserProfile, onBack: () => void }) => {
   const t = TRANSLATIONS[lang];
