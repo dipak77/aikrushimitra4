@@ -132,3 +132,56 @@ export const predictYield = async (data: any, lang: string) => {
         return "Error predicting yield.";
     }
 }
+
+// Function to get Live Smart Updates (Schemes, Market, Events)
+export const getLiveAgriUpdates = async (lang: string) => {
+  const apiKey = getGenAIKey();
+  if (!apiKey) return [];
+
+  const ai = new GoogleGenAI({ apiKey });
+  
+  // Instruction to get specific, dated info
+  const prompt = `Find the absolute latest agricultural updates for farmers in Maharashtra, India.
+  
+  I need exactly 2 items in valid JSON format:
+  1. 'scheme': The most recent update on PM Kisan Yojana (next installment date) OR Namo Shetkari Yojana.
+  2. 'market': A significant price trend for Soyabean, Cotton, or Onion in major Maharashtra mandis (Lasalgaon/Akola) from the last 24-48 hours.
+
+  Output strictly JSON:
+  [
+    {
+      "type": "scheme",
+      "title": "Short Headline (max 6 words)",
+      "subtitle": "Details with dates/amounts (max 10 words)",
+      "badge": "Short Badge (e.g. 'Date Announced')"
+    },
+    {
+      "type": "market",
+      "title": "Short Headline (max 6 words)",
+      "subtitle": "Details with price/trend (max 10 words)",
+      "badge": "Short Badge (e.g. 'Price Up')"
+    }
+  ]
+  
+  Translate the JSON values to ${lang === 'mr' ? 'Marathi' : lang === 'hi' ? 'Hindi' : 'English'}.`;
+
+  try {
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: prompt,
+      config: {
+        tools: [{ googleSearch: {} }],
+        responseMimeType: "application/json"
+      }
+    });
+
+    const text = response.text;
+    if (!text) return [];
+    
+    // Parse JSON
+    return JSON.parse(text);
+  } catch (error) {
+    console.error("Gemini Live Update Error:", error);
+    return [];
+  }
+};
