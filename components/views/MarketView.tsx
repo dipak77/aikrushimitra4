@@ -115,11 +115,11 @@ const MarketView = ({ lang, onBack }: { lang: Language, onBack: () => void }) =>
 
                 <div className="grid gap-3 grid-cols-1 md:grid-cols-2">
                     {MOCK_MARKET.map((m,i) => (
-                    <div key={i} onClick={triggerHaptic} className="glass-panel p-5 rounded-2xl flex flex-col gap-4 animate-enter active:scale-[0.98] transition-all bg-white/5 hover:border-cyan-500/30 shadow-lg group" style={{animationDelay: `${i*50}ms`}}>
+                    <div key={i} onClick={() => triggerHaptic()} className="glass-panel p-5 rounded-2xl flex flex-col gap-4 animate-enter active:scale-[0.98] transition-all bg-white/5 hover:border-cyan-500/30 shadow-lg group" style={{animationDelay: `${i*50}ms`}}>
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-4">
-                                <div className={clsx("w-12 h-12 rounded-xl flex items-center justify-center shadow-inner transition-transform group-hover:scale-110", m.bg)}>
-                                    <m.icon size={24} className={m.color}/>
+                                <div className={clsx("w-10 h-10 rounded-xl flex items-center justify-center bg-[#1e293b] border border-white/5", m.color)}>
+                                    <m.icon size={18} />
                                 </div>
                                 <div>
                                     <h3 className="font-bold text-lg text-white">{mt.crops[m.name] || m.name}</h3>

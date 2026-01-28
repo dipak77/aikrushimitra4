@@ -96,7 +96,6 @@ export const predictYield = async (data: any, lang: string) => {
 
 // Function to get Live Smart Updates (Schemes, Market, Events)
 export const getLiveAgriUpdates = async (lang: string) => {
-  // Instruction to get specific, dated info
   const prompt = `Find the absolute latest agricultural updates for farmers in Maharashtra, India.
   
   I need exactly 2 items in valid JSON format:
@@ -131,8 +130,9 @@ export const getLiveAgriUpdates = async (lang: string) => {
   }
 };
 
-// Helper for Live API (Note: Live API WebSocket requires client key or complex backend WS proxy. 
-// Returning null here as client key is removed for security. Voice Assistant will need updates.)
+// Helper for Live API key injection if client-side logic requires it
 export const getGenAIKey = () => {
-  return null; 
+  // Returns the key injected by Vite during build/serve, or null if missing
+  // Note: For best security, rely on backend proxies instead of client-side keys
+  return process.env.API_KEY || null; 
 };
