@@ -23,6 +23,7 @@ import ProfileView from './components/views/ProfileView';
 import CropCalendarView from './components/views/CropCalendarView';
 import AdminDashboard from './components/views/AdminDashboard';
 import SplashScreen from './components/views/SplashScreen';
+import SabjiMandiView from './components/views/SabjiMandiView';
 
 const App = () => {
   const [view, setView] = useState<ViewState>('SPLASH');
@@ -58,6 +59,7 @@ const App = () => {
        case 'AREA_CALCULATOR': return <AreaCalculator lang={lang} onBack={() => setView('DASHBOARD')} />;
        case 'CALENDAR': return <CropCalendarView lang={lang} onBack={() => setView('DASHBOARD')} />;
        case 'ADMIN': return <AdminDashboard onBack={() => setView('DASHBOARD')} />;
+       case 'SABJI_MANDI': return <SabjiMandiView lang={lang} user={user} onBack={() => setView('DASHBOARD')} />;
        case 'SCHEMES': 
           if(selectedScheme) {
              return <SchemeDetailView scheme={selectedScheme} lang={lang} onBack={() => setSelectedScheme(null)} />;

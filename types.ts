@@ -21,6 +21,7 @@ export type ViewState =
   | 'AGRI_KNOWLEDGE'
   | 'BLOG'
   | 'BLOG_DETAIL'
+  | 'SABJI_MANDI'
   | 'ADMIN';
 
 export interface UserProfile {

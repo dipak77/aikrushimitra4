@@ -1,6 +1,8 @@
 
 import { Language } from './types';
-import { ScanLine, Store, Mic, FlaskConical, Map as MapIcon, TrendingUp } from 'lucide-react';
+import { ScanLine, Store, Mic, FlaskConical, Map as MapIcon, TrendingUp, ShoppingCart } from 'lucide-react';
+
+export const SHOP_PHONE = '919503053110';
 
 export const TRANSLATIONS: Record<Language, any> = {
   mr: {
@@ -15,6 +17,7 @@ export const TRANSLATIONS: Record<Language, any> = {
     menu_soil: "माती परीक्षण",
     menu_yield: "उत्पन्न अंदाज",
     menu_area: "क्षेत्र मोजणी",
+    menu_mandi: "भाजी मार्केट",
     
     live_system: "लाईव्ह सिस्टम",
     welcome_title: "नमस्कार,",
@@ -28,6 +31,7 @@ export const TRANSLATIONS: Record<Language, any> = {
     quick_action_market_desc: "ताजी अपडेट",
     quick_action_soil: "माती परीक्षण",
     quick_action_tools: "स्मार्ट टूल्स",
+    quick_action_mandi: "ताजी भाजी",
 
     govt_schemes: "शासकीय योजना",
     latest_news: "कृषी बातम्या",
@@ -111,6 +115,24 @@ export const TRANSLATIONS: Record<Language, any> = {
     reset_map: "पुन्हा मोजा",
     undo_point: "मागे घ्या",
 
+    mandi_title: "भाजी मार्केट",
+    mandi_desc: "शेतकऱ्यांकडून थेट तुमच्या घरी",
+    mandi_cart: "कोठडी",
+    mandi_checkout: "WhatsApp वर ऑर्डर करा",
+    mandi_total: "एकूण",
+    mandi_delivery: "डिलिव्हरी",
+    mandi_free: "मोफत",
+    mandi_address: "तुमचा पत्ता",
+    mandi_name: "पूर्ण नाव",
+    mandi_empty: "कोठडी रिकामी आहे",
+    mandi_add: "Add",
+    mandi_categories: {
+        all: "सर्व",
+        veg: "भाजीपाला",
+        fruit: "फळे",
+        leafy: "पालेभाजी"
+    },
+
     author: "लेखक",
     date_format: "दिनांक",
   },
@@ -126,6 +148,7 @@ export const TRANSLATIONS: Record<Language, any> = {
     menu_soil: "मृदा परीक्षण",
     menu_yield: "उपज अनुमान",
     menu_area: "क्षेत्र मापन",
+    menu_mandi: "सब्जी मंडी",
 
     live_system: "लाइव सिस्टम",
     welcome_title: "नमस्ते,",
@@ -139,6 +162,7 @@ export const TRANSLATIONS: Record<Language, any> = {
     quick_action_market_desc: "ताज़ा अपडेट",
     quick_action_soil: "मृदा परीक्षण",
     quick_action_tools: "स्मार्ट टूल्स",
+    quick_action_mandi: "ताज़ा सब्जी",
 
     govt_schemes: "सरकारी योजनाएं",
     latest_news: "कृषि समाचार",
@@ -222,6 +246,24 @@ export const TRANSLATIONS: Record<Language, any> = {
     reset_map: "रीसेट करें",
     undo_point: "पीछे जाएं",
 
+    mandi_title: "सब्जी मंडी",
+    mandi_desc: "किसानों से सीधे आपके घर तक",
+    mandi_cart: "टोकरी",
+    mandi_checkout: "WhatsApp पर ऑर्डर करें",
+    mandi_total: "कुल",
+    mandi_delivery: "डिलीवरी",
+    mandi_free: "मुफ्त",
+    mandi_address: "आपका पता",
+    mandi_name: "पूरा नाम",
+    mandi_empty: "टोकरी खाली है",
+    mandi_add: "Add",
+    mandi_categories: {
+        all: "सभी",
+        veg: "सब्जियां",
+        fruit: "फल",
+        leafy: "हरी सब्जी"
+    },
+
     author: "लेखक",
     date_format: "दिनांक",
   },
@@ -237,6 +279,7 @@ export const TRANSLATIONS: Record<Language, any> = {
     menu_soil: "Soil Health",
     menu_yield: "Yield Predictor",
     menu_area: "Area Calc",
+    menu_mandi: "Sabji Mandi",
 
     live_system: "Live System",
     welcome_title: "Hello,",
@@ -250,6 +293,7 @@ export const TRANSLATIONS: Record<Language, any> = {
     quick_action_market_desc: "Live Updates",
     quick_action_soil: "Soil Health",
     quick_action_tools: "Smart Tools",
+    quick_action_mandi: "Fresh Veggies",
 
     govt_schemes: "Govt Schemes",
     latest_news: "Agri News",
@@ -333,6 +377,24 @@ export const TRANSLATIONS: Record<Language, any> = {
     reset_map: "Reset",
     undo_point: "Undo",
 
+    mandi_title: "Vegetable Market",
+    mandi_desc: "Farm fresh to your doorstep",
+    mandi_cart: "Cart",
+    mandi_checkout: "Order on WhatsApp",
+    mandi_total: "Total",
+    mandi_delivery: "Delivery",
+    mandi_free: "Free",
+    mandi_address: "Your Address",
+    mandi_name: "Full Name",
+    mandi_empty: "Cart is empty",
+    mandi_add: "Add",
+    mandi_categories: {
+        all: "All",
+        veg: "Vegetables",
+        fruit: "Fruits",
+        leafy: "Leafy"
+    },
+
     author: "Author",
     date_format: "Date",
   }
@@ -340,6 +402,7 @@ export const TRANSLATIONS: Record<Language, any> = {
 
 export const PROMO_NOTIFICATIONS: Record<Language, any[]> = {
   mr: [
+    { id: 'mandi', title: 'ताजी भाजी घरपोच!', desc: 'WhatsApp वर ऑर्डर करा आणि मिळवा फ्रेश भाजी.', icon: ShoppingCart, view: 'SABJI_MANDI', color: 'text-green-400' },
     { id: 'scan', title: 'पीक डॉक्टर वापरला का?', desc: 'पानाचा फोटो काढा आणि रोगाचे निदान मिळवा.', icon: ScanLine, view: 'DISEASE_DETECTOR', color: 'text-emerald-400' },
     { id: 'market', title: 'बाजार भाव तपासले?', desc: 'तुमच्या जवळच्या मार्केटचे ताजे भाव पहा.', icon: Store, view: 'MARKET', color: 'text-amber-400' },
     { id: 'voice', title: 'बोलून माहिती विचारा!', desc: 'माईक बटण दाबा आणि हवी ती माहिती मिळवा.', icon: Mic, view: 'VOICE_ASSISTANT', color: 'text-cyan-400' },
@@ -347,6 +410,7 @@ export const PROMO_NOTIFICATIONS: Record<Language, any[]> = {
     { id: 'area', title: 'शेत मोजायचे आहे?', desc: 'सॅटेलाईटद्वारे अचूक क्षेत्र मोजणी करा.', icon: MapIcon, view: 'AREA_CALCULATOR', color: 'text-blue-400' },
   ],
   hi: [
+    { id: 'mandi', title: 'ताज़ा सब्जी घर पर!', desc: 'WhatsApp पर ऑर्डर करें और ताज़ा सब्जी पाएं।', icon: ShoppingCart, view: 'SABJI_MANDI', color: 'text-green-400' },
     { id: 'scan', title: 'फसल डॉक्टर आजमाया?', desc: 'पत्ती की फोटो लें और रोग का पता लगाएं।', icon: ScanLine, view: 'DISEASE_DETECTOR', color: 'text-emerald-400' },
     { id: 'market', title: 'मंडी भाव देखे?', desc: 'अपने नजदीकी मंडी के ताज़ा भाव देखें।', icon: Store, view: 'MARKET', color: 'text-amber-400' },
     { id: 'voice', title: 'बोलकर जानकारी पाएं!', desc: 'माइक बटन दबाएं और सवाल पूछें।', icon: Mic, view: 'VOICE_ASSISTANT', color: 'text-cyan-400' },
@@ -354,6 +418,7 @@ export const PROMO_NOTIFICATIONS: Record<Language, any[]> = {
     { id: 'area', title: 'खेत मापना है?', desc: 'सैटेलाइट से सटीक क्षेत्रफल मापें।', icon: MapIcon, view: 'AREA_CALCULATOR', color: 'text-blue-400' },
   ],
   en: [
+    { id: 'mandi', title: 'Fresh Veggies!', desc: 'Order via WhatsApp and get home delivery.', icon: ShoppingCart, view: 'SABJI_MANDI', color: 'text-green-400' },
     { id: 'scan', title: 'Try Crop Doctor!', desc: 'Snap a photo of leaf to detect diseases.', icon: ScanLine, view: 'DISEASE_DETECTOR', color: 'text-emerald-400' },
     { id: 'market', title: 'Check Market Rates!', desc: 'Get live prices from nearby Mandis.', icon: Store, view: 'MARKET', color: 'text-amber-400' },
     { id: 'voice', title: 'Just Ask AI!', desc: 'Tap the mic and speak in your language.', icon: Mic, view: 'VOICE_ASSISTANT', color: 'text-cyan-400' },

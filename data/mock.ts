@@ -14,6 +14,21 @@ export const MOCK_MARKET = [
   { name: 'Rice', price: 3200, trend: '+0', arrival: 'Med', color: 'text-teal-300', bg: 'bg-teal-500/20', icon: Wheat, history: [3200, 3200, 3150, 3180, 3200, 3200] },
 ];
 
+export const MOCK_VEGETABLES = [
+    { id: 1, nameMr: 'टोमॅटो', nameHi: 'टमाटर', nameEn: 'Tomato', price: 30, unit: 'kg', category: 'veg', image: '🍅' },
+    { id: 2, nameMr: 'कांदा', nameHi: 'प्याज़', nameEn: 'Onion', price: 40, unit: 'kg', category: 'veg', image: '🧅' },
+    { id: 3, nameMr: 'बटाटा', nameHi: 'आलू', nameEn: 'Potato', price: 35, unit: 'kg', category: 'veg', image: '🥔' },
+    { id: 4, nameMr: 'कोथिंबीर', nameHi: 'धनिया', nameEn: 'Coriander', price: 15, unit: 'bunch', category: 'leafy', image: '🌿' },
+    { id: 5, nameMr: 'भेंडी', nameHi: 'भिंडी', nameEn: 'Okra', price: 60, unit: 'kg', category: 'veg', image: '🥬' },
+    { id: 6, nameMr: 'वांगी', nameHi: 'बैंगन', nameEn: 'Brinjal', price: 50, unit: 'kg', category: 'veg', image: '🍆' },
+    { id: 7, nameMr: 'पालक', nameHi: 'पालक', nameEn: 'Spinach', price: 20, unit: 'bunch', category: 'leafy', image: '🥗' },
+    { id: 8, nameMr: 'लसूण', nameHi: 'लहसुन', nameEn: 'Garlic', price: 120, unit: 'kg', category: 'veg', image: '🧄' },
+    { id: 9, nameMr: 'मिरची', nameHi: 'मिर्च', nameEn: 'Chili', price: 80, unit: 'kg', category: 'veg', image: '🌶️' },
+    { id: 10, nameMr: 'गाजर', nameHi: 'गाजर', nameEn: 'Carrot', price: 45, unit: 'kg', category: 'veg', image: '🥕' },
+    { id: 11, nameMr: 'सफरचंद', nameHi: 'सेब', nameEn: 'Apple', price: 150, unit: 'kg', category: 'fruit', image: '🍎' },
+    { id: 12, nameMr: 'केळी', nameHi: 'केला', nameEn: 'Banana', price: 40, unit: 'dozen', category: 'fruit', image: '🍌' },
+];
+
 export const WEATHER_HOURLY = [
     { time: '10 AM', temp: '26°', icon: Sun },
     { time: '11 AM', temp: '28°', icon: Sun },

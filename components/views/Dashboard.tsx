@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { UserProfile, Language, ViewState } from '../../types';
 import { TRANSLATIONS } from '../../constants';
-import { ScanLine, FlaskConical, Map as MapIcon, Landmark, TrendingUp, Languages, Leaf, Shield } from 'lucide-react';
+import { ScanLine, FlaskConical, Map as MapIcon, Landmark, TrendingUp, Languages, Leaf, Shield, ShoppingCart } from 'lucide-react';
 import { triggerHaptic } from '../../utils/common';
 
 // Segregated Components
@@ -203,24 +203,24 @@ const Dashboard = ({ lang, setLang, user, onNavigate }: { lang: Language, setLan
                 {/* Quick Actions Grid - Glass Tiles */}
                 <div className="col-span-1 md:col-span-9 grid grid-cols-2 md:grid-cols-4 gap-4">
                     <FeatureCard 
+                        icon={ShoppingCart} 
+                        title={t.quick_action_mandi}
+                        variant="disease"
+                        onClick={() => onNavigate('SABJI_MANDI')} 
+                        delay={100}
+                    />
+                    <FeatureCard 
                         icon={ScanLine} 
                         title={t.quick_action_doctor}
                         variant="disease"
                         onClick={() => onNavigate('DISEASE_DETECTOR')} 
-                        delay={100}
+                        delay={150}
                     />
                     <FeatureCard 
                         icon={FlaskConical} 
                         title={t.quick_action_soil}
                         variant="soil"
                         onClick={() => onNavigate('SOIL')} 
-                        delay={150}
-                    />
-                    <FeatureCard 
-                        icon={TrendingUp} 
-                        title={t.menu_yield}
-                        variant="yield"
-                        onClick={() => onNavigate('YIELD')} 
                         delay={200}
                     />
                     <FeatureCard 

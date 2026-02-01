@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState, useRef } from 'react';
 import { ViewState } from '../../types';
-import { LayoutDashboard, Store, Mic, Landmark, Map as MapIcon, Sparkles, Zap, Crown, Star } from 'lucide-react';
+import { LayoutDashboard, Store, Mic, Landmark, ShoppingCart, Sparkles, Zap, Crown, Star } from 'lucide-react';
 import clsx from 'clsx';
 import { triggerHaptic } from '../../utils/common';
 
@@ -61,10 +61,10 @@ const MobileNav = ({ view, setView }: { view: ViewState, setView: (v: ViewState)
 
   const navItems = [
     { id: 'DASHBOARD', icon: LayoutDashboard, label: 'Home', color: 'emerald', gradient: 'from-emerald-400 to-teal-500', glow: 'rgba(16, 185, 129, 0.4)' },
-    { id: 'MARKET', icon: Store, label: 'Market', color: 'violet', gradient: 'from-violet-400 to-purple-500', glow: 'rgba(139, 92, 246, 0.4)' },
+    { id: 'SABJI_MANDI', icon: ShoppingCart, label: 'Shop', color: 'green', gradient: 'from-green-400 to-emerald-500', glow: 'rgba(34, 197, 94, 0.4)' },
     { id: 'VOICE_ASSISTANT', icon: Mic, main: true, label: 'Voice', color: 'cyan', gradient: 'from-cyan-400 to-blue-600', glow: 'rgba(6, 182, 212, 0.4)' },
+    { id: 'MARKET', icon: Store, label: 'Market', color: 'violet', gradient: 'from-violet-400 to-purple-500', glow: 'rgba(139, 92, 246, 0.4)' },
     { id: 'SCHEMES', icon: Landmark, label: 'Schemes', color: 'sky', gradient: 'from-sky-400 to-indigo-500', glow: 'rgba(56, 189, 248, 0.4)' },
-    { id: 'AREA_CALCULATOR', icon: MapIcon, label: 'Area', color: 'amber', gradient: 'from-amber-400 to-orange-500', glow: 'rgba(251, 191, 36, 0.4)' },
   ];
 
   useEffect(() => {
@@ -245,4 +245,3 @@ const MobileNav = ({ view, setView }: { view: ViewState, setView: (v: ViewState)
 };
 
 export default MobileNav;
-    
