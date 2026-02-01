@@ -132,7 +132,8 @@ export const getLiveAgriUpdates = async (lang: string) => {
 
 // Helper for Live API key injection if client-side logic requires it
 export const getGenAIKey = () => {
-  // Returns the key injected by Vite during build/serve, or null if missing
-  // Note: For best security, rely on backend proxies instead of client-side keys
-  return process.env.API_KEY || null; 
+  // Returns the key injected by Vite during build/serve
+  // The logic in vite.config.js ensures this value is populated 
+  // from API_KEY, GOOGLE_API_KEY, or GEMINI_API_KEY
+  return process.env.API_KEY || ''; 
 };

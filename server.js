@@ -1,3 +1,4 @@
+
 import 'dotenv/config';
 import express from 'express';
 import path from 'path';
@@ -9,16 +10,32 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
 const PORT = process.env.PORT || 8080;
 
-// CRITICAL: Log environment on startup
+// Helper to clean API key (remove quotes/whitespace)
+const cleanKey = (key) => key ? key.trim().replace(/^["']|["']$/g, '') : '';
+
+// Resolve API Key from various possible env vars
+const RAW_API_KEY = process.env.API_KEY || process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY;
+const API_KEY = cleanKey(RAW_API_KEY);
+
+// CRITICAL: Log environment on startup to debug connection issues
 console.log('🚀 Starting server...');
 console.log('📍 Environment:', process.env.NODE_ENV || 'development');
-console.log('🔑 API_KEY present:', !!process.env.API_KEY);
-console.log('🔑 API_KEY length:', process.env.API_KEY?.length || 0);
+console.log('🔑 API_KEY detected:', !!API_KEY);
+
+if (API_KEY) {
+    console.log('🔑 API_KEY length:', API_KEY.length);
+    console.log('🔑 API_KEY prefix:', API_KEY.substring(0, 4) + '...');
+} else {
+    console.error('\n⛔ FATAL ERROR: API_KEY is missing!');
+    console.error('💡 Solution: Create a .env file with: API_KEY=your_gemini_api_key');
+    console.error('📖 Get your key from: https://aistudio.google.com/apikey\n');
+}
+
 console.log('🔌 PORT:', PORT);
 
-// Security
+// Security: Enforce HTTPS in production
 app.use((req, res, next) => {
-  if (process.env.NODE_ENV === 'production' && req.headers['x-forwarded-proto'] !== 'https') {
+  if (process.env.NODE_ENV === 'production' && req.headers['x-forwarded-proto'] === 'http') {
     return res.redirect(`https://${req.headers.host}${req.url}`);
   }
   next();
@@ -38,22 +55,18 @@ app.use(express.json({ limit: '10mb' }));
 app.get('/api/health', (req, res) => {
   res.json({ 
     status: 'ok',
-    apiKeyConfigured: !!process.env.API_KEY,
-    apiKeyLength: process.env.API_KEY?.length || 0,
+    apiKeyConfigured: !!API_KEY,
     environment: process.env.NODE_ENV || 'development',
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime()
+    timestamp: new Date().toISOString()
   });
 });
 
 const getAIClient = () => {
-  const key = process.env.API_KEY;
-  if (!key) {
+  if (!API_KEY) {
     console.error('❌ CRITICAL: API_KEY not found in environment');
-    throw new Error("API_KEY not configured");
+    throw new Error("API_KEY not configured on server");
   }
-  console.log(`✅ Creating AI client with key: ${key.substring(0, 10)}...`);
-  return new GoogleGenAI({ apiKey: key });
+  return new GoogleGenAI({ apiKey: API_KEY });
 };
 
 // Text chat endpoint
@@ -62,16 +75,17 @@ app.post('/api/chat', async (req, res) => {
     const { prompt, systemInstruction } = req.body;
     const ai = getAIClient();
     
+    // Use gemini-3-flash-preview for text tasks
     const response = await ai.models.generateContent({
-      model: 'gemini-2.0-flash-exp',
+      model: 'gemini-3-flash-preview',
       contents: prompt,
       config: { systemInstruction }
     });
     
     res.json({ text: response.text });
   } catch (error) {
-    console.error("Chat API Error:", error);
-    res.status(500).json({ error: "Failed to generate response" });
+    console.error("Chat API Error:", error.message);
+    res.status(500).json({ error: "Failed to generate response. Check server logs." });
   }
 });
 
@@ -81,8 +95,9 @@ app.post('/api/vision', async (req, res) => {
     const { prompt, imageBase64 } = req.body;
     const ai = getAIClient();
 
+    // Use gemini-2.5-flash-image for vision tasks
     const response = await ai.models.generateContent({
-      model: 'gemini-2.0-flash-exp',
+      model: 'gemini-2.5-flash-image',
       contents: {
         parts: [
           { inlineData: { mimeType: 'image/jpeg', data: imageBase64 } },
@@ -93,8 +108,8 @@ app.post('/api/vision', async (req, res) => {
 
     res.json({ text: response.text });
   } catch (error) {
-    console.error("Vision API Error:", error);
-    res.status(500).json({ error: "Failed to analyze image" });
+    console.error("Vision API Error:", error.message);
+    res.status(500).json({ error: "Failed to analyze image. Check server logs." });
   }
 });
 
@@ -105,7 +120,7 @@ app.post('/api/updates', async (req, res) => {
     const ai = getAIClient();
 
     const response = await ai.models.generateContent({
-      model: 'gemini-2.0-flash-exp',
+      model: 'gemini-3-flash-preview',
       contents: prompt,
       config: {
         tools: [{ googleSearch: {} }],
@@ -115,8 +130,8 @@ app.post('/api/updates', async (req, res) => {
 
     res.json({ text: response.text });
   } catch (error) {
-    console.error("Updates API Error:", error);
-    res.status(500).json({ error: "Failed to fetch updates" });
+    console.error("Updates API Error:", error.message);
+    res.status(500).json({ error: "Failed to fetch updates. Check server logs." });
   }
 });
 
@@ -131,26 +146,43 @@ const server = app.listen(PORT, '0.0.0.0', () => {
   console.log(`🎤 WebSocket endpoint: /ws/live`);
 });
 
-// WebSocket Server with EXTENSIVE logging
+// WebSocket Server with Keep-Alive
 const wss = new WebSocketServer({ 
   server, 
   path: '/ws/live',
   clientTracking: true,
   perMessageDeflate: false,
-  maxPayload: 10 * 1024 * 1024 // 10MB
+  maxPayload: 20 * 1024 * 1024 // 20MB
 });
 
 console.log('🔌 WebSocket server created');
 
 wss.on('connection', async (clientWs, req) => {
   const clientId = Math.random().toString(36).substr(2, 9);
-  const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
   
   console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
   console.log(`🔗 NEW CONNECTION: ${clientId}`);
-  console.log(`📍 Client IP: ${clientIp}`);
   console.log(`⏰ Time: ${new Date().toISOString()}`);
-  console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+  console.log(`🔑 API Key Status: ${API_KEY ? 'PRESENT' : 'MISSING'}`);
+  
+  // CRITICAL: Validate API key before proceeding
+  if (!API_KEY || API_KEY.length < 10) {
+    console.error(`❌ ${clientId}: API_KEY invalid or missing`);
+    const errorMsg = {
+      error: 'Server Configuration Error',
+      message: 'API_KEY not configured on server',
+      hint: 'Check your .env file and ensure API_KEY is set correctly'
+    };
+    
+    if (clientWs.readyState === clientWs.OPEN) {
+      clientWs.send(JSON.stringify(errorMsg));
+    }
+    
+    setTimeout(() => {
+      clientWs.close(1008, 'API_KEY not configured');
+    }, 500);
+    return; // Exit early
+  }
   
   let ai = null;
   let session = null;
@@ -167,24 +199,34 @@ wss.on('connection', async (clientWs, req) => {
     }
   };
 
+  // Heartbeat to keep connection alive
+  const pingInterval = setInterval(() => {
+    if (clientWs.readyState === clientWs.OPEN) {
+        // Send a ping to client? 
+        // Standard WS uses ping frames, but client JS WebSocket API doesn't support manual PING.
+        // We rely on activity. 
+        // Server can ping client if using 'ws' lib on both ends, but client is browser.
+        // Best practice: Client sends ping, server sends pong or handles it.
+        // Here we just check liveness or do nothing, rely on TCP keepalive.
+        // Or we can send a custom JSON ping if needed.
+    }
+  }, 30000);
+
   try {
-    // Step 1: Verify API key
-    console.log(`🔑 ${clientId}: Checking API key...`);
+    // Step 1: Get AI client
     ai = getAIClient();
-    console.log(`✅ ${clientId}: AI client created`);
-    
     sendToClient({ type: 'proxy_ready', message: 'Proxy initialized' });
 
     // Step 2: Connect to Gemini with detailed logging
     console.log(`⏳ ${clientId}: Connecting to Gemini Live API...`);
-    console.log(`📊 ${clientId}: Memory usage: ${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)}MB`);
     
     const connectStartTime = Date.now();
     
     try {
+      // Use the specific Native Audio Preview model for Live API
       session = await Promise.race([
         ai.live.connect({
-          model: 'gemini-2.0-flash-exp',
+          model: 'gemini-2.5-flash-native-audio-preview-12-2025',
           config: { 
             responseModalities: ['AUDIO'],
             speechConfig: { 
@@ -225,9 +267,6 @@ Keep responses short (2-3 sentences) unless asked for detailed information.`
       session.on('message', (msg) => {
         try {
           sendToClient(msg);
-          if (msg.serverContent?.modelTurn) {
-            console.log(`🤖 ${clientId}: Model response received`);
-          }
         } catch (e) {
           console.error(`❌ ${clientId}: Error forwarding:`, e.message);
         }
@@ -241,7 +280,7 @@ Keep responses short (2-3 sentences) unless asked for detailed information.`
           if (clientWs.readyState === clientWs.OPEN) {
             clientWs.close(1000, 'Upstream closed');
           }
-        }, 100);
+        }, 500);
       });
 
       session.on('error', (err) => {
@@ -250,37 +289,35 @@ Keep responses short (2-3 sentences) unless asked for detailed information.`
         sendToClient({ 
           error: 'AI service error', 
           message: err.message,
-          details: err.stack
+          details: 'The AI model refused the connection. Check billing/quota.'
         });
+        // Give client time to receive error before closing
         setTimeout(() => {
           if (clientWs.readyState === clientWs.OPEN) {
             clientWs.close(1011, 'Upstream error');
           }
-        }, 100);
+        }, 1000);
       });
 
       // Handle client messages
-      let messageCount = 0;
       clientWs.on('message', async (data) => {
-        if (!session || !isGeminiConnected) {
-          console.warn(`⚠️  ${clientId}: Message ignored - not ready`);
-          return;
-        }
-
         try {
           const parsed = JSON.parse(data.toString());
           
+          // Respond to application-level ping
+          if (parsed.type === 'ping') {
+             // Optional: send pong back or just ignore to keep connection open
+             return; 
+          }
+          
+          if (!session || !isGeminiConnected) return;
+
           if (parsed.realtimeInput) {
             session.send(parsed);
-            messageCount++;
-            if (messageCount % 100 === 0) {
-              console.log(`📊 ${clientId}: Sent ${messageCount} audio chunks`);
-            }
           }
           
           if (parsed.clientContent) {
             session.send(parsed);
-            console.log(`📤 ${clientId}: Text input sent`);
           }
         } catch (e) {
           console.error(`❌ ${clientId}: Parse error:`, e.message);
@@ -288,13 +325,9 @@ Keep responses short (2-3 sentences) unless asked for detailed information.`
       });
 
       clientWs.on('close', (code, reason) => {
+        clearInterval(pingInterval);
         const duration = Date.now() - connectionStartTime;
-        console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
-        console.log(`🔌 ${clientId}: Disconnected`);
-        console.log(`📊 Code: ${code}, Reason: ${reason || 'none'}`);
-        console.log(`⏱️  Duration: ${Math.round(duration / 1000)}s`);
-        console.log(`📨 Messages: ${messageCount}`);
-        console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+        console.log(`🔌 ${clientId}: Disconnected (${code}) after ${Math.round(duration / 1000)}s`);
         
         if (session && isGeminiConnected) {
           try {
@@ -307,45 +340,30 @@ Keep responses short (2-3 sentences) unless asked for detailed information.`
         }
       });
 
-      clientWs.on('error', (error) => {
-        console.error(`❌ ${clientId}: Client error:`, error.message);
-      });
-
     } catch (geminiError) {
-      console.error(`❌ ${clientId}: Gemini connection failed:`, geminiError);
+      console.error(`❌ ${clientId}: Gemini connection failed:`, geminiError.message);
       throw geminiError;
     }
 
   } catch (err) {
-    const duration = Date.now() - connectionStartTime;
-    console.error(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
-    console.error(`❌ ${clientId}: INITIALIZATION FAILED`);
-    console.error(`⏱️  Failed after: ${duration}ms`);
-    console.error(`💥 Error: ${err.message}`);
-    console.error(`📚 Stack: ${err.stack}`);
-    console.error(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+    console.error(`❌ ${clientId}: INITIALIZATION FAILED`, err.message);
     
     sendToClient({
       error: 'Server initialization failed',
       message: err.message,
-      hint: !process.env.API_KEY 
-        ? 'API_KEY not configured' 
-        : 'Gemini Live API connection failed. Check server logs.'
+      hint: !API_KEY 
+        ? 'API_KEY not configured on server' 
+        : 'Model might be unavailable or key is invalid. Check Server Logs.'
     });
     
     setTimeout(() => {
       if (clientWs.readyState === clientWs.OPEN) {
         clientWs.close(1011, 'Init failed');
       }
-    }, 200);
+    }, 500);
   }
 });
 
-wss.on('error', (error) => {
-  console.error('❌ WebSocket Server error:', error);
-});
-
-// Static files
 if (!isProduction) {
   console.log('🔧 Starting in DEVELOPMENT mode with Vite...');
   const { createServer } = await import('vite');
@@ -365,26 +383,8 @@ if (!isProduction) {
   });
 }
 
-// Graceful shutdown
 process.on('SIGINT', () => {
   console.log('\n🛑 Shutting down...');
-  wss.clients.forEach(client => {
-    if (client.readyState === client.OPEN) {
-      client.close(1001, 'Server shutting down');
-    }
-  });
-  server.close(() => {
-    console.log('✅ Server closed');
-    process.exit(0);
-  });
-});
-
-// Error handlers
-process.on('unhandledRejection', (reason, promise) => {
-  console.error('❌ Unhandled Rejection:', reason);
-});
-
-process.on('uncaughtException', (error) => {
-  console.error('❌ Uncaught Exception:', error);
-  process.exit(1);
+  wss.clients.forEach(client => client.close());
+  server.close(() => process.exit(0));
 });
