@@ -27,6 +27,17 @@ export const MOCK_VEGETABLES = [
     { id: 10, nameMr: 'गाजर', nameHi: 'गाजर', nameEn: 'Carrot', price: 45, unit: 'kg', category: 'veg', image: '🥕' },
     { id: 11, nameMr: 'सफरचंद', nameHi: 'सेब', nameEn: 'Apple', price: 150, unit: 'kg', category: 'fruit', image: '🍎' },
     { id: 12, nameMr: 'केळी', nameHi: 'केला', nameEn: 'Banana', price: 40, unit: 'dozen', category: 'fruit', image: '🍌' },
+    { id: 13, nameMr: 'फ्लॉवर', nameHi: 'गोभी', nameEn: 'Cauliflower', price: 40, unit: 'kg', category: 'veg', image: '🥦' },
+    { id: 14, nameMr: 'कोबी', nameHi: 'पत्ता गोभी', nameEn: 'Cabbage', price: 25, unit: 'kg', category: 'veg', image: '🥬' },
+    { id: 15, nameMr: 'आले', nameHi: 'अद्रक', nameEn: 'Ginger', price: 120, unit: 'kg', category: 'veg', image: '🫚' },
+    { id: 16, nameMr: 'लिंबू', nameHi: 'नींबू', nameEn: 'Lemon', price: 5, unit: 'pc', category: 'veg', image: '🍋' },
+    { id: 17, nameMr: 'काकडी', nameHi: 'खीरा', nameEn: 'Cucumber', price: 30, unit: 'kg', category: 'veg', image: '🥒' },
+    { id: 18, nameMr: 'हापूस आंबा', nameHi: 'आम', nameEn: 'Mango', price: 600, unit: 'doz', category: 'fruit', image: '🥭' },
+    { id: 19, nameMr: 'कलिंगड', nameHi: 'तरबूज', nameEn: 'Watermelon', price: 50, unit: 'pc', category: 'fruit', image: '🍉' },
+    { id: 20, nameMr: 'मेथी', nameHi: 'मेथी', nameEn: 'Fenugreek', price: 20, unit: 'bunch', category: 'leafy', image: '🌿' },
+    { id: 21, nameMr: 'शेपू', nameHi: 'सोुआ', nameEn: 'Dill', price: 15, unit: 'bunch', category: 'leafy', image: '🌱' },
+    { id: 22, nameMr: 'मटार', nameHi: 'मटर', nameEn: 'Green Peas', price: 80, unit: 'kg', category: 'veg', image: '🫛' },
+    { id: 23, nameMr: 'दुधी भोपळा', nameHi: 'लौकी', nameEn: 'Bottle Gourd', price: 30, unit: 'pc', category: 'veg', image: '🥒' },
 ];
 
 export const WEATHER_HOURLY = [

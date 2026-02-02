@@ -4,7 +4,7 @@ import { Language, UserProfile } from '../../types';
 import { TRANSLATIONS, SHOP_PHONE } from '../../constants';
 import { MOCK_VEGETABLES } from '../../data/mock';
 import SimpleView from '../layout/SimpleView';
-import { ShoppingCart, Plus, Minus, X, ArrowRight, MapPin, User, Send, CheckCircle2 } from 'lucide-react';
+import { ShoppingCart, Plus, Minus, X, ArrowRight, MapPin, User, Send, CheckCircle2, Search } from 'lucide-react';
 import { Button } from '../Button';
 import { triggerHaptic } from '../../utils/common';
 import clsx from 'clsx';
@@ -22,11 +22,15 @@ const SabjiMandiView = ({ lang, user, onBack }: { lang: Language, user: UserProf
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [userDetails, setUserDetails] = useState({ name: user.name, address: user.village });
   const [isOrderSent, setIsOrderSent] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
-  // Filter products
-  const products = activeCategory === 'all' 
-    ? MOCK_VEGETABLES 
-    : MOCK_VEGETABLES.filter(p => p.category === activeCategory);
+  // Filter products based on category AND search
+  const products = MOCK_VEGETABLES.filter(p => {
+      const matchCat = activeCategory === 'all' || p.category === activeCategory;
+      const q = searchQuery.toLowerCase();
+      const matchSearch = !q || p.nameEn.toLowerCase().includes(q) || p.nameMr.includes(q) || p.nameHi.includes(q);
+      return matchCat && matchSearch;
+  });
 
   // Cart logic
   const addToCart = (id: number) => {
@@ -93,7 +97,7 @@ ${addrLabel}: ${userDetails.address}`;
 
   return (
     <SimpleView title={t.mandi_title} onBack={onBack}>
-      <div className="pb-32 relative min-h-screen">
+      <div className="pb-48 relative min-h-screen">
         
         {/* Success Overlay */}
         {isOrderSent && (
@@ -111,22 +115,36 @@ ${addrLabel}: ${userDetails.address}`;
             </div>
         )}
 
-        {/* Categories */}
-        <div className="flex gap-3 overflow-x-auto hide-scrollbar pb-4 px-2 sticky top-0 bg-[#020617]/95 backdrop-blur-md z-30 pt-2 -mx-4 px-4 mb-4 border-b border-white/5">
-           {['all', 'veg', 'leafy', 'fruit'].map((cat) => (
-               <button 
-                 key={cat}
-                 onClick={() => { setActiveCategory(cat as any); triggerHaptic(); }}
-                 className={clsx(
-                    "px-5 py-2.5 rounded-full text-sm font-bold whitespace-nowrap transition-all border",
-                    activeCategory === cat 
-                      ? "bg-green-500 text-white border-green-400 shadow-[0_0_15px_rgba(34,197,94,0.4)]" 
-                      : "bg-white/5 text-slate-400 border-white/10 hover:bg-white/10"
-                 )}
-               >
-                 {t.mandi_categories[cat] || cat}
-               </button>
-           ))}
+        {/* Search Bar */}
+        <div className="sticky top-0 bg-[#020617]/95 backdrop-blur-md z-30 pt-2 pb-2 px-2 -mx-4 mb-2 border-b border-white/5">
+            <div className="mx-4 relative">
+                <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input 
+                    type="text" 
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder={lang === 'mr' ? 'भाजी शोधा...' : 'Search vegetables...'}
+                    className="w-full bg-white/10 border border-white/10 rounded-xl pl-12 pr-4 py-3 text-white placeholder:text-slate-500 focus:outline-none focus:border-green-500/50 focus:bg-white/15 transition-all"
+                />
+            </div>
+            
+            {/* Categories */}
+            <div className="flex gap-3 overflow-x-auto hide-scrollbar px-4 pt-3 pb-2">
+               {['all', 'veg', 'leafy', 'fruit'].map((cat) => (
+                   <button 
+                     key={cat}
+                     onClick={() => { setActiveCategory(cat as any); triggerHaptic(); }}
+                     className={clsx(
+                        "px-5 py-2.5 rounded-full text-sm font-bold whitespace-nowrap transition-all border",
+                        activeCategory === cat 
+                          ? "bg-green-500 text-white border-green-400 shadow-[0_0_15px_rgba(34,197,94,0.4)]" 
+                          : "bg-white/5 text-slate-400 border-white/10 hover:bg-white/10"
+                     )}
+                   >
+                     {t.mandi_categories[cat] || cat}
+                   </button>
+               ))}
+            </div>
         </div>
 
         {/* Product Grid */}
@@ -163,11 +181,17 @@ ${addrLabel}: ${userDetails.address}`;
                     </div>
                 );
             })}
+            
+            {products.length === 0 && (
+                <div className="col-span-full py-12 text-center text-slate-500">
+                    <p>No items found matching "{searchQuery}"</p>
+                </div>
+            )}
         </div>
 
-        {/* Floating Cart Bar */}
+        {/* Floating Cart Bar - POSITIONED HIGHER for Mobile Nav */}
         {totalItems > 0 && (
-            <div className="fixed bottom-6 inset-x-4 md:inset-x-auto md:w-[400px] md:right-6 z-50 animate-enter">
+            <div className="fixed bottom-24 lg:bottom-6 inset-x-4 md:inset-x-auto md:w-[400px] md:right-6 z-[190] animate-enter">
                 <div onClick={() => setIsCartOpen(true)} className="bg-[#1DB954] text-white p-4 rounded-[1.5rem] shadow-[0_10px_40px_rgba(29,185,84,0.4)] flex items-center justify-between cursor-pointer active:scale-95 transition-transform border border-white/20">
                     <div className="flex items-center gap-3">
                         <div className="w-10 h-10 bg-black/20 rounded-full flex items-center justify-center font-black">
@@ -188,8 +212,8 @@ ${addrLabel}: ${userDetails.address}`;
         {/* Cart Drawer (Bottom Sheet) */}
         {isCartOpen && (
             <>
-                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60]" onClick={() => setIsCartOpen(false)}></div>
-                <div className="fixed bottom-0 inset-x-0 bg-[#0f172a] border-t border-white/10 rounded-t-[2.5rem] z-[70] p-6 max-h-[85vh] overflow-y-auto animate-[slide-up_0.3s_ease-out] shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[250]" onClick={() => setIsCartOpen(false)}></div>
+                <div className="fixed bottom-0 inset-x-0 bg-[#0f172a] border-t border-white/10 rounded-t-[2.5rem] z-[260] p-6 pb-12 max-h-[85vh] overflow-y-auto animate-[slide-up_0.3s_ease-out] shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
                     <div className="w-12 h-1 bg-white/20 rounded-full mx-auto mb-6"></div>
                     
                     <div className="flex justify-between items-center mb-6">
@@ -214,7 +238,7 @@ ${addrLabel}: ${userDetails.address}`;
                                     </div>
                                     <div className="flex items-center gap-3">
                                         <button onClick={() => removeFromCart(p.id)} className="w-7 h-7 rounded-lg bg-white/10 flex items-center justify-center"><Minus size={14}/></button>
-                                        <span className="font-mono font-bold w-4 text-center">{qty}</span>
+                                        <span className="font-mono font-bold w-4 text-center text-white">{qty}</span>
                                         <button onClick={() => addToCart(p.id)} className="w-7 h-7 rounded-lg bg-green-500 text-white flex items-center justify-center"><Plus size={14}/></button>
                                     </div>
                                 </div>
@@ -252,13 +276,13 @@ ${addrLabel}: ${userDetails.address}`;
                         fullWidth 
                         size="lg" 
                         variant="primary" 
-                        className="from-[#1DB954] to-[#168f40] shadow-lg shadow-green-500/20 py-4 text-lg"
-                        icon={<Send size={20}/>}
+                        className="from-[#1DB954] to-[#168f40] shadow-lg shadow-green-500/20 py-4 text-lg text-white font-bold"
+                        icon={<Send size={20} className="text-white"/>}
                         onClick={handleCheckout}
                     >
                         {t.mandi_checkout}
                     </Button>
-                    <p className="text-center text-[10px] text-slate-500 mt-4 uppercase tracking-widest">Powered by WhatsApp</p>
+                    <p className="text-center text-[10px] text-white/40 mt-4 uppercase tracking-widest font-bold">Powered by WhatsApp</p>
                 </div>
             </>
         )}
