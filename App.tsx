@@ -101,7 +101,8 @@ const App = () => {
        </main>
 
        {/* 5. Mobile Navigation (Floating Bottom, High Z-Index) */}
-       {!isFullScreen && view !== 'SABJI_MANDI' && <MobileNav view={view} setView={setView} />}
+       {/* SHOW ONLY ON DASHBOARD */}
+       {view === 'DASHBOARD' && <MobileNav view={view} setView={setView} />}
     </div>
   );
 };
