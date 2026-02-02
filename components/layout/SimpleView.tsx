@@ -1,3 +1,4 @@
+
 import React, { useEffect, useRef } from 'react';
 import { ArrowLeft, Sparkles } from 'lucide-react';
 import { triggerHaptic } from '../../utils/common';
@@ -68,7 +69,7 @@ const SimpleView = ({ title, children, onBack }: SimpleViewProps) => {
       <div className="relative z-10 h-full w-full flex flex-col bg-gradient-to-br from-[#020617]/80 via-[#0f172a]/75 to-[#020617]/80 backdrop-blur-3xl animate-enter">
         
         {/* Ultra-Premium Liquid Glass Header */}
-        <div className="flex items-center gap-6 p-8 pt-safe-top z-50 sticky top-0 bg-gradient-to-r from-[#020617]/70 via-[#0f172a]/65 to-[#020617]/70 backdrop-blur-[40px] border-b border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.4),0_2px_8px_rgba(255,255,255,0.05),inset_0_1px_0_rgba(255,255,255,0.1)] transition-all duration-500 hover:shadow-[0_12px_48px_rgba(0,0,0,0.5),0_4px_16px_rgba(16,185,129,0.1)] group/header">
+        <div className="flex items-center gap-4 md:gap-6 p-4 md:p-8 pt-safe-top z-50 sticky top-0 bg-gradient-to-r from-[#020617]/70 via-[#0f172a]/65 to-[#020617]/70 backdrop-blur-[40px] border-b border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.4),0_2px_8px_rgba(255,255,255,0.05),inset_0_1px_0_rgba(255,255,255,0.1)] transition-all duration-500 hover:shadow-[0_12px_48px_rgba(0,0,0,0.5),0_4px_16px_rgba(16,185,129,0.1)] group/header">
           
           {/* Animated Glow Line */}
           <div className="absolute bottom-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-emerald-400/50 to-transparent opacity-0 group-hover/header:opacity-100 transition-opacity duration-700"></div>
@@ -76,7 +77,7 @@ const SimpleView = ({ title, children, onBack }: SimpleViewProps) => {
           {/* Premium Lens-Style Back Button with Ripple Effect */}
           <button 
             onClick={() => { onBack(); triggerHaptic(); }} 
-            className="relative w-14 h-14 rounded-2xl bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-xl flex items-center justify-center text-slate-100 border border-white/20 hover:border-emerald-400/50 active:scale-95 transition-all duration-300 shadow-[0_8px_24px_rgba(0,0,0,0.3),inset_0_1px_0_rgba(255,255,255,0.2)] hover:shadow-[0_12px_32px_rgba(16,185,129,0.3),0_0_40px_rgba(16,185,129,0.2),inset_0_1px_0_rgba(255,255,255,0.3)] group overflow-hidden"
+            className="relative w-10 h-10 md:w-14 md:h-14 rounded-2xl bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-xl flex items-center justify-center text-slate-100 border border-white/20 hover:border-emerald-400/50 active:scale-95 transition-all duration-300 shadow-[0_8px_24px_rgba(0,0,0,0.3),inset_0_1px_0_rgba(255,255,255,0.2)] hover:shadow-[0_12px_32px_rgba(16,185,129,0.3),0_0_40px_rgba(16,185,129,0.2),inset_0_1px_0_rgba(255,255,255,0.3)] group overflow-hidden"
           >
             {/* Animated Gradient Background */}
             <div className="absolute inset-0 bg-gradient-to-tr from-emerald-500/0 via-cyan-500/0 to-transparent group-hover:from-emerald-500/20 group-hover:via-cyan-500/15 transition-all duration-500 opacity-0 group-hover:opacity-100"></div>
@@ -90,7 +91,7 @@ const SimpleView = ({ title, children, onBack }: SimpleViewProps) => {
             </div>
             
             {/* Icon with Enhanced Motion */}
-            <ArrowLeft size={22} className="relative z-10 group-hover:-translate-x-1.5 group-hover:drop-shadow-[0_0_8px_rgba(16,185,129,0.8)] transition-all duration-300" strokeWidth={2.5}/>
+            <ArrowLeft size={20} className="relative z-10 md:w-[22px] md:h-[22px] group-hover:-translate-x-1.5 group-hover:drop-shadow-[0_0_8px_rgba(16,185,129,0.8)] transition-all duration-300" strokeWidth={2.5}/>
             
             {/* Corner Accents */}
             <div className="absolute top-1 right-1 w-2 h-2 border-t border-r border-white/30 rounded-tr-md opacity-0 group-hover:opacity-100 transition-opacity"></div>
@@ -98,11 +99,11 @@ const SimpleView = ({ title, children, onBack }: SimpleViewProps) => {
           </button>
           
           {/* Ultra-Premium Shimmer Text Title with 3D Effect */}
-          <div className="flex items-center gap-3 flex-1">
+          <div className="flex items-center gap-2 md:gap-3 flex-1">
             {/* Decorative Sparkle Icon */}
-            <Sparkles size={28} className="text-emerald-400/80 animate-pulse-glow drop-shadow-[0_0_12px_rgba(16,185,129,0.6)]" strokeWidth={2}/>
+            <Sparkles size={20} className="text-emerald-400/80 animate-pulse-glow drop-shadow-[0_0_12px_rgba(16,185,129,0.6)] md:w-7 md:h-7" strokeWidth={2}/>
             
-            <h1 className="text-4xl font-black tracking-tight leading-none relative group/title">
+            <h1 className="text-2xl md:text-4xl font-black tracking-tight leading-none relative group/title">
               {/* 3D Shadow Layers */}
               <span className="absolute inset-0 text-transparent bg-clip-text bg-gradient-to-r from-emerald-400/20 via-cyan-400/20 to-emerald-400/20 blur-sm translate-y-1">
                 {title}
@@ -134,12 +135,12 @@ const SimpleView = ({ title, children, onBack }: SimpleViewProps) => {
         </div>
 
         {/* Premium Content Area with Fade Effects */}
-        <div className="flex-1 overflow-y-auto overflow-x-hidden px-6 pb-40 hide-scrollbar relative">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 md:px-6 pb-40 hide-scrollbar relative">
           {/* Top Fade Gradient */}
           <div className="sticky top-0 left-0 right-0 h-8 bg-gradient-to-b from-[#020617]/80 to-transparent pointer-events-none z-20"></div>
           
           {/* Content Container with Enter Animation */}
-          <div className="max-w-4xl mx-auto w-full pt-8 animate-[enter_0.6s_ease-out] relative">
+          <div className="max-w-4xl mx-auto w-full pt-4 md:pt-8 animate-[enter_0.6s_ease-out] relative">
             {/* Subtle Content Glow */}
             <div className="absolute inset-0 bg-gradient-to-b from-emerald-500/5 via-transparent to-cyan-500/5 rounded-3xl blur-3xl pointer-events-none"></div>
             

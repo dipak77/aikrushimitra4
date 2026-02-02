@@ -97,7 +97,7 @@ ${addrLabel}: ${userDetails.address}`;
 
   return (
     <SimpleView title={t.mandi_title} onBack={onBack}>
-      <div className="pb-48 relative min-h-screen">
+      <div className="pb-32 relative min-h-screen">
         
         {/* Success Overlay */}
         {isOrderSent && (
@@ -191,7 +191,7 @@ ${addrLabel}: ${userDetails.address}`;
 
         {/* Floating Cart Bar - POSITIONED HIGHER for Mobile Nav */}
         {totalItems > 0 && (
-            <div className="fixed bottom-24 lg:bottom-6 inset-x-4 md:inset-x-auto md:w-[400px] md:right-6 z-[190] animate-enter">
+            <div className="fixed bottom-6 inset-x-4 md:inset-x-auto md:w-[400px] md:right-6 z-[190] animate-enter">
                 <div onClick={() => setIsCartOpen(true)} className="bg-[#1DB954] text-white p-4 rounded-[1.5rem] shadow-[0_10px_40px_rgba(29,185,84,0.4)] flex items-center justify-between cursor-pointer active:scale-95 transition-transform border border-white/20">
                     <div className="flex items-center gap-3">
                         <div className="w-10 h-10 bg-black/20 rounded-full flex items-center justify-center font-black">

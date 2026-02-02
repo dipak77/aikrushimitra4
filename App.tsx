@@ -101,7 +101,7 @@ const App = () => {
        </main>
 
        {/* 5. Mobile Navigation (Floating Bottom, High Z-Index) */}
-       {!isFullScreen && <MobileNav view={view} setView={setView} />}
+       {!isFullScreen && view !== 'SABJI_MANDI' && <MobileNav view={view} setView={setView} />}
     </div>
   );
 };
