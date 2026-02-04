@@ -3,8 +3,6 @@ import React, { useState, useRef, useEffect } from 'react';
 import { UserProfile, Language } from '../../types';
 import { TRANSLATIONS } from '../../constants';
 import { ArrowLeft, RefreshCw, Mic, WifiOff, MessageSquare } from 'lucide-react';
-import { GoogleGenAI, Modality } from '@google/genai';
-import { getGenAIKey } from '../../services/geminiService';
 import { decode, decodeAudioData, createPCMChunk } from '../../utils/audio';
 import { triggerHaptic } from '../../utils/common';
 import { clsx } from 'clsx';
@@ -21,8 +19,7 @@ const VoiceAssistant = ({ lang, user, onBack }: { lang: Language, user: UserProf
 
   // Robust Session Management
   const shouldStayConnectedRef = useRef(false);
-  const sessionPromiseRef = useRef<Promise<any> | null>(null);
-  const activeSessionRef = useRef<any>(null); 
+  const activeSocketRef = useRef<WebSocket | null>(null); 
   
   // Audio Nodes
   const inputContextRef = useRef<AudioContext | null>(null);
@@ -77,11 +74,10 @@ const VoiceAssistant = ({ lang, user, onBack }: { lang: Language, user: UserProf
         outputContextRef.current = null;
     }
 
-    if (activeSessionRef.current) {
-        try { activeSessionRef.current.close(); } catch(e) {}
-        activeSessionRef.current = null;
+    if (activeSocketRef.current) {
+        activeSocketRef.current.close();
+        activeSocketRef.current = null;
     }
-    sessionPromiseRef.current = null;
     
     if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
 
@@ -145,17 +141,17 @@ const VoiceAssistant = ({ lang, user, onBack }: { lang: Language, user: UserProf
       animationFrameRef.current = requestAnimationFrame(() => visualize(inputAnalyser, outputAnalyser));
   };
 
+  const getWebSocketUrl = () => {
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const host = window.location.host;
+    // Uses the proxy path defined in vite.config.js (dev) or server.js (prod)
+    return `${protocol}//${host}/ws/live`;
+  };
+
   const connect = async () => {
     if (!navigator.onLine) {
         setStatus('offline');
         return;
-    }
-
-    const apiKey = getGenAIKey();
-    if (!apiKey) {
-      setStatus('error');
-      setErrorMessage("API Key Not Found.");
-      return;
     }
 
     cleanup(false); 
@@ -164,6 +160,7 @@ const VoiceAssistant = ({ lang, user, onBack }: { lang: Language, user: UserProf
     setStatus(retryCountRef.current > 0 ? 'reconnecting' : 'connecting');
 
     try {
+      // 1. Setup Audio Input
       const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
       mediaStreamRef.current = stream;
       
@@ -172,11 +169,13 @@ const VoiceAssistant = ({ lang, user, onBack }: { lang: Language, user: UserProf
       await inputCtx.resume();
       inputContextRef.current = inputCtx;
 
+      // 2. Setup Audio Output
       const outputCtx = new AudioContextClass({ sampleRate: 24000 });
       await outputCtx.resume();
       outputContextRef.current = outputCtx;
       nextStartTimeRef.current = outputCtx.currentTime;
 
+      // 3. Audio Graph
       const source = inputCtx.createMediaStreamSource(stream);
       const processor = inputCtx.createScriptProcessor(4096, 1, 1);
       processorRef.current = processor;
@@ -195,38 +194,34 @@ const VoiceAssistant = ({ lang, user, onBack }: { lang: Language, user: UserProf
       
       visualize(inputAnalyser, outputAnalyser);
 
-      const ai = new GoogleGenAI({ apiKey });
+      // 4. Connect to WebSocket Proxy
+      const ws = new WebSocket(getWebSocketUrl());
+      activeSocketRef.current = ws;
 
-      // --- CONTEXT RETENTION LOGIC ---
-      // We inject previous turns into system instruction to "restore" context
-      const history = transcriptsRef.current.slice(-8); // Keep last ~8 turns
-      let contextStr = "";
-      if (history.length > 0) {
-        contextStr = "\n\n[PREVIOUS CONVERSATION CONTEXT - Resume from here]:";
-        history.forEach(h => {
-            contextStr += `\n${h.role === 'user' ? 'User' : 'You'}: ${h.text}`;
-        });
-      }
-      
-      const baseInstruction = "You are AI Krushi Mitra, a helpful agricultural expert assistant for Indian farmers. Speak naturally in Marathi, Hindi or English as per the user's language preference. Keep responses concise, practical, and encouraging.";
-      const fullInstruction = history.length > 0 ? `${baseInstruction}${contextStr}` : baseInstruction;
+      ws.onopen = () => {
+          // Status will be updated to 'connected' when server sends 'setupComplete' or 'proxy_ready'
+      };
 
-      const sessionPromise = ai.live.connect({
-        model: 'gemini-2.5-flash-native-audio-preview-12-2025',
-        config: { 
-            responseModalities: [Modality.AUDIO], 
-            speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Puck' } } },
-            inputAudioTranscription: {}, 
-            outputAudioTranscription: {},
-            systemInstruction: fullInstruction,
-        },
-        callbacks: {
-           onopen: () => { 
-              retryCountRef.current = 0; 
-              setStatus('connected'); 
-              triggerHaptic();
-           },
-           onmessage: async (msg: any) => {
+      ws.onmessage = async (event) => {
+          try {
+              const msg = JSON.parse(event.data);
+
+              // Handshake messages from server.js
+              if (msg.setupComplete || msg.type === 'proxy_ready') {
+                  retryCountRef.current = 0; 
+                  setStatus('connected'); 
+                  triggerHaptic();
+                  return;
+              }
+
+              if (msg.error) {
+                  console.error("Server Error:", msg);
+                  setErrorMessage(msg.message || "Server Error");
+                  setStatus('error');
+                  return;
+              }
+
+              // Audio from Model
               const audioData = msg.serverContent?.modelTurn?.parts?.[0]?.inlineData?.data;
               if (audioData) {
                  const buffer = await decodeAudioData(decode(audioData), outputCtx, 24000, 1);
@@ -241,47 +236,58 @@ const VoiceAssistant = ({ lang, user, onBack }: { lang: Language, user: UserProf
                  nextStartTimeRef.current += buffer.duration;
               }
 
+              // Transcripts
               const userTranscript = msg.serverContent?.inputTranscription?.text;
               if (userTranscript) {
                   setTranscripts(prev => [...prev, { role: 'user', text: userTranscript }]);
               }
-           },
-           onclose: (e) => {
-               if (e.code === 1008 || e.reason?.includes("leaked")) {
-                   setErrorMessage("API Key Revoked.");
-                   setStatus('error');
-                   shouldStayConnectedRef.current = false;
-                   return;
-               }
-               if (shouldStayConnectedRef.current && e.code !== 1000) {
-                   handleAutoReconnect();
-               } else {
-                   setStatus('idle');
-                   shouldStayConnectedRef.current = false;
-               }
-           },
-           onerror: (err) => {
-               if (shouldStayConnectedRef.current) handleAutoReconnect();
+              const modelTranscript = msg.serverContent?.modelTurn?.parts?.[0]?.text;
+              if (modelTranscript) {
+                  setTranscripts(prev => [...prev, { role: 'model', text: modelTranscript }]);
+              }
+
+          } catch (e) {
+              console.error("WS Parse Error", e);
+          }
+      };
+
+      ws.onclose = (e) => {
+           if (e.code === 1008 || e.reason?.includes("API_KEY")) {
+               setErrorMessage("Server API Key Error.");
+               setStatus('error');
+               shouldStayConnectedRef.current = false;
+               return;
            }
-        }
-      });
+           if (shouldStayConnectedRef.current && e.code !== 1000) {
+               handleAutoReconnect();
+           } else {
+               setStatus('idle');
+               shouldStayConnectedRef.current = false;
+           }
+      };
+
+      ws.onerror = (err) => {
+           console.error("WebSocket Error", err);
+           if (shouldStayConnectedRef.current) handleAutoReconnect();
+      };
       
-      sessionPromiseRef.current = sessionPromise;
-      sessionPromise.then(sess => {
-          activeSessionRef.current = sess;
-      }).catch(e => {
-          handleAutoReconnect();
-      });
-      
+      // 5. Send Audio
       processor.onaudioprocess = (e) => {
          const inputData = e.inputBuffer.getChannelData(0);
-         const blob = createPCMChunk(inputData, inputCtx.sampleRate); 
-         if (sessionPromiseRef.current) {
-             sessionPromiseRef.current.then(session => {
-                 if (session === activeSessionRef.current && shouldStayConnectedRef.current) {
-                    session.sendRealtimeInput({ media: blob });
+         const blob = createPCMChunk(inputData, inputCtx.sampleRate); // Returns { data, mimeType }
+         
+         if (activeSocketRef.current && activeSocketRef.current.readyState === WebSocket.OPEN && shouldStayConnectedRef.current) {
+             // Construct the payload that server.js expects (it forwards 'realtimeInput' property)
+             activeSocketRef.current.send(JSON.stringify({
+                 realtimeInput: {
+                     mediaChunks: [
+                         {
+                             mimeType: "audio/pcm;rate=16000",
+                             data: blob.data
+                         }
+                     ]
                  }
-             }).catch(() => {});
+             }));
          }
       };
 
