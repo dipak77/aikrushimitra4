@@ -202,13 +202,7 @@ wss.on('connection', async (clientWs, req) => {
   // Heartbeat to keep connection alive
   const pingInterval = setInterval(() => {
     if (clientWs.readyState === clientWs.OPEN) {
-        // Send a ping to client? 
-        // Standard WS uses ping frames, but client JS WebSocket API doesn't support manual PING.
-        // We rely on activity. 
-        // Server can ping client if using 'ws' lib on both ends, but client is browser.
-        // Best practice: Client sends ping, server sends pong or handles it.
-        // Here we just check liveness or do nothing, rely on TCP keepalive.
-        // Or we can send a custom JSON ping if needed.
+        // Just keeping the connection alive
     }
   }, 30000);
 
@@ -223,7 +217,49 @@ wss.on('connection', async (clientWs, req) => {
     const connectStartTime = Date.now();
     
     try {
-      // Use the specific Native Audio Preview model for Live API
+      // Define callbacks for Gemini Session
+      const callbacks = {
+        onopen: () => {
+          const connectDuration = Date.now() - connectStartTime;
+          console.log(`✅ ${clientId}: Connected to Gemini in ${connectDuration}ms`);
+          isGeminiConnected = true;
+          sendToClient({ setupComplete: true });
+        },
+        onmessage: (msg) => {
+          try {
+            sendToClient(msg);
+          } catch (e) {
+            console.error(`❌ ${clientId}: Error forwarding:`, e.message);
+          }
+        },
+        onclose: () => {
+          console.log(`🔌 ${clientId}: Gemini upstream closed`);
+          isGeminiConnected = false;
+          sendToClient({ type: 'upstream_closed' });
+          setTimeout(() => {
+            if (clientWs.readyState === clientWs.OPEN) {
+              clientWs.close(1000, 'Upstream closed');
+            }
+          }, 500);
+        },
+        onerror: (err) => {
+          console.error(`❌ ${clientId}: Gemini error:`, err);
+          isGeminiConnected = false;
+          sendToClient({ 
+            error: 'AI service error', 
+            message: err.message || "Unknown error",
+            details: 'The AI model refused the connection. Check billing/quota.'
+          });
+          // Give client time to receive error before closing
+          setTimeout(() => {
+            if (clientWs.readyState === clientWs.OPEN) {
+              clientWs.close(1011, 'Upstream error');
+            }
+          }, 1000);
+        }
+      };
+
+      // Connect using the callbacks
       session = await Promise.race([
         ai.live.connect({
           model: 'gemini-2.5-flash-native-audio-preview-12-2025',
@@ -250,54 +286,13 @@ Your role:
 Keep responses short (2-3 sentences) unless asked for detailed information.`
               }]
             }
-          }
+          },
+          callbacks: callbacks
         }),
         new Promise((_, reject) => 
           setTimeout(() => reject(new Error('Gemini connection timeout after 45 seconds')), 45000)
         )
       ]);
-
-      const connectDuration = Date.now() - connectStartTime;
-      console.log(`✅ ${clientId}: Connected to Gemini in ${connectDuration}ms`);
-      
-      isGeminiConnected = true;
-      sendToClient({ setupComplete: true });
-
-      // Handle Gemini messages
-      session.on('message', (msg) => {
-        try {
-          sendToClient(msg);
-        } catch (e) {
-          console.error(`❌ ${clientId}: Error forwarding:`, e.message);
-        }
-      });
-
-      session.on('close', () => {
-        console.log(`🔌 ${clientId}: Gemini upstream closed`);
-        isGeminiConnected = false;
-        sendToClient({ type: 'upstream_closed' });
-        setTimeout(() => {
-          if (clientWs.readyState === clientWs.OPEN) {
-            clientWs.close(1000, 'Upstream closed');
-          }
-        }, 500);
-      });
-
-      session.on('error', (err) => {
-        console.error(`❌ ${clientId}: Gemini error:`, err);
-        isGeminiConnected = false;
-        sendToClient({ 
-          error: 'AI service error', 
-          message: err.message,
-          details: 'The AI model refused the connection. Check billing/quota.'
-        });
-        // Give client time to receive error before closing
-        setTimeout(() => {
-          if (clientWs.readyState === clientWs.OPEN) {
-            clientWs.close(1011, 'Upstream error');
-          }
-        }, 1000);
-      });
 
       // Handle client messages
       clientWs.on('message', async (data) => {
@@ -305,19 +300,18 @@ Keep responses short (2-3 sentences) unless asked for detailed information.`
           const parsed = JSON.parse(data.toString());
           
           // Respond to application-level ping
-          if (parsed.type === 'ping') {
-             // Optional: send pong back or just ignore to keep connection open
-             return; 
-          }
+          if (parsed.type === 'ping') return;
           
           if (!session || !isGeminiConnected) return;
 
           if (parsed.realtimeInput) {
-            session.send(parsed);
+            // Correctly send input using sendRealtimeInput
+            session.sendRealtimeInput(parsed.realtimeInput);
           }
           
           if (parsed.clientContent) {
-            session.send(parsed);
+             // For tool responses or text input if needed
+             // session.send(parsed.clientContent); 
           }
         } catch (e) {
           console.error(`❌ ${clientId}: Parse error:`, e.message);
@@ -331,6 +325,7 @@ Keep responses short (2-3 sentences) unless asked for detailed information.`
         
         if (session && isGeminiConnected) {
           try {
+            // Close session if supported
             if (typeof session.close === 'function') {
               session.close();
             }
