@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { ViewState, Language, UserProfile } from './types';
 import { logActivity } from './services/analyticsService';
+import { GoogleOAuthProvider } from '@react-oauth/google';
 
 // Layout
 import Sidebar from './components/layout/Sidebar';
@@ -24,42 +25,69 @@ import CropCalendarView from './components/views/CropCalendarView';
 import AdminDashboard from './components/views/AdminDashboard';
 import SplashScreen from './components/views/SplashScreen';
 import SabjiMandiView from './components/views/SabjiMandiView';
+import LoginView from './components/views/LoginView';
 
 const App = () => {
   const [view, setView] = useState<ViewState>('SPLASH');
   const [lang, setLang] = useState<Language>('mr');
   
-  const [user, setUser] = useState<UserProfile>({ 
-    name: "Patil", 
-    village: "Haveli", 
-    district: "Pune", 
-    landSize: "5 Acres", 
-    crop: "Soyabean" 
-  });
+  // Default user state is null until login
+  const [user, setUser] = useState<UserProfile | null>(null);
   
   const [selectedScheme, setSelectedScheme] = useState<any>(null);
 
+  // --- GOOGLE CLIENT ID ---
+  // Ensure this is set in your .env file as VITE_GOOGLE_CLIENT_ID
+  const GOOGLE_CLIENT_ID = process.env.VITE_GOOGLE_CLIENT_ID || "";
+
   // --- ANALYTICS TRACKING ---
   useEffect(() => {
-    if (view !== 'SPLASH') {
-       // Try to get cached location or default to user profile village
+    if (view !== 'SPLASH' && view !== 'LOGIN' && user) {
        const location = localStorage.getItem('last_known_loc') || user.village;
-       logActivity(view, location);
+       logActivity(view, location, user);
     }
-  }, [view, user.village]);
+  }, [view, user]);
+
+  // --- AUTH CHECK ---
+  const handleSplashComplete = () => {
+      // Check for existing session
+      const savedSession = localStorage.getItem('user_session');
+      if (savedSession) {
+          try {
+              const parsedUser = JSON.parse(savedSession);
+              setUser(parsedUser);
+              setView('DASHBOARD');
+          } catch (e) {
+              setView('LOGIN');
+          }
+      } else {
+          setView('LOGIN');
+      }
+  };
+
+  const handleLoginSuccess = (loggedInUser: UserProfile) => {
+      setUser(loggedInUser);
+      setView('DASHBOARD');
+  };
 
   const getView = () => {
+    // Force Login if no user and not in Splash/Login views
+    if (!user && view !== 'SPLASH' && view !== 'LOGIN') {
+        return <LoginView onLoginSuccess={handleLoginSuccess} lang={lang} />;
+    }
+
     switch(view) {
-       case 'SPLASH': return <SplashScreen onComplete={() => setView('DASHBOARD')} />;
-       case 'DASHBOARD': return <Dashboard lang={lang} setLang={setLang} user={user} onNavigate={setView} />;
-       case 'VOICE_ASSISTANT': return <VoiceAssistant lang={lang} user={user} onBack={() => setView('DASHBOARD')} />;
+       case 'SPLASH': return <SplashScreen onComplete={handleSplashComplete} />;
+       case 'LOGIN': return <LoginView onLoginSuccess={handleLoginSuccess} lang={lang} />;
+       case 'DASHBOARD': return user ? <Dashboard lang={lang} setLang={setLang} user={user} onNavigate={setView} /> : null;
+       case 'VOICE_ASSISTANT': return user ? <VoiceAssistant lang={lang} user={user} onBack={() => setView('DASHBOARD')} /> : null;
        case 'DISEASE_DETECTOR': return <DiseaseDetector lang={lang} onBack={() => setView('DASHBOARD')} />;
        case 'SOIL': return <SoilAnalysis lang={lang} onBack={() => setView('DASHBOARD')} />;
        case 'YIELD': return <YieldPredictor lang={lang} onBack={() => setView('DASHBOARD')} />;
        case 'AREA_CALCULATOR': return <AreaCalculator lang={lang} onBack={() => setView('DASHBOARD')} />;
        case 'CALENDAR': return <CropCalendarView lang={lang} onBack={() => setView('DASHBOARD')} />;
        case 'ADMIN': return <AdminDashboard onBack={() => setView('DASHBOARD')} />;
-       case 'SABJI_MANDI': return <SabjiMandiView lang={lang} user={user} onBack={() => setView('DASHBOARD')} />;
+       case 'SABJI_MANDI': return user ? <SabjiMandiView lang={lang} user={user} onBack={() => setView('DASHBOARD')} /> : null;
        case 'SCHEMES': 
           if(selectedScheme) {
              return <SchemeDetailView scheme={selectedScheme} lang={lang} onBack={() => setSelectedScheme(null)} />;
@@ -70,40 +98,42 @@ const App = () => {
        case 'WEATHER':
          return <WeatherView lang={lang} onBack={() => setView('DASHBOARD')} />;
        case 'PROFILE':
-         return <ProfileView lang={lang} currentUser={user} onSave={(u) => { setUser(u); setView('DASHBOARD'); }} onBack={() => setView('DASHBOARD')} />;
-       default: return <Dashboard lang={lang} setLang={setLang} user={user} onNavigate={setView} />;
+         return user ? <ProfileView lang={lang} currentUser={user} onSave={(u) => { setUser(u); localStorage.setItem('user_session', JSON.stringify(u)); setView('DASHBOARD'); }} onBack={() => setView('DASHBOARD')} /> : null;
+       default: return user ? <Dashboard lang={lang} setLang={setLang} user={user} onNavigate={setView} /> : null;
     }
   };
 
   // Fullscreen views hide the standard nav but may implement their own internal nav
-  const isFullScreen = view === 'VOICE_ASSISTANT' || view === 'AREA_CALCULATOR' || view === 'SPLASH' || view === 'ADMIN';
+  const isFullScreen = view === 'VOICE_ASSISTANT' || view === 'AREA_CALCULATOR' || view === 'SPLASH' || view === 'ADMIN' || view === 'LOGIN';
 
   return (
-    <div className="relative w-full h-[100dvh] bg-transparent overflow-hidden text-slate-100 font-jakarta">
-       
-       {/* 1. Global Background Layers (Fixed, z-0) */}
-       <div className="premium-bg">
-          <div className="planet-orb-main"></div>
-          <div className="planet-ring"></div>
-          <div className="planet-orb-secondary"></div>
-          <div className="star-field"></div>
-       </div>
+    <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
+        <div className="relative w-full h-[100dvh] bg-transparent overflow-hidden text-slate-100 font-jakarta">
+        
+        {/* 1. Global Background Layers (Fixed, z-0) */}
+        <div className="premium-bg">
+            <div className="planet-orb-main"></div>
+            <div className="planet-ring"></div>
+            <div className="planet-orb-secondary"></div>
+            <div className="star-field"></div>
+        </div>
 
-       {/* 2. Notification System (Highest z-index for alerts) */}
-       {!isFullScreen && <NotificationSystem lang={lang} onNavigate={setView} />}
+        {/* 2. Notification System (Highest z-index for alerts) */}
+        {!isFullScreen && <NotificationSystem lang={lang} onNavigate={setView} />}
 
-       {/* 3. Navigation Sidebar (Desktop) - Fixed Left, High Z-Index */}
-       {!isFullScreen && <Sidebar view={view} setView={setView} lang={lang} />}
+        {/* 3. Navigation Sidebar (Desktop) - Fixed Left, High Z-Index */}
+        {!isFullScreen && <Sidebar view={view} setView={setView} lang={lang} />}
 
-       {/* 4. Main Content Area */}
-       <main className="relative w-full h-full z-10">
-          {getView()}
-       </main>
+        {/* 4. Main Content Area */}
+        <main className="relative w-full h-full z-10">
+            {getView()}
+        </main>
 
-       {/* 5. Mobile Navigation (Floating Bottom, High Z-Index) */}
-       {/* SHOW ONLY ON DASHBOARD */}
-       {view === 'DASHBOARD' && <MobileNav view={view} setView={setView} />}
-    </div>
+        {/* 5. Mobile Navigation (Floating Bottom, High Z-Index) */}
+        {/* SHOW ONLY ON DASHBOARD */}
+        {view === 'DASHBOARD' && <MobileNav view={view} setView={setView} />}
+        </div>
+    </GoogleOAuthProvider>
   );
 };
 

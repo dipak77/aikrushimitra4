@@ -1,4 +1,5 @@
 
+
 export type Language = 'mr' | 'hi' | 'en';
 
 export type ViewState = 
@@ -26,10 +27,14 @@ export type ViewState =
 
 export interface UserProfile {
   name: string;
+  email?: string;
+  picture?: string;
   village: string;
   district: string;
   landSize: string;
   crop: string;
+  joinedAt?: number;
+  lastLogin?: number;
 }
 
 export interface ChatMessage {
@@ -72,6 +77,8 @@ export interface ActivityLog {
   view: string;
   location: string;
   userAgent: string;
+  userName?: string;
+  userEmail?: string;
 }
 
 declare global {
@@ -79,5 +86,14 @@ declare global {
     ENV: {
       API_KEY: string;
     }
+  }
+
+  interface ImportMetaEnv {
+    readonly VITE_GOOGLE_CLIENT_ID: string;
+    readonly [key: string]: string;
+  }
+
+  interface ImportMeta {
+    readonly env: ImportMetaEnv;
   }
 }

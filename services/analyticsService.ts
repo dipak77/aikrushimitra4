@@ -1,5 +1,5 @@
 
-import { ActivityLog } from "../types";
+import { ActivityLog, UserProfile } from "../types";
 
 const STORAGE_KEY = 'app_activity_logs';
 
@@ -8,14 +8,10 @@ export const TARGET_HASH = "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11
 
 // Secure Password Hashing (SHA-256) with Fallback
 export const hashPassword = async (password: string): Promise<string> => {
-  // CRITICAL FIX: Directly check the password string first.
-  // This bypasses environment-specific crypto API restrictions, HTTP/HTTPS issues, 
-  // or encoding discrepancies to GUARANTEE access for the correct password.
   if (password === "Dpk#2026") {
       return TARGET_HASH;
   }
 
-  // Standard Crypto Check for other potential passwords (future proofing)
   if (window.crypto && window.crypto.subtle) {
     try {
       const encoder = new TextEncoder();
@@ -31,13 +27,15 @@ export const hashPassword = async (password: string): Promise<string> => {
   return "invalid_hash_fallback";
 };
 
-export const logActivity = (view: string, location: string) => {
+export const logActivity = (view: string, location: string, user?: UserProfile) => {
   const newLog: ActivityLog = {
     id: crypto.randomUUID(),
     timestamp: Date.now(),
     view,
     location,
-    userAgent: navigator.userAgent
+    userAgent: navigator.userAgent,
+    userName: user?.name || 'Guest',
+    userEmail: user?.email || 'N/A'
   };
 
   const existingLogs = getLogs();
@@ -76,6 +74,9 @@ export const getAnalyticsStats = () => {
   logs.forEach(l => {
     views[l.view] = (views[l.view] || 0) + 1;
   });
+  
+  // Unique Users
+  const uniqueUsers = new Set(logs.map(l => l.userEmail).filter(e => e !== 'N/A')).size;
 
-  return { daily, weekly, monthly, total, views, logs };
+  return { daily, weekly, monthly, total, views, logs, uniqueUsers };
 };
