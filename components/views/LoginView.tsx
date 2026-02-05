@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { GoogleLogin } from '@react-oauth/google';
 import { jwtDecode } from "jwt-decode";
 import { UserProfile, Language } from '../../types';
-import { Sprout, ShieldCheck, MapPin, Globe, AlertTriangle, ChevronRight } from 'lucide-react';
+import { Sprout, ShieldCheck, MapPin, Globe, AlertTriangle, ChevronRight, HelpCircle, User, Loader2 } from 'lucide-react';
 import { triggerHaptic } from '../../utils/common';
 import { logActivity } from '../../services/analyticsService';
 
@@ -15,6 +15,7 @@ interface LoginViewProps {
 const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess, lang }) => {
   const [error, setError] = useState('');
   const [isLocating, setIsLocating] = useState(false);
+  const [showDevOptions, setShowDevOptions] = useState(false);
 
   // Check for Client ID safely
   const hasClientId = !!process.env.VITE_GOOGLE_CLIENT_ID && process.env.VITE_GOOGLE_CLIENT_ID.length > 5;
@@ -24,11 +25,9 @@ const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess, lang }) => {
       triggerHaptic('medium');
       const decoded: any = jwtDecode(credentialResponse.credential);
       
-      // Get location if possible for tracking
       setIsLocating(true);
       
       let location = "Unknown";
-      
       try {
           if (navigator.geolocation) {
               await new Promise<void>((resolve) => {
@@ -54,18 +53,15 @@ const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess, lang }) => {
         name: decoded.name,
         email: decoded.email,
         picture: decoded.picture,
-        village: location !== "Unknown" ? location : "Maharashtra", // Default
-        district: "Pune", // Default, user can update profile
+        village: location !== "Unknown" ? location : "Maharashtra",
+        district: "Pune",
         landSize: "0 Acres",
         crop: "Not Selected",
         joinedAt: Date.now(),
         lastLogin: Date.now()
       };
 
-      // Save to storage
       localStorage.setItem('user_session', JSON.stringify(userProfile));
-      
-      // Log Login Event
       logActivity('LOGIN_SUCCESS', location, userProfile);
 
       setIsLocating(false);
@@ -73,24 +69,42 @@ const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess, lang }) => {
 
     } catch (err) {
       console.error("Login Error", err);
-      setError("Authentication Failed. Please try again.");
+      setError("Authentication Failed. Try Guest Mode.");
       setIsLocating(false);
     }
   };
 
-  const handleDevBypass = () => {
+  const handleGuestLogin = () => {
         triggerHaptic('medium');
-        const mockUser: UserProfile = {
-            name: "Demo Farmer",
-            email: "demo@aikrushimitra.in",
-            village: "Pune",
-            district: "Pune",
-            landSize: "5 Acres",
-            crop: "Soyabean",
-            joinedAt: Date.now()
-        };
-        localStorage.setItem('user_session', JSON.stringify(mockUser));
-        onLoginSuccess(mockUser);
+        setIsLocating(true); // Simulate loading
+        
+        setTimeout(() => {
+            const guestUser: UserProfile = {
+                name: "Guest Farmer",
+                email: "guest@aikrushimitra.in",
+                village: "Maharashtra",
+                district: "Pune",
+                landSize: "0 Acres",
+                crop: "Select Crop",
+                joinedAt: Date.now()
+            };
+            
+            try {
+                localStorage.setItem('user_session', JSON.stringify(guestUser));
+                logActivity('GUEST_LOGIN', "Guest Location", guestUser);
+            } catch(e) {
+                console.error("Storage error", e);
+            }
+            
+            setIsLocating(false);
+            onLoginSuccess(guestUser);
+        }, 800);
+  };
+
+  const handleGoogleError = () => {
+      // Common in preview environments due to origin mismatch
+      setError("Google Login unavailable in Preview.");
+      setShowDevOptions(true);
   };
 
   return (
@@ -130,13 +144,20 @@ const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess, lang }) => {
                     Sign in to access AI crop doctor, market rates, and personalized advice.
                 </p>
 
-                {hasClientId ? (
-                    <div className="flex justify-center mb-6">
-                        {/* Standard Google Button - Robust & Trusted */}
-                        <div className="w-full flex justify-center">
+                {isLocating ? (
+                    <div className="flex flex-col items-center justify-center py-8">
+                        <Loader2 size={32} className="text-emerald-400 animate-spin mb-4" />
+                        <div className="text-emerald-400 text-xs font-bold animate-pulse flex items-center gap-2">
+                            <MapPin size={12} /> Setting up your profile...
+                        </div>
+                    </div>
+                ) : hasClientId ? (
+                    <div className="flex flex-col items-center gap-4">
+                        {/* Standard Google Button */}
+                        <div className="w-full flex justify-center h-[44px]">
                             <GoogleLogin
                                 onSuccess={handleGoogleSuccess}
-                                onError={() => setError('Login Failed')}
+                                onError={handleGoogleError}
                                 theme="filled_black"
                                 shape="pill"
                                 size="large"
@@ -145,6 +166,20 @@ const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess, lang }) => {
                                 useOneTap
                             />
                         </div>
+                        
+                        <div className="flex items-center gap-3 w-full px-4">
+                            <div className="h-[1px] bg-white/10 flex-1"></div>
+                            <span className="text-[10px] text-slate-500 font-bold uppercase">OR</span>
+                            <div className="h-[1px] bg-white/10 flex-1"></div>
+                        </div>
+
+                        {/* Guest Bypass Button */}
+                        <button 
+                            onClick={handleGuestLogin}
+                            className="w-full h-[44px] rounded-full bg-white/5 border border-white/10 hover:bg-white/10 active:scale-95 transition-all flex items-center justify-center gap-2 text-sm font-bold text-slate-300 hover:text-white group"
+                        >
+                            <User size={16} className="group-hover:text-emerald-400 transition-colors"/> Continue as Guest
+                        </button>
                     </div>
                 ) : (
                     <div className="mb-6 p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl text-center">
@@ -155,41 +190,43 @@ const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess, lang }) => {
                         <p className="text-amber-400/80 text-xs px-2">
                             Google Client ID is missing. Please add VITE_GOOGLE_CLIENT_ID to your .env file.
                         </p>
+                        <button onClick={handleGuestLogin} className="mt-4 w-full py-2 bg-amber-500/20 rounded-lg text-amber-200 font-bold text-xs hover:bg-amber-500/30 transition-colors">
+                            Bypass & Continue (Guest)
+                        </button>
                     </div>
                 )}
 
-                {isLocating && (
-                    <div className="flex items-center justify-center gap-2 text-emerald-400 text-xs font-bold animate-pulse mt-4">
-                        <MapPin size={12} /> Getting Location...
+                {error && !isLocating && (
+                    <div className="text-red-400 text-xs text-center mt-4 bg-red-500/10 py-2 rounded-lg border border-red-500/20 animate-enter flex flex-col gap-1">
+                        <p className="font-bold">{error}</p>
+                        <p className="opacity-70 text-[10px]">Use "Continue as Guest" below.</p>
                     </div>
-                )}
-
-                {error && (
-                    <p className="text-red-400 text-xs text-center mt-4 bg-red-500/10 py-2 rounded-lg border border-red-500/20">{error}</p>
                 )}
 
                 <div className="mt-8 pt-6 border-t border-white/5 flex flex-col items-center gap-2">
                     <div className="flex items-center gap-2 text-slate-500 text-xs">
                         <ShieldCheck size={12} />
-                        <span>Secure Login via Google</span>
+                        <span>Secure Environment</span>
                     </div>
                 </div>
             </div>
             
-            {/* Dev Bypass (Visible if no Client ID) */}
-            {!hasClientId && (
-                <div className="mt-6 text-center animate-enter" style={{animationDelay: '0.2s'}}>
-                    <button 
-                        onClick={handleDevBypass}
-                        className="group relative inline-flex items-center gap-2 px-6 py-3 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 transition-all active:scale-95"
-                    >
-                        <span className="text-xs font-bold text-slate-300 group-hover:text-white uppercase tracking-wider">
-                            Development Mode: Skip Login
-                        </span>
-                        <ChevronRight size={14} className="text-slate-500 group-hover:text-white" />
-                    </button>
-                </div>
-            )}
+            {/* Troubleshoot Trigger */}
+            <div className="mt-6 text-center animate-enter" style={{animationDelay: '0.2s'}}>
+                <button 
+                    onClick={() => setShowDevOptions(!showDevOptions)}
+                    className="text-[10px] text-slate-600 hover:text-slate-400 transition-colors flex items-center justify-center gap-1.5 w-full py-2"
+                >
+                    <HelpCircle size={12} /> Having trouble?
+                </button>
+                
+                {showDevOptions && (
+                    <div className="mt-2 p-3 bg-white/5 rounded-xl border border-white/5 text-[10px] text-slate-400">
+                        <p className="mb-2">If Google Sign-In pop-up closes immediately, the domain might not be authorized in Google Cloud Console.</p>
+                        <p className="font-bold text-emerald-400">Click "Continue as Guest" to skip.</p>
+                    </div>
+                )}
+            </div>
         </div>
     </div>
   );

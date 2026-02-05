@@ -278,14 +278,13 @@ const VoiceAssistant = ({ lang, user, onBack }: { lang: Language, user: UserProf
          
          if (activeSocketRef.current && activeSocketRef.current.readyState === WebSocket.OPEN && shouldStayConnectedRef.current) {
              // Construct the payload that server.js expects (it forwards 'realtimeInput' property)
+             // CRITICAL: Use 'media' object, not 'mediaChunks' array for latest SDK compatibility
              activeSocketRef.current.send(JSON.stringify({
                  realtimeInput: {
-                     mediaChunks: [
-                         {
-                             mimeType: "audio/pcm;rate=16000",
-                             data: blob.data
-                         }
-                     ]
+                     media: {
+                         mimeType: "audio/pcm;rate=16000",
+                         data: blob.data
+                     }
                  }
              }));
          }
@@ -478,6 +477,10 @@ const VoiceAssistant = ({ lang, user, onBack }: { lang: Language, user: UserProf
                     transcripts.length > 0 && transcripts[transcripts.length-1].role === 'user' ? "Listening..." : "I'm Listening..."
                  ) : status === 'idle' ? t.voice_title : status === 'error' ? "Connection Error" : "Connecting..."}
               </h2>
+              
+              {status === 'error' && (
+                  <p className="text-red-400 text-xs font-bold bg-red-500/10 px-3 py-1 rounded-lg border border-red-500/20">{errorMessage}</p>
+              )}
 
               {/* Suggestions Chips (Vertical List) */}
               {(status === 'idle' || (status === 'connected' && transcripts.length < 2)) && (
