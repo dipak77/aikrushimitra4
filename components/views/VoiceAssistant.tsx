@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { UserProfile, Language } from '../../types';
 import { TRANSLATIONS } from '../../constants';
@@ -7,21 +6,17 @@ import { decode, decodeAudioData, createPCMChunk } from '../../utils/audio';
 import { triggerHaptic } from '../../utils/common';
 import { clsx } from 'clsx';
 
+
 const VoiceAssistant = ({ lang, user, onBack }: { lang: Language, user: UserProfile, onBack: () => void }) => {
   const t = TRANSLATIONS[lang];
-  // Extended state for robustness
   const [status, setStatus] = useState<'idle' | 'connecting' | 'connected' | 'reconnecting' | 'error' | 'offline'>('idle');
   const [errorMessage, setErrorMessage] = useState('');
   const [transcripts, setTranscripts] = useState<{role: 'user'|'model', text: string}[]>([]);
   
-  // Ref to keep track of transcripts for reconnection context without dependency loops
   const transcriptsRef = useRef<{role: 'user'|'model', text: string}[]>([]);
-
-  // Robust Session Management
   const shouldStayConnectedRef = useRef(false);
   const activeSocketRef = useRef<WebSocket | null>(null); 
   
-  // Audio Nodes
   const inputContextRef = useRef<AudioContext | null>(null);
   const outputContextRef = useRef<AudioContext | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
@@ -29,27 +24,25 @@ const VoiceAssistant = ({ lang, user, onBack }: { lang: Language, user: UserProf
   
   const reconnectTimeoutRef = useRef<any>(null);
   const retryCountRef = useRef(0);
-  
   const nextStartTimeRef = useRef<number>(0);
   
-  // Animation Refs
   const containerRef = useRef<HTMLDivElement>(null);
   const animationFrameRef = useRef<number>(0);
   const lastVolumeRef = useRef(0); 
   const phaseRef = useRef(0);
 
-  // Sync ref with state
+
   useEffect(() => {
     transcriptsRef.current = transcripts;
   }, [transcripts]);
 
-  // Auto-scroll for transcript
+
   const transcriptEndRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     transcriptEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [transcripts]);
 
-  // Cleanup Function
+
   const cleanup = (fullyStop: boolean = false) => {
     if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
     
@@ -87,6 +80,7 @@ const VoiceAssistant = ({ lang, user, onBack }: { lang: Language, user: UserProf
     }
   };
 
+
   const handleAutoReconnect = () => {
       if (!shouldStayConnectedRef.current) return;
 
@@ -106,11 +100,10 @@ const VoiceAssistant = ({ lang, user, onBack }: { lang: Language, user: UserProf
       }, delay);
   };
 
-  // Advanced Visualizer
+
   const visualize = (inputAnalyser: AnalyserNode, outputAnalyser: AnalyserNode) => {
       if(!containerRef.current) return;
       
-      // 1. Get Audio Levels
       const inputData = new Uint8Array(inputAnalyser.frequencyBinCount);
       inputAnalyser.getByteFrequencyData(inputData);
       let inputSum = 0;
@@ -123,30 +116,27 @@ const VoiceAssistant = ({ lang, user, onBack }: { lang: Language, user: UserProf
       for(let i = 0; i < outputData.length; i++) outputSum += outputData[i];
       const outputAvg = outputSum / outputData.length;
 
-      // 2. Smooth the volume value (Linear Interpolation)
       const maxAvg = Math.max(inputAvg, outputAvg);
       const targetVolume = maxAvg / 255;
-      lastVolumeRef.current += (targetVolume - lastVolumeRef.current) * 0.15; // Smooth transition
+      lastVolumeRef.current += (targetVolume - lastVolumeRef.current) * 0.15;
       const vol = lastVolumeRef.current;
 
-      // 3. Update CSS Variables for high-performance animation
-      // We control scale, glow intensity, and morph speed via CSS vars
       containerRef.current.style.setProperty('--audio-level', vol.toString());
       containerRef.current.style.setProperty('--glow-opacity', (0.3 + vol * 0.7).toString());
       
-      // Phase determines the rotation/morph offset
-      phaseRef.current += 0.02 + (vol * 0.1); // Spin faster on higher volume
+      phaseRef.current += 0.02 + (vol * 0.1);
       containerRef.current.style.setProperty('--phase', phaseRef.current.toString());
 
       animationFrameRef.current = requestAnimationFrame(() => visualize(inputAnalyser, outputAnalyser));
   };
 
+
   const getWebSocketUrl = () => {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const host = window.location.host;
-    // Uses the proxy path defined in vite.config.js (dev) or server.js (prod)
     return `${protocol}//${host}/ws/live`;
   };
+
 
   const connect = async () => {
     if (!navigator.onLine) {
@@ -160,8 +150,13 @@ const VoiceAssistant = ({ lang, user, onBack }: { lang: Language, user: UserProf
     setStatus(retryCountRef.current > 0 ? 'reconnecting' : 'connecting');
 
     try {
-      // 1. Setup Audio Input
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        audio: { 
+          echoCancellation: true, 
+          noiseSuppression: true, 
+          autoGainControl: true 
+        } 
+      });
       mediaStreamRef.current = stream;
       
       const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
@@ -169,13 +164,11 @@ const VoiceAssistant = ({ lang, user, onBack }: { lang: Language, user: UserProf
       await inputCtx.resume();
       inputContextRef.current = inputCtx;
 
-      // 2. Setup Audio Output
       const outputCtx = new AudioContextClass({ sampleRate: 24000 });
       await outputCtx.resume();
       outputContextRef.current = outputCtx;
       nextStartTimeRef.current = outputCtx.currentTime;
 
-      // 3. Audio Graph
       const source = inputCtx.createMediaStreamSource(stream);
       const processor = inputCtx.createScriptProcessor(4096, 1, 1);
       processorRef.current = processor;
@@ -194,20 +187,56 @@ const VoiceAssistant = ({ lang, user, onBack }: { lang: Language, user: UserProf
       
       visualize(inputAnalyser, outputAnalyser);
 
-      // 4. Connect to WebSocket Proxy
       const ws = new WebSocket(getWebSocketUrl());
       activeSocketRef.current = ws;
 
       ws.onopen = () => {
-          // Status will be updated to 'connected' when server sends 'setupComplete' or 'proxy_ready'
+          console.log('WebSocket connected, sending configuration...');
+          
+          // Build system instruction with conversation context
+          const history = transcriptsRef.current.slice(-8);
+          let contextStr = "";
+          if (history.length > 0) {
+            contextStr = "\n\n[PREVIOUS CONVERSATION CONTEXT - Resume from here]:";
+            history.forEach(h => {
+                contextStr += `\n${h.role === 'user' ? 'User' : 'You'}: ${h.text}`;
+            });
+          }
+          
+          // Language-specific instruction
+          const languageName = lang === 'mr' ? 'Marathi' : lang === 'hi' ? 'Hindi' : 'English';
+          const baseInstruction = `You are AI Krushi Mitra (AI कृषी मित्र), a helpful agricultural assistant for farmers in Maharashtra, India.
+
+Your role:
+- Provide farming advice primarily in ${languageName}, but understand and respond in Marathi, Hindi, or English based on user's language
+- Help with crop management, pest control, weather guidance, market prices, government schemes
+- Be concise, practical, and encouraging
+- Use simple language that farmers can understand
+- Speak naturally in a conversational, warm tone
+
+Keep responses short (2-3 sentences) unless asked for detailed information.`;
+          
+          const fullInstruction = history.length > 0 ? `${baseInstruction}${contextStr}` : baseInstruction;
+
+          // Send setup configuration to backend
+          ws.send(JSON.stringify({
+              type: 'setup',
+              config: {
+                  language: lang,
+                  systemInstruction: fullInstruction,
+                  voiceName: 'Puck', // Natural voice that works well for Indian languages
+                  enableInputTranscription: true,
+                  enableOutputTranscription: true
+              }
+          }));
       };
 
       ws.onmessage = async (event) => {
           try {
               const msg = JSON.parse(event.data);
-
-              // Handshake messages from server.js
-              if (msg.setupComplete || msg.type === 'proxy_ready') {
+              
+              // Connection established
+              if (msg.setupComplete || msg.type === 'setup_complete') {
                   retryCountRef.current = 0; 
                   setStatus('connected'); 
                   triggerHaptic();
@@ -236,14 +265,30 @@ const VoiceAssistant = ({ lang, user, onBack }: { lang: Language, user: UserProf
                  nextStartTimeRef.current += buffer.duration;
               }
 
-              // Transcripts
+              // User Transcripts
               const userTranscript = msg.serverContent?.inputTranscription?.text;
               if (userTranscript) {
-                  setTranscripts(prev => [...prev, { role: 'user', text: userTranscript }]);
+                  setTranscripts(prev => {
+                      // Prevent duplicates
+                      const lastMsg = prev[prev.length - 1];
+                      if (lastMsg?.role === 'user' && lastMsg?.text === userTranscript) {
+                          return prev;
+                      }
+                      return [...prev, { role: 'user', text: userTranscript }];
+                  });
               }
+              
+              // Model Transcripts
               const modelTranscript = msg.serverContent?.modelTurn?.parts?.[0]?.text;
               if (modelTranscript) {
-                  setTranscripts(prev => [...prev, { role: 'model', text: modelTranscript }]);
+                  setTranscripts(prev => {
+                      // Prevent duplicates
+                      const lastMsg = prev[prev.length - 1];
+                      if (lastMsg?.role === 'model' && lastMsg?.text === modelTranscript) {
+                          return prev;
+                      }
+                      return [...prev, { role: 'model', text: modelTranscript }];
+                  });
               }
 
           } catch (e) {
@@ -271,14 +316,12 @@ const VoiceAssistant = ({ lang, user, onBack }: { lang: Language, user: UserProf
            if (shouldStayConnectedRef.current) handleAutoReconnect();
       };
       
-      // 5. Send Audio
+      // Send Audio to Backend
       processor.onaudioprocess = (e) => {
          const inputData = e.inputBuffer.getChannelData(0);
-         const blob = createPCMChunk(inputData, inputCtx.sampleRate); // Returns { data, mimeType }
+         const blob = createPCMChunk(inputData, inputCtx.sampleRate);
          
          if (activeSocketRef.current && activeSocketRef.current.readyState === WebSocket.OPEN && shouldStayConnectedRef.current) {
-             // Construct the payload that server.js expects (it forwards 'realtimeInput' property)
-             // CRITICAL: Use 'media' object, not 'mediaChunks' array for latest SDK compatibility
              activeSocketRef.current.send(JSON.stringify({
                  realtimeInput: {
                      media: {
@@ -296,10 +339,10 @@ const VoiceAssistant = ({ lang, user, onBack }: { lang: Language, user: UserProf
     }
   };
 
+
   const handleToggle = () => {
       triggerHaptic();
       if (status === 'idle' || status === 'error') {
-          // Only clear if explicitly starting fresh, not retrying
           if (status !== 'error') setTranscripts([]); 
           connect();
       } else {
@@ -315,7 +358,6 @@ const VoiceAssistant = ({ lang, user, onBack }: { lang: Language, user: UserProf
   return (
     <div className="fixed inset-0 z-[200] bg-[#020617] flex flex-col h-[100dvh] w-full" ref={containerRef} style={{'--audio-level': 0, '--phase': 0} as React.CSSProperties}>
        
-       {/* --- Advanced Animation CSS --- */}
        <style>{`
           @property --angle {
             syntax: '<angle>';
@@ -388,7 +430,6 @@ const VoiceAssistant = ({ lang, user, onBack }: { lang: Language, user: UserProf
           }
        `}</style>
 
-       {/* 1. Deep Space Background with Grid */}
        <div className="absolute inset-0 bg-[#020617] pointer-events-none">
             <div className="absolute inset-0 opacity-20" 
                  style={{backgroundImage: 'linear-gradient(rgba(34, 197, 94, 0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(34, 197, 94, 0.1) 1px, transparent 1px)', backgroundSize: '40px 40px'}}></div>
@@ -396,7 +437,6 @@ const VoiceAssistant = ({ lang, user, onBack }: { lang: Language, user: UserProf
             <div className="absolute bottom-[-10%] right-[-10%] w-[90vw] h-[90vw] bg-cyan-900/20 blur-[120px] rounded-full"></div>
        </div>
 
-       {/* 2. Top Navigation Bar */}
        <div className="absolute top-0 left-0 right-0 p-4 pt-safe-top flex justify-between items-center z-[220] bg-gradient-to-b from-[#020617]/80 to-transparent">
           <button 
              onClick={handleBack} 
@@ -420,10 +460,8 @@ const VoiceAssistant = ({ lang, user, onBack }: { lang: Language, user: UserProf
           </div>
        </div>
 
-       {/* 3. Main Centered Content */}
        <div className="flex-1 flex flex-col items-center justify-center w-full relative z-10 orb-container">
           
-          {/* The Orb */}
           <div 
             className="relative w-[320px] h-[320px] flex items-center justify-center cursor-pointer tap-highlight-transparent group"
             onClick={handleToggle}
@@ -470,7 +508,6 @@ const VoiceAssistant = ({ lang, user, onBack }: { lang: Language, user: UserProf
              </div>
           </div>
           
-          {/* Status Text & Suggestions */}
           <div className="mt-8 w-full px-6 flex flex-col items-center z-40">
               <h2 className="text-2xl font-black text-white tracking-tight mb-2 drop-shadow-[0_0_10px_rgba(0,0,0,0.5)]">
                  {status === 'connected' ? (
@@ -482,7 +519,6 @@ const VoiceAssistant = ({ lang, user, onBack }: { lang: Language, user: UserProf
                   <p className="text-red-400 text-xs font-bold bg-red-500/10 px-3 py-1 rounded-lg border border-red-500/20">{errorMessage}</p>
               )}
 
-              {/* Suggestions Chips (Vertical List) */}
               {(status === 'idle' || (status === 'connected' && transcripts.length < 2)) && (
                  <div className="w-full max-w-[280px] flex flex-col gap-3 mt-6 animate-enter delay-100">
                     {t.voice_hints.map((hint: string, i: number) => (
@@ -498,7 +534,6 @@ const VoiceAssistant = ({ lang, user, onBack }: { lang: Language, user: UserProf
           </div>
        </div>
 
-       {/* 4. Live Transcription Overlay */}
        <div className={clsx("absolute bottom-0 inset-x-0 bg-gradient-to-t from-black via-black/90 to-transparent pt-16 pb-safe-bottom px-6 z-20 transition-transform duration-500 flex flex-col justify-end min-h-[30vh]", 
            transcripts.length === 0 && "translate-y-full opacity-0"
        )}>

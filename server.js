@@ -1,4 +1,3 @@
-
 import 'dotenv/config';
 import express from 'express';
 import path from 'path';
@@ -6,21 +5,21 @@ import { fileURLToPath } from 'url';
 import { GoogleGenAI } from '@google/genai';
 import { WebSocketServer } from 'ws';
 
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
 const PORT = process.env.PORT || 8080;
 
-// Helper to clean API key (remove quotes/whitespace)
-const cleanKey = (key) => key ? key.trim().replace(/^["']|["']$/g, '') : '';
 
-// Resolve API Key from various possible env vars
+const cleanKey = (key) => key ? key.trim().replace(/^["']|["']$/g, '') : '';
 const RAW_API_KEY = process.env.API_KEY || process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY;
 const API_KEY = cleanKey(RAW_API_KEY);
 
-// CRITICAL: Log environment on startup to debug connection issues
+
 console.log('🚀 Starting server...');
 console.log('📍 Environment:', process.env.NODE_ENV || 'development');
 console.log('🔑 API_KEY detected:', !!API_KEY);
+
 
 if (API_KEY) {
     console.log('🔑 API_KEY length:', API_KEY.length);
@@ -31,15 +30,17 @@ if (API_KEY) {
     console.error('📖 Get your key from: https://aistudio.google.com/apikey\n');
 }
 
+
 console.log('🔌 PORT:', PORT);
 
-// Security: Enforce HTTPS in production
+
 app.use((req, res, next) => {
   if (process.env.NODE_ENV === 'production' && req.headers['x-forwarded-proto'] === 'http') {
     return res.redirect(`https://${req.headers.host}${req.url}`);
   }
   next();
 });
+
 
 app.use((req, res, next) => {
   res.header("Access-Control-Allow-Origin", "*"); 
@@ -49,9 +50,10 @@ app.use((req, res, next) => {
   next();
 });
 
+
 app.use(express.json({ limit: '10mb' }));
 
-// Health check with detailed info
+
 app.get('/api/health', (req, res) => {
   res.json({ 
     status: 'ok',
@@ -61,6 +63,7 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+
 const getAIClient = () => {
   if (!API_KEY) {
     console.error('❌ CRITICAL: API_KEY not found in environment');
@@ -69,15 +72,14 @@ const getAIClient = () => {
   return new GoogleGenAI({ apiKey: API_KEY });
 };
 
-// Text chat endpoint
+
 app.post('/api/chat', async (req, res) => {
   try {
     const { prompt, systemInstruction } = req.body;
     const ai = getAIClient();
     
-    // Use gemini-3-flash-preview for text tasks
     const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
+      model: 'gemini-2.0-flash-exp',
       contents: prompt,
       config: { systemInstruction }
     });
@@ -89,15 +91,14 @@ app.post('/api/chat', async (req, res) => {
   }
 });
 
-// Vision endpoint
+
 app.post('/api/vision', async (req, res) => {
   try {
     const { prompt, imageBase64 } = req.body;
     const ai = getAIClient();
 
-    // Use gemini-2.5-flash-image for vision tasks
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash-image',
+      model: 'gemini-2.0-flash-exp',
       contents: {
         parts: [
           { inlineData: { mimeType: 'image/jpeg', data: imageBase64 } },
@@ -113,14 +114,14 @@ app.post('/api/vision', async (req, res) => {
   }
 });
 
-// Updates endpoint
+
 app.post('/api/updates', async (req, res) => {
   try {
     const { prompt } = req.body;
     const ai = getAIClient();
 
     const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
+      model: 'gemini-2.0-flash-exp',
       contents: prompt,
       config: {
         tools: [{ googleSearch: {} }],
@@ -135,27 +136,28 @@ app.post('/api/updates', async (req, res) => {
   }
 });
 
-const isProduction = process.env.NODE_ENV === 'production';
 
-// Serve public assets
+const isProduction = process.env.NODE_ENV === 'production';
 app.use(express.static(path.resolve(__dirname, 'public')));
 
-// Start server
+
 const server = app.listen(PORT, '0.0.0.0', () => {
   console.log(`✅ Server running on port ${PORT}`);
   console.log(`🎤 WebSocket endpoint: /ws/live`);
 });
 
-// WebSocket Server with Keep-Alive
+
 const wss = new WebSocketServer({ 
   server, 
   path: '/ws/live',
   clientTracking: true,
   perMessageDeflate: false,
-  maxPayload: 20 * 1024 * 1024 // 20MB
+  maxPayload: 20 * 1024 * 1024
 });
 
+
 console.log('🔌 WebSocket server created');
+
 
 wss.on('connection', async (clientWs, req) => {
   const clientId = Math.random().toString(36).substr(2, 9);
@@ -165,7 +167,6 @@ wss.on('connection', async (clientWs, req) => {
   console.log(`⏰ Time: ${new Date().toISOString()}`);
   console.log(`🔑 API Key Status: ${API_KEY ? 'PRESENT' : 'MISSING'}`);
   
-  // CRITICAL: Validate API key before proceeding
   if (!API_KEY || API_KEY.length < 10) {
     console.error(`❌ ${clientId}: API_KEY invalid or missing`);
     const errorMsg = {
@@ -181,13 +182,15 @@ wss.on('connection', async (clientWs, req) => {
     setTimeout(() => {
       clientWs.close(1008, 'API_KEY not configured');
     }, 500);
-    return; // Exit early
+    return;
   }
   
   let ai = null;
   let session = null;
   let isGeminiConnected = false;
   let connectionStartTime = Date.now();
+  let clientConfig = null; // Store client configuration
+
 
   const sendToClient = (data) => {
     if (clientWs.readyState === clientWs.OPEN) {
@@ -199,146 +202,161 @@ wss.on('connection', async (clientWs, req) => {
     }
   };
 
-  // Heartbeat to keep connection alive
+
   const pingInterval = setInterval(() => {
     if (clientWs.readyState === clientWs.OPEN) {
-        // Just keeping the connection alive
+        // Keep alive
     }
   }, 30000);
 
+
   try {
-    // Step 1: Get AI client
     ai = getAIClient();
     sendToClient({ type: 'proxy_ready', message: 'Proxy initialized' });
 
-    // Step 2: Connect to Gemini with detailed logging
-    console.log(`⏳ ${clientId}: Connecting to Gemini Live API...`);
-    
-    const connectStartTime = Date.now();
-    
-    try {
-      // Define callbacks for Gemini Session
-      const callbacks = {
-        onopen: () => {
-          const connectDuration = Date.now() - connectStartTime;
-          console.log(`✅ ${clientId}: Connected to Gemini in ${connectDuration}ms`);
-          isGeminiConnected = true;
-          sendToClient({ setupComplete: true });
-        },
-        onmessage: (msg) => {
-          try {
-            sendToClient(msg);
-          } catch (e) {
-            console.error(`❌ ${clientId}: Error forwarding:`, e.message);
-          }
-        },
-        onclose: () => {
-          console.log(`🔌 ${clientId}: Gemini upstream closed`);
-          isGeminiConnected = false;
-          sendToClient({ type: 'upstream_closed' });
-          setTimeout(() => {
-            if (clientWs.readyState === clientWs.OPEN) {
-              clientWs.close(1000, 'Upstream closed');
-            }
-          }, 500);
-        },
-        onerror: (err) => {
-          console.error(`❌ ${clientId}: Gemini error:`, err);
-          isGeminiConnected = false;
-          sendToClient({ 
-            error: 'AI service error', 
-            message: err.message || "Unknown error",
-            details: 'The AI model refused the connection. Check billing/quota.'
+    // Handle client messages
+    clientWs.on('message', async (data) => {
+      try {
+        const parsed = JSON.parse(data.toString());
+        
+        // **Handle setup message from frontend**
+        if (parsed.type === 'setup' && parsed.config) {
+          console.log(`⚙️ ${clientId}: Received setup config:`, {
+            language: parsed.config.language,
+            voiceName: parsed.config.voiceName,
+            hasSystemInstruction: !!parsed.config.systemInstruction
           });
-          // Give client time to receive error before closing
-          setTimeout(() => {
-            if (clientWs.readyState === clientWs.OPEN) {
-              clientWs.close(1011, 'Upstream error');
-            }
-          }, 1000);
-        }
-      };
-
-      // Connect using the callbacks
-      session = await Promise.race([
-        ai.live.connect({
-          model: 'gemini-2.5-flash-native-audio-preview-12-2025',
-          config: { 
-            responseModalities: ['AUDIO'],
-            speechConfig: { 
-              voiceConfig: { 
-                prebuiltVoiceConfig: { 
-                  voiceName: 'Kore'
-                } 
-              } 
-            },
-            systemInstruction: {
-              parts: [{
-                text: `You are AI Krushi Mitra (AI कृषी मित्र), a helpful agricultural assistant for farmers in Maharashtra, India. 
-
-Your role:
-- Provide farming advice in Marathi, Hindi, or English based on user's language
-- Help with crop management, pest control, weather guidance, market prices
-- Be concise, practical, and encouraging
-- Use simple language that farmers can understand
-- Speak naturally in a conversational tone
-
-Keep responses short (2-3 sentences) unless asked for detailed information.`
-              }]
-            }
-          },
-          callbacks: callbacks
-        }),
-        new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Gemini connection timeout after 45 seconds')), 45000)
-        )
-      ]);
-
-      // Handle client messages
-      clientWs.on('message', async (data) => {
-        try {
-          const parsed = JSON.parse(data.toString());
           
-          // Respond to application-level ping
-          if (parsed.type === 'ping') return;
+          clientConfig = parsed.config;
           
-          if (!session || !isGeminiConnected) return;
+          // Now connect to Gemini with the configuration
+          console.log(`⏳ ${clientId}: Connecting to Gemini Live API with config...`);
+          
+          const connectStartTime = Date.now();
+          
+          try {
+            const callbacks = {
+              onopen: () => {
+                const connectDuration = Date.now() - connectStartTime;
+                console.log(`✅ ${clientId}: Connected to Gemini in ${connectDuration}ms`);
+                isGeminiConnected = true;
+                sendToClient({ type: 'setup_complete', setupComplete: true });
+              },
+              onmessage: (msg) => {
+                try {
+                  sendToClient(msg);
+                } catch (e) {
+                  console.error(`❌ ${clientId}: Error forwarding:`, e.message);
+                }
+              },
+              onclose: () => {
+                console.log(`🔌 ${clientId}: Gemini upstream closed`);
+                isGeminiConnected = false;
+                sendToClient({ type: 'upstream_closed' });
+                setTimeout(() => {
+                  if (clientWs.readyState === clientWs.OPEN) {
+                    clientWs.close(1000, 'Upstream closed');
+                  }
+                }, 500);
+              },
+              onerror: (err) => {
+                console.error(`❌ ${clientId}: Gemini error:`, err);
+                isGeminiConnected = false;
+                sendToClient({ 
+                  error: 'AI service error', 
+                  message: err.message || "Unknown error",
+                  details: 'The AI model refused the connection. Check billing/quota.'
+                });
+                setTimeout(() => {
+                  if (clientWs.readyState === clientWs.OPEN) {
+                    clientWs.close(1011, 'Upstream error');
+                  }
+                }, 1000);
+              }
+            };
 
-          if (parsed.realtimeInput) {
-            // Correctly send input using sendRealtimeInput
-            session.sendRealtimeInput(parsed.realtimeInput);
+            // Build speech config
+            const voiceName = clientConfig.voiceName || 'Puck';
+            
+            // Connect with client configuration
+            session = await Promise.race([
+              ai.live.connect({
+                model: 'gemini-2.5-flash-native-audio-preview-12-2025',
+                config: { 
+                  responseModalities: ['AUDIO'],
+                  speechConfig: { 
+                    voiceConfig: { 
+                      prebuiltVoiceConfig: { 
+                        voiceName: voiceName
+                      } 
+                    } 
+                  },
+                  systemInstruction: {
+                    parts: [{
+                      text: clientConfig.systemInstruction || `You are AI Krushi Mitra, a helpful agricultural assistant.`
+                    }]
+                  },
+                  // **Enable transcriptions**
+                  ...(clientConfig.enableInputTranscription && {
+                    inputAudioTranscription: {}
+                  }),
+                  ...(clientConfig.enableOutputTranscription && {
+                    outputAudioTranscription: {}
+                  })
+                },
+                callbacks: callbacks
+              }),
+              new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('Gemini connection timeout after 45 seconds')), 45000)
+              )
+            ]);
+
+          } catch (geminiError) {
+            console.error(`❌ ${clientId}: Gemini connection failed:`, geminiError.message);
+            throw geminiError;
           }
           
-          if (parsed.clientContent) {
-             // For tool responses or text input if needed
-             // session.send(parsed.clientContent); 
+          return; // Setup handled
+        }
+        
+        // Respond to ping
+        if (parsed.type === 'ping') return;
+        
+        if (!session || !isGeminiConnected) {
+          console.warn(`⚠️ ${clientId}: Received data but session not ready`);
+          return;
+        }
+
+        // Forward audio input to Gemini
+        if (parsed.realtimeInput) {
+          session.sendRealtimeInput(parsed.realtimeInput);
+        }
+        
+        if (parsed.clientContent) {
+          // For other content types if needed
+        }
+      } catch (e) {
+        console.error(`❌ ${clientId}: Parse error:`, e.message);
+      }
+    });
+
+
+    clientWs.on('close', (code, reason) => {
+      clearInterval(pingInterval);
+      const duration = Date.now() - connectionStartTime;
+      console.log(`🔌 ${clientId}: Disconnected (${code}) after ${Math.round(duration / 1000)}s`);
+      
+      if (session && isGeminiConnected) {
+        try {
+          if (typeof session.close === 'function') {
+            session.close();
           }
         } catch (e) {
-          console.error(`❌ ${clientId}: Parse error:`, e.message);
+          console.error(`❌ ${clientId}: Session close error:`, e.message);
         }
-      });
+      }
+    });
 
-      clientWs.on('close', (code, reason) => {
-        clearInterval(pingInterval);
-        const duration = Date.now() - connectionStartTime;
-        console.log(`🔌 ${clientId}: Disconnected (${code}) after ${Math.round(duration / 1000)}s`);
-        
-        if (session && isGeminiConnected) {
-          try {
-            // Close session if supported
-            if (typeof session.close === 'function') {
-              session.close();
-            }
-          } catch (e) {
-            console.error(`❌ ${clientId}: Session close error:`, e.message);
-          }
-        }
-      });
-
-    } catch (geminiError) {
-      console.error(`❌ ${clientId}: Gemini connection failed:`, geminiError.message);
-      throw geminiError;
-    }
 
   } catch (err) {
     console.error(`❌ ${clientId}: INITIALIZATION FAILED`, err.message);
@@ -359,6 +377,7 @@ Keep responses short (2-3 sentences) unless asked for detailed information.`
   }
 });
 
+
 if (!isProduction) {
   console.log('🔧 Starting in DEVELOPMENT mode with Vite...');
   const { createServer } = await import('vite');
@@ -377,6 +396,7 @@ if (!isProduction) {
     res.sendFile(path.resolve(__dirname, 'dist', 'index.html'));
   });
 }
+
 
 process.on('SIGINT', () => {
   console.log('\n🛑 Shutting down...');
