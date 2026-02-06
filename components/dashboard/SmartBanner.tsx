@@ -1,4 +1,3 @@
-
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   CloudRain, TrendingUp, Lightbulb, Activity, ArrowRight, Flag, Heart, Sparkles,
@@ -46,7 +45,7 @@ export const SmartBanner = ({
 
   const txt = DASH_TEXT[lang];
 
-  // Tick for real-time clock (keeps calendar card “live”)
+  // Real-time clock update
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 30_000);
     return () => clearInterval(t);
@@ -101,11 +100,11 @@ export const SmartBanner = ({
     const fetchAIUpdates = async () => {
       try {
         setIsLoadingAI(true);
-        await new Promise(resolve => setTimeout(resolve, 900)); // quicker + less “feels stuck”
+        await new Promise(resolve => setTimeout(resolve, 900));
         const updates = await getLiveAgriUpdates(lang);
         if (mounted && updates && updates.length > 0) setLiveUpdates(updates);
       } catch {
-        // silent fail; UI will fallback
+        // silent fail
       } finally {
         if (mounted) setIsLoadingAI(false);
       }
@@ -119,22 +118,22 @@ export const SmartBanner = ({
     };
   }, [lang]);
 
-  // --- Stable particle seeds (NO Math.random inside render loop) ---
+  // --- Optimized particle seeds ---
   const particleSeeds = useMemo(() => {
-    return Array.from({ length: 18 }, (_, i) => ({
+    return Array.from({ length: 14 }, (_, i) => ({
       id: i,
-      top: Math.random() * 100,
-      left: Math.random() * 100,
-      size: 4 + Math.random() * 6,
-      driftX: -18 + Math.random() * 36,
-      driftY: -28 - Math.random() * 26,
-      dur: 4.8 + Math.random() * 3.2,
-      delay: Math.random() * 2.5,
-      alpha: 0.35 + Math.random() * 0.45,
+      top: 5 + Math.random() * 90,
+      left: 5 + Math.random() * 90,
+      size: 3 + Math.random() * 5,
+      driftX: -15 + Math.random() * 30,
+      driftY: -22 - Math.random() * 20,
+      dur: 5.5 + Math.random() * 2.5,
+      delay: Math.random() * 3,
+      alpha: 0.25 + Math.random() * 0.35,
     }));
   }, []);
 
-  // --- Message Queue (memoized so effects don’t thrash) ---
+  // --- Message Queue ---
   const messages: Msg[] = useMemo(() => {
     const list: Msg[] = [];
 
@@ -155,16 +154,15 @@ export const SmartBanner = ({
         },
         cta: { mr: 'संदेश शेअर करा', hi: 'संदेश शेयर करें', en: 'Share Wishes' },
 
-        // Premium: tricolor on deep midnight (looks less “flat”)
-        bgBase: 'radial-gradient(circle at 20% 30%, rgba(255,153,51,0.95) 0%, rgba(15,23,42,1) 55%, rgba(19,136,8,0.95) 100%)',
-        bgOverlay: 'linear-gradient(135deg, rgba(255,255,255,0.12) 0%, rgba(0,0,0,0.58) 55%, rgba(255,255,255,0.10) 100%)',
-        accentGlow: 'rgba(255, 153, 51, 0.75)',
-        secondaryGlow: 'rgba(19, 136, 8, 0.70)',
+        bgBase: 'radial-gradient(ellipse 120% 100% at 30% 40%, rgba(255,153,51,0.92) 0%, rgba(10,15,35,1) 48%, rgba(19,136,8,0.88) 100%)',
+        bgOverlay: 'linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(0,0,0,0.65) 50%, rgba(255,255,255,0.05) 100%)',
+        accentGlow: 'rgba(255, 153, 51, 0.80)',
+        secondaryGlow: 'rgba(19, 136, 8, 0.75)',
         particleColors: ['#FF9933', '#FFFFFF', '#138808', '#0ea5e9'],
         icon: Flag,
         badges: [
-          { text: { mr: '77वा', hi: '77वां', en: '77th' }, color: 'bg-gradient-to-r from-orange-600/90 to-orange-500/90', glow: 'shadow-[0_0_25px_rgba(255,153,51,0.65)]' },
-          { text: { mr: '26 जानेवारी', hi: '26 जनवरी', en: 'Jan 26' }, color: 'bg-gradient-to-r from-green-700/90 to-green-600/90', glow: 'shadow-[0_0_25px_rgba(19,136,8,0.6)]' }
+          { text: { mr: '77वा', hi: '77वां', en: '77th' }, color: 'bg-gradient-to-r from-orange-600/90 to-orange-500/90', glow: 'shadow-[0_0_25px_rgba(255,153,51,0.7)]' },
+          { text: { mr: '26 जानेवारी', hi: '26 जनवरी', en: 'Jan 26' }, color: 'bg-gradient-to-r from-green-700/90 to-green-600/90', glow: 'shadow-[0_0_25px_rgba(19,136,8,0.65)]' }
         ],
         isSpecial: true
       });
@@ -187,15 +185,15 @@ export const SmartBanner = ({
         },
         cta: { mr: 'सल्ला पहा', hi: 'सलाह देखें', en: 'View Tips' },
 
-        bgBase: 'radial-gradient(circle at 30% 20%, rgba(59,130,246,0.85) 0%, rgba(15,23,42,1) 55%, rgba(79,70,229,0.85) 100%)',
-        bgOverlay: 'linear-gradient(135deg, rgba(255,255,255,0.10) 0%, rgba(0,0,0,0.70) 60%, rgba(255,255,255,0.06) 100%)',
-        accentGlow: 'rgba(59, 130, 246, 0.75)',
-        secondaryGlow: 'rgba(99, 102, 241, 0.65)',
+        bgBase: 'radial-gradient(ellipse 110% 100% at 25% 25%, rgba(59,130,246,0.90) 0%, rgba(8,15,38,1) 52%, rgba(79,70,229,0.82) 100%)',
+        bgOverlay: 'linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(0,0,0,0.70) 55%, rgba(255,255,255,0.05) 100%)',
+        accentGlow: 'rgba(59, 130, 246, 0.80)',
+        secondaryGlow: 'rgba(99, 102, 241, 0.70)',
         particleColors: ['#60a5fa', '#3b82f6', '#818cf8', '#38bdf8'],
         icon: AlertTriangle,
         badges: [
-          { text: { mr: 'तातडीचे', hi: 'अत्यावश्यक', en: 'Urgent' }, color: 'bg-gradient-to-r from-red-700/90 to-red-600/90', glow: 'shadow-[0_0_30px_rgba(239,68,68,0.6)]' },
-          { text: { mr: `${windSpeed} किमी`, hi: `${windSpeed} किमी`, en: `${windSpeed} km/h` }, color: 'bg-white/10 border border-white/20', glow: 'shadow-[0_0_18px_rgba(255,255,255,0.25)]' }
+          { text: { mr: 'तातडीचे', hi: 'अत्यावश्यक', en: 'Urgent' }, color: 'bg-gradient-to-r from-red-700/90 to-red-600/90', glow: 'shadow-[0_0_30px_rgba(239,68,68,0.65)]' },
+          { text: { mr: `${windSpeed} किमी`, hi: `${windSpeed} किमी`, en: `${windSpeed} km/h` }, color: 'bg-white/12 border border-white/25', glow: 'shadow-[0_0_18px_rgba(255,255,255,0.3)]' }
         ],
       });
     }
@@ -214,23 +212,23 @@ export const SmartBanner = ({
           cta: { mr: 'तपशील', hi: 'विवरण', en: 'Details' },
 
           bgBase: isScheme
-            ? 'radial-gradient(circle at 25% 30%, rgba(16,185,129,0.85) 0%, rgba(2,6,23,1) 60%, rgba(20,184,166,0.8) 100%)'
-            : 'radial-gradient(circle at 70% 25%, rgba(168,85,247,0.85) 0%, rgba(2,6,23,1) 60%, rgba(236,72,153,0.75) 100%)',
-          bgOverlay: 'linear-gradient(135deg, rgba(255,255,255,0.10) 0%, rgba(0,0,0,0.72) 60%, rgba(255,255,255,0.06) 100%)',
-          accentGlow: isScheme ? 'rgba(16, 185, 129, 0.75)' : 'rgba(168, 85, 247, 0.75)',
-          secondaryGlow: isScheme ? 'rgba(20, 184, 166, 0.65)' : 'rgba(236, 72, 153, 0.65)',
+            ? 'radial-gradient(ellipse 115% 100% at 30% 35%, rgba(16,185,129,0.90) 0%, rgba(3,7,18,1) 55%, rgba(20,184,166,0.85) 100%)'
+            : 'radial-gradient(ellipse 110% 100% at 65% 30%, rgba(168,85,247,0.88) 0%, rgba(3,7,18,1) 54%, rgba(236,72,153,0.80) 100%)',
+          bgOverlay: 'linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(0,0,0,0.72) 58%, rgba(255,255,255,0.05) 100%)',
+          accentGlow: isScheme ? 'rgba(16, 185, 129, 0.80)' : 'rgba(168, 85, 247, 0.80)',
+          secondaryGlow: isScheme ? 'rgba(20, 184, 166, 0.70)' : 'rgba(236, 72, 153, 0.70)',
           particleColors: isScheme ? ['#10b981', '#34d399', '#2dd4bf'] : ['#a855f7', '#c084fc', '#ec4899'],
           icon: isScheme ? Crown : TrendingUp,
           badges: [
             {
               text: { mr: update.badge || 'नवीन', hi: update.badge || 'नया', en: update.badge || 'New' },
-              color: 'bg-white/10 border border-white/20',
-              glow: 'shadow-[0_0_18px_rgba(255,255,255,0.25)]'
+              color: 'bg-white/12 border border-white/25',
+              glow: 'shadow-[0_0_18px_rgba(255,255,255,0.3)]'
             },
             {
               text: { mr: 'AI', hi: 'AI', en: 'AI' },
               color: 'bg-gradient-to-r from-cyan-600/90 to-blue-500/90',
-              glow: 'shadow-[0_0_22px_rgba(6,182,212,0.55)]'
+              glow: 'shadow-[0_0_22px_rgba(6,182,212,0.6)]'
             }
           ]
         });
@@ -254,20 +252,20 @@ export const SmartBanner = ({
         },
         cta: { mr: 'कॅलेंडर', hi: 'कैलेंडर', en: 'Calendar' },
 
-        bgBase: 'radial-gradient(circle at 30% 20%, rgba(124,58,237,0.9) 0%, rgba(2,6,23,1) 60%, rgba(236,72,153,0.8) 100%)',
-        bgOverlay: 'linear-gradient(135deg, rgba(255,255,255,0.10) 0%, rgba(0,0,0,0.72) 60%, rgba(255,255,255,0.06) 100%)',
-        accentGlow: 'rgba(168, 85, 247, 0.75)',
-        secondaryGlow: 'rgba(236, 72, 153, 0.65)',
+        bgBase: 'radial-gradient(ellipse 110% 100% at 30% 30%, rgba(124,58,237,0.90) 0%, rgba(3,7,18,1) 56%, rgba(236,72,153,0.82) 100%)',
+        bgOverlay: 'linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(0,0,0,0.72) 58%, rgba(255,255,255,0.05) 100%)',
+        accentGlow: 'rgba(168, 85, 247, 0.80)',
+        secondaryGlow: 'rgba(236, 72, 153, 0.70)',
         particleColors: ['#a855f7', '#ec4899', '#d946ef'],
         icon: CalendarIcon,
         badges: [
-          { text: { mr: currentDay, hi: currentDay, en: currentDay }, color: 'bg-white/10 border border-white/20' },
-          { text: { mr: `${currentDate}`, hi: `${currentDate}`, en: `${currentDate}` }, color: 'bg-white/10 border border-white/20' }
+          { text: { mr: currentDay, hi: currentDay, en: currentDay }, color: 'bg-white/12 border border-white/25' },
+          { text: { mr: `${currentDate}`, hi: `${currentDate}`, en: `${currentDate}` }, color: 'bg-white/12 border border-white/25' }
         ]
       });
     }
 
-    // 5) Standard weather (only if no alert already)
+    // 5) Standard weather
     if (!isStormy && !isHighWind && list.length < 3 && temp !== '--') {
       list.push({
         id: 'weather',
@@ -289,16 +287,16 @@ export const SmartBanner = ({
         cta: { mr: 'तपशील', hi: 'विवरण', en: 'Forecast' },
 
         bgBase: isDay
-          ? 'radial-gradient(circle at 25% 20%, rgba(245,158,11,0.85) 0%, rgba(2,6,23,1) 62%, rgba(59,130,246,0.8) 100%)'
-          : 'radial-gradient(circle at 75% 20%, rgba(99,102,241,0.85) 0%, rgba(2,6,23,1) 62%, rgba(168,85,247,0.75) 100%)',
-        bgOverlay: 'linear-gradient(135deg, rgba(255,255,255,0.10) 0%, rgba(0,0,0,0.72) 60%, rgba(255,255,255,0.06) 100%)',
-        accentGlow: isDay ? 'rgba(245, 158, 11, 0.75)' : 'rgba(99, 102, 241, 0.75)',
-        secondaryGlow: isDay ? 'rgba(59, 130, 246, 0.65)' : 'rgba(168, 85, 247, 0.65)',
+          ? 'radial-gradient(ellipse 115% 100% at 28% 25%, rgba(245,158,11,0.88) 0%, rgba(3,7,18,1) 58%, rgba(59,130,246,0.78) 100%)'
+          : 'radial-gradient(ellipse 110% 100% at 70% 28%, rgba(99,102,241,0.88) 0%, rgba(3,7,18,1) 58%, rgba(139,92,246,0.78) 100%)',
+        bgOverlay: 'linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(0,0,0,0.72) 58%, rgba(255,255,255,0.05) 100%)',
+        accentGlow: isDay ? 'rgba(245, 158, 11, 0.80)' : 'rgba(99, 102, 241, 0.80)',
+        secondaryGlow: isDay ? 'rgba(59, 130, 246, 0.70)' : 'rgba(168, 85, 247, 0.70)',
         particleColors: isDay ? ['#f59e0b', '#3b82f6', '#60a5fa'] : ['#6366f1', '#a855f7', '#818cf8'],
         icon: isRainy ? CloudRain : isDay ? Sun : Moon,
         badges: [
-          { text: { mr: isDay ? 'Day' : 'Night', hi: isDay ? 'Day' : 'Night', en: isDay ? 'Day' : 'Night' }, color: 'bg-white/10 border border-white/20' },
-          { text: { mr: `${temp}°C`, hi: `${temp}°C`, en: `${temp}°C` }, color: 'bg-white/10 border border-white/20' }
+          { text: { mr: isDay ? 'Day' : 'Night', hi: isDay ? 'Day' : 'Night', en: isDay ? 'Day' : 'Night' }, color: 'bg-white/12 border border-white/25' },
+          { text: { mr: `${temp}°C`, hi: `${temp}°C`, en: `${temp}°C` }, color: 'bg-white/12 border border-white/25' }
         ],
       });
     }
@@ -317,16 +315,16 @@ export const SmartBanner = ({
         cta: { mr: 'भाव', hi: 'कीमत', en: 'Rates' },
 
         bgBase: isPositiveTrend
-          ? 'radial-gradient(circle at 30% 20%, rgba(16,185,129,0.88) 0%, rgba(2,6,23,1) 62%, rgba(6,182,212,0.75) 100%)'
-          : 'radial-gradient(circle at 30% 20%, rgba(239,68,68,0.88) 0%, rgba(2,6,23,1) 62%, rgba(249,115,22,0.75) 100%)',
-        bgOverlay: 'linear-gradient(135deg, rgba(255,255,255,0.10) 0%, rgba(0,0,0,0.72) 60%, rgba(255,255,255,0.06) 100%)',
-        accentGlow: isPositiveTrend ? 'rgba(16, 185, 129, 0.75)' : 'rgba(239, 68, 68, 0.75)',
-        secondaryGlow: isPositiveTrend ? 'rgba(6, 182, 212, 0.65)' : 'rgba(249, 115, 22, 0.65)',
+          ? 'radial-gradient(ellipse 115% 100% at 32% 28%, rgba(16,185,129,0.90) 0%, rgba(3,7,18,1) 58%, rgba(6,182,212,0.82) 100%)'
+          : 'radial-gradient(ellipse 115% 100% at 32% 28%, rgba(239,68,68,0.90) 0%, rgba(3,7,18,1) 58%, rgba(249,115,22,0.80) 100%)',
+        bgOverlay: 'linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(0,0,0,0.72) 58%, rgba(255,255,255,0.05) 100%)',
+        accentGlow: isPositiveTrend ? 'rgba(16, 185, 129, 0.80)' : 'rgba(239, 68, 68, 0.80)',
+        secondaryGlow: isPositiveTrend ? 'rgba(6, 182, 212, 0.70)' : 'rgba(249, 115, 22, 0.70)',
         particleColors: isPositiveTrend ? ['#10b981', '#06b6d4', '#34d399'] : ['#ef4444', '#f97316', '#fb7185'],
         icon: TrendingUp,
         badges: [
-          { text: { mr: isPositiveTrend ? 'Bullish' : 'Bearish', hi: isPositiveTrend ? 'Bullish' : 'Bearish', en: isPositiveTrend ? 'Bullish' : 'Bearish' }, color: 'bg-white/10 border border-white/20' },
-          { text: { mr: marketData.trend, hi: marketData.trend, en: marketData.trend }, color: 'bg-white/10 border border-white/20' }
+          { text: { mr: isPositiveTrend ? 'Bullish' : 'Bearish', hi: isPositiveTrend ? 'Bullish' : 'Bearish', en: isPositiveTrend ? 'Bullish' : 'Bearish' }, color: 'bg-white/12 border border-white/25' },
+          { text: { mr: marketData.trend, hi: marketData.trend, en: marketData.trend }, color: 'bg-white/12 border border-white/25' }
         ],
       });
     }
@@ -344,15 +342,15 @@ export const SmartBanner = ({
           : { mr: 'रात्री तापमान कमी होऊ शकते. पाणी द्या', hi: 'रात में तापमान गिर सकता है। सिंचाई करें', en: 'Temp may drop tonight. Irrigate crops' },
         cta: { mr: 'सल्ला', hi: 'सलाह', en: 'Read Tip' },
 
-        bgBase: 'radial-gradient(circle at 35% 20%, rgba(251,191,36,0.85) 0%, rgba(2,6,23,1) 62%, rgba(251,146,60,0.75) 100%)',
-        bgOverlay: 'linear-gradient(135deg, rgba(255,255,255,0.10) 0%, rgba(0,0,0,0.72) 60%, rgba(255,255,255,0.06) 100%)',
-        accentGlow: 'rgba(251, 191, 36, 0.75)',
-        secondaryGlow: 'rgba(251, 146, 60, 0.65)',
+        bgBase: 'radial-gradient(ellipse 112% 100% at 35% 28%, rgba(251,191,36,0.88) 0%, rgba(3,7,18,1) 58%, rgba(251,146,60,0.80) 100%)',
+        bgOverlay: 'linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(0,0,0,0.72) 58%, rgba(255,255,255,0.05) 100%)',
+        accentGlow: 'rgba(251, 191, 36, 0.80)',
+        secondaryGlow: 'rgba(251, 146, 60, 0.70)',
         particleColors: ['#fbbf24', '#fb923c', '#f59e0b'],
         icon: Lightbulb,
         badges: [
-          { text: { mr: 'AI', hi: 'AI', en: 'AI' }, color: 'bg-white/10 border border-white/20' },
-          { text: { mr: 'Tip', hi: 'Tip', en: 'Tip' }, color: 'bg-white/10 border border-white/20' }
+          { text: { mr: 'AI', hi: 'AI', en: 'AI' }, color: 'bg-white/12 border border-white/25' },
+          { text: { mr: 'Tip', hi: 'Tip', en: 'Tip' }, color: 'bg-white/12 border border-white/25' }
         ]
       });
     }
@@ -389,8 +387,8 @@ export const SmartBanner = ({
       setTimeout(() => {
         setCurrentIndex(prev => (prev + 1) % messages.length);
         setIsAnimating(false);
-      }, 520);
-    }, 7600);
+      }, 480);
+    }, 8500);
 
     return () => clearInterval(interval);
   }, [messages.length]);
@@ -401,47 +399,56 @@ export const SmartBanner = ({
 
   if (!msg) return null;
 
-  const particleCount = msg.isSpecial ? 16 : 12;
+  const particleCount = msg.isSpecial ? 14 : 10;
 
   return (
-    <div className={clsx("relative flex flex-1 lg:max-w-5xl lg:mx-6 min-h-[5.25rem] lg:h-28 rounded-3xl overflow-hidden", className)}>
+    <div className={clsx("relative flex flex-1 lg:max-w-5xl lg:mx-auto min-h-[88px] lg:h-32 rounded-[28px] overflow-hidden shadow-2xl", className)}>
       <style>{`
         .sb-gpu { transform: translate3d(0,0,0); backface-visibility: hidden; }
         .sb-will { will-change: transform, opacity; }
 
         @keyframes sb-slide-in {
-          0%   { transform: translate3d(-18px, 10px, 0) scale(0.985); opacity: 0; }
-          100% { transform: translate3d(0, 0, 0) scale(1); opacity: 1; }
+          0%   { transform: translate3d(-12px, 8px, 0) scale(0.98); opacity: 0; filter: blur(4px); }
+          100% { transform: translate3d(0, 0, 0) scale(1); opacity: 1; filter: blur(0); }
         }
 
         @keyframes sb-slide-out {
-          0%   { transform: translate3d(0, 0, 0) scale(1); opacity: 1; }
-          100% { transform: translate3d(18px, -10px, 0) scale(0.985); opacity: 0; }
+          0%   { transform: translate3d(0, 0, 0) scale(1); opacity: 1; filter: blur(0); }
+          100% { transform: translate3d(12px, -8px, 0) scale(0.98); opacity: 0; filter: blur(4px); }
         }
 
         @keyframes sb-bg-flow {
-          0%, 100% { background-position: 0% 50%; }
-          50% { background-position: 100% 50%; }
+          0%, 100% { background-position: 0% 40%; }
+          50% { background-position: 100% 60%; }
         }
 
         @keyframes sb-shine {
-          0% { transform: translate3d(-140%,0,0) skewX(-18deg); opacity: 0; }
-          45% { opacity: 0.55; }
-          100% { transform: translate3d(240%,0,0) skewX(-18deg); opacity: 0; }
+          0% { transform: translate3d(-120%,0,0) skewX(-15deg); opacity: 0; }
+          40% { opacity: 0.6; }
+          100% { transform: translate3d(220%,0,0) skewX(-15deg); opacity: 0; }
         }
 
         @keyframes sb-float {
-          0%,100% { transform: translate3d(0,0,0); opacity: var(--a); }
-          50% { transform: translate3d(var(--dx), var(--dy), 0); opacity: calc(var(--a) * 0.7); }
+          0%,100% { transform: translate3d(0,0,0) scale(1); opacity: var(--a); }
+          50% { transform: translate3d(var(--dx), var(--dy), 0) scale(0.85); opacity: calc(var(--a) * 0.6); }
         }
 
         @keyframes sb-badge {
-          0%,100% { transform: translate3d(0,0,0) scale(1); }
-          50% { transform: translate3d(0,0,0) scale(1.04); }
+          0%,100% { transform: translateY(0) scale(1); }
+          50% { transform: translateY(-1px) scale(1.05); }
+        }
+
+        @keyframes sb-glow-pulse {
+          0%, 100% { opacity: 0.8; filter: brightness(1); }
+          50% { opacity: 1; filter: brightness(1.15); }
         }
 
         @media (prefers-reduced-motion: reduce) {
-          .sb-anim, .sb-anim * { animation: none !important; transition: none !important; }
+          *, *::before, *::after {
+            animation-duration: 0.01ms !important;
+            animation-iteration-count: 1 !important;
+            transition-duration: 0.01ms !important;
+          }
         }
       `}</style>
 
@@ -450,8 +457,8 @@ export const SmartBanner = ({
         className="absolute inset-0 sb-gpu sb-anim"
         style={{
           background: msg.bgBase,
-          backgroundSize: '220% 220%',
-          animation: 'sb-bg-flow 14s ease-in-out infinite',
+          backgroundSize: '200% 200%',
+          animation: 'sb-bg-flow 16s ease-in-out infinite',
         }}
       />
 
@@ -460,20 +467,27 @@ export const SmartBanner = ({
         className="absolute inset-0 sb-gpu pointer-events-none"
         style={{
           background: msg.bgOverlay,
-          boxShadow: 'inset 0 -60px 120px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.12)',
+          boxShadow: `
+            inset 0 -80px 140px rgba(0,0,0,0.5),
+            inset 0 2px 1px rgba(255,255,255,0.15),
+            inset 0 -2px 1px rgba(0,0,0,0.3)
+          `,
         }}
       />
 
-      {/* Soft highlight */}
+      {/* Enhanced soft highlights */}
       <div
-        className="absolute inset-0 pointer-events-none"
+        className="absolute inset-0 pointer-events-none mix-blend-overlay opacity-60"
         style={{
-          background:
-            'radial-gradient(circle at 25% 30%, rgba(255,255,255,0.10) 0%, transparent 55%), radial-gradient(circle at 80% 70%, rgba(0,0,0,0.35) 0%, transparent 55%)'
+          background: `
+            radial-gradient(circle 400px at 20% 25%, rgba(255,255,255,0.12) 0%, transparent 50%),
+            radial-gradient(circle 350px at 85% 75%, rgba(0,0,0,0.25) 0%, transparent 50%),
+            linear-gradient(180deg, rgba(255,255,255,0.05) 0%, transparent 30%, rgba(0,0,0,0.15) 100%)
+          `
         }}
       />
 
-      {/* Particles (stable seeds, transform-only animation) */}
+      {/* Particles */}
       <div className="absolute inset-0 pointer-events-none">
         {particleSeeds.slice(0, particleCount).map((p) => {
           const color = msg.particleColors[p.id % msg.particleColors.length];
@@ -499,11 +513,11 @@ export const SmartBanner = ({
         })}
       </div>
 
-      {/* Shine */}
+      {/* Shine effect */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-40">
         <div
           className="absolute inset-0 w-1/3 bg-gradient-to-r from-transparent via-white/45 to-transparent sb-gpu"
-          style={{ animation: 'sb-shine 6.5s ease-in-out infinite' }}
+          style={{ animation: 'sb-shine 8s ease-in-out infinite' }}
         />
       </div>
 
@@ -519,11 +533,12 @@ export const SmartBanner = ({
       {/* Content */}
       <div
         className={clsx(
-          "relative z-10 w-full h-full flex flex-col lg:flex-row items-start lg:items-center justify-between p-5 lg:px-7 gap-3 lg:gap-0 sb-anim",
-          isAnimating ? "sb-will sb-gpu animate-[sb-slide-out_0.52s_ease-out_forwards]" : "sb-will sb-gpu animate-[sb-slide-in_0.55s_ease-out_forwards]"
+          "relative z-10 w-full h-full flex flex-col lg:flex-row items-start lg:items-center justify-between",
+          "p-6 lg:px-8 gap-4 lg:gap-6 sb-anim",
+          isAnimating ? "sb-will sb-gpu animate-[sb-slide-out_0.48s_ease-out_forwards]" : "sb-will sb-gpu animate-[sb-slide-in_0.55s_ease-out_forwards]"
         )}
       >
-        {/* Left */}
+        {/* Left section */}
         <div className="flex items-start lg:items-center gap-4 lg:gap-6 flex-1 min-w-0 w-full">
           {/* Icon */}
           <div className="relative shrink-0 sb-gpu">
@@ -534,19 +549,19 @@ export const SmartBanner = ({
                              radial-gradient(circle at 70% 70%, ${msg.secondaryGlow} 0%, transparent 60%)`
               }}
             />
-            <div className="relative w-16 h-16 lg:w-20 lg:h-20 rounded-2xl overflow-hidden border border-white/20 bg-white/10 backdrop-blur-xl shadow-[0_18px_60px_rgba(0,0,0,0.55)]">
-              <div className="absolute inset-0 bg-gradient-to-br from-white/20 via-white/5 to-transparent" />
-              <div className="absolute top-1 inset-x-5 h-[3px] bg-gradient-to-r from-transparent via-white/70 to-transparent blur-[1px]" />
+            <div className="relative w-14 h-14 lg:w-[72px] lg:h-[72px] rounded-[18px] overflow-hidden border border-white/25 bg-white/12 backdrop-blur-xl shadow-[0_20px_70px_rgba(0,0,0,0.6)]">
+              <div className="absolute inset-0 bg-gradient-to-br from-white/25 via-white/8 to-transparent" />
+              <div className="absolute top-0.5 inset-x-4 h-[2px] bg-gradient-to-r from-transparent via-white/80 to-transparent blur-sm" />
               <div className="absolute inset-0 flex items-center justify-center">
-                <Icon size={34} className="text-white drop-shadow-[0_10px_25px_rgba(0,0,0,0.6)]" strokeWidth={2.6} />
+                <Icon size={32} className="text-white drop-shadow-[0_8px_20px_rgba(0,0,0,0.7)]" strokeWidth={2.8} />
               </div>
             </div>
           </div>
 
-          {/* Text */}
+          {/* Text content */}
           <div className="flex flex-col gap-2 flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-[11px] lg:text-xs font-black uppercase tracking-[0.18em] text-white/80 bg-black/25 border border-white/10 backdrop-blur-md px-3 py-1 rounded-lg">
+              <span className="text-[10px] lg:text-[11px] font-extrabold uppercase tracking-[0.15em] text-white/85 bg-black/30 border border-white/15 backdrop-blur-lg px-3.5 py-1.5 rounded-[10px] shadow-lg">
                 {msg.category[lang] || msg.category.en}
               </span>
 
@@ -555,7 +570,7 @@ export const SmartBanner = ({
                   <div
                     key={idx}
                     className={clsx(
-                      "px-3 py-1 rounded-lg text-[11px] font-black uppercase tracking-wide text-white border border-white/15 backdrop-blur-xl sb-gpu sb-will",
+                      "px-3 py-1 rounded-[10px] text-[10px] font-black uppercase tracking-wide text-white border border-white/20 backdrop-blur-xl sb-gpu sb-will",
                       b.color,
                       b.glow
                     )}
@@ -567,57 +582,89 @@ export const SmartBanner = ({
               </div>
             </div>
 
-            <h2 className="text-2xl lg:text-3xl font-black leading-tight tracking-tight truncate text-white drop-shadow-[0_12px_30px_rgba(0,0,0,0.65)]">
+            <h2 className="text-[22px] lg:text-[28px] font-black leading-[1.15] tracking-[-0.02em] text-white drop-shadow-[0_10px_25px_rgba(0,0,0,0.7)] line-clamp-1">
               {msg.title[lang] || msg.title.en}
             </h2>
 
-            <p className="text-sm lg:text-base font-semibold truncate text-white/90 drop-shadow-[0_10px_24px_rgba(0,0,0,0.55)]">
+            <p className="text-[13px] lg:text-[15px] font-semibold leading-snug text-white/92 drop-shadow-[0_8px_20px_rgba(0,0,0,0.6)] line-clamp-1">
               {msg.subtitle[lang] || msg.subtitle.en}
             </p>
           </div>
         </div>
 
-        {/* Right */}
+        {/* Right section */}
         <div className="flex items-center justify-between w-full lg:w-auto lg:gap-6 shrink-0">
-          <div className="hidden lg:block h-20 w-px bg-white/20" />
+          <div className="hidden lg:block h-20 w-px bg-white/20 shadow-[0_0_8px_rgba(255,255,255,0.15)]" />
 
-          <button className="group/cta relative px-6 py-3 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/20 backdrop-blur-xl transition-transform duration-300 hover:scale-[1.03] sb-gpu sb-will">
-            <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent rounded-2xl" />
-            <div className="relative flex items-center gap-2.5">
-              <span className="text-sm lg:text-base font-black text-white">
+          <button 
+            className="group/cta relative px-7 py-3.5 rounded-[18px] bg-white/12 hover:bg-white/18 border border-white/25 backdrop-blur-xl transition-all duration-300 hover:scale-105 hover:shadow-[0_20px_60px_rgba(255,255,255,0.15)] sb-gpu sb-will active:scale-100"
+            aria-label={`${msg.cta[lang]} - ${msg.title[lang]}`}
+            role="button"
+            tabIndex={0}
+          >
+            {/* Glossy overlay */}
+            <div className="absolute inset-0 bg-gradient-to-b from-white/20 via-white/5 to-black/20 rounded-[18px]" />
+            
+            {/* Top highlight */}
+            <div className="absolute top-0 inset-x-6 h-[2px] bg-gradient-to-r from-transparent via-white/80 to-transparent blur-sm" />
+            
+            <div className="relative flex items-center gap-3">
+              <span className="text-[13px] lg:text-[15px] font-black text-white tracking-wide">
                 {msg.cta[lang] || msg.cta.en}
               </span>
-              <ArrowRight size={18} className="text-white group-hover/cta:translate-x-1 transition-transform" strokeWidth={3} />
+              <ArrowRight 
+                size={18} 
+                className="text-white group-hover/cta:translate-x-1.5 transition-transform duration-300" 
+                strokeWidth={3.2} 
+              />
             </div>
 
+            {/* Special decorations */}
             {msg.isSpecial && (
               <>
-                <Heart size={14} className="absolute -top-2 -right-2 text-red-400 animate-pulse" fill="currentColor" />
-                <Sparkles size={12} className="absolute -bottom-1 -left-1 text-yellow-300 animate-bounce" />
+                <Heart 
+                  size={13} 
+                  className="absolute -top-1.5 -right-1.5 text-red-400 drop-shadow-[0_0_8px_rgba(248,113,113,0.8)]" 
+                  fill="currentColor" 
+                  style={{ animation: 'sb-glow-pulse 2s ease-in-out infinite' }}
+                />
+                <Sparkles 
+                  size={11} 
+                  className="absolute -bottom-1 -left-1 text-yellow-300 drop-shadow-[0_0_8px_rgba(253,224,71,0.8)]"
+                  style={{ animation: 'sb-badge 2.5s ease-in-out infinite' }}
+                />
               </>
             )}
           </button>
 
-          <div className="flex flex-col items-end gap-2">
-            <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/10 border border-white/15 backdrop-blur-xl">
-              <Activity size={14} className="text-white" strokeWidth={3} />
-              <span className="text-[11px] font-black text-white uppercase tracking-wide">
+          <div className="flex flex-col items-end gap-2.5">
+            {/* Live indicator */}
+            <div className="flex items-center gap-2.5 px-4 py-2.5 rounded-[12px] bg-black/25 border border-white/20 backdrop-blur-xl shadow-lg">
+              <Activity size={13} className="text-emerald-300" strokeWidth={3.2} />
+              <span className="text-[10px] font-black text-white uppercase tracking-[0.12em]">
                 {isLoadingAI ? 'Loading' : 'Live'}
               </span>
-              <span className="w-2 h-2 rounded-full bg-emerald-300 shadow-[0_0_12px_rgba(52,211,153,0.8)]" />
+              <span 
+                className="relative w-2 h-2 rounded-full bg-emerald-400"
+                style={{
+                  boxShadow: '0 0 12px rgba(52,211,153,0.9), 0 0 24px rgba(52,211,153,0.5)',
+                  animation: 'sb-glow-pulse 1.5s ease-in-out infinite'
+                }}
+              />
             </div>
 
+            {/* Progress indicators */}
             <div className="flex gap-2">
               {messages.map((m, idx) => (
                 <span
                   key={m.id}
                   className={clsx(
-                    "h-2 rounded-full transition-all duration-500",
-                    idx === safeIndex ? "w-8" : "w-2 bg-white/35"
+                    "h-1.5 rounded-full transition-all duration-500",
+                    idx === safeIndex ? "w-10" : "w-1.5 bg-white/30"
                   )}
                   style={idx === safeIndex ? {
                     background: `linear-gradient(90deg, ${msg.accentGlow}, ${msg.secondaryGlow})`,
-                    boxShadow: `0 0 18px ${msg.accentGlow}`
+                    boxShadow: `0 0 16px ${msg.accentGlow}, 0 0 8px ${msg.secondaryGlow}`
                   } : undefined}
                 />
               ))}
@@ -626,21 +673,30 @@ export const SmartBanner = ({
         </div>
       </div>
 
-      {/* Subtle corner dots */}
-      <div className="absolute top-4 left-6 flex gap-2 opacity-60 pointer-events-none">
-        <span className="w-2.5 h-2.5 rounded-full bg-white/80" />
-        <span className="w-2.5 h-2.5 rounded-full bg-white/55" />
-        <span className="w-2.5 h-2.5 rounded-full bg-white/35" />
+      {/* Corner dots */}
+      <div className="absolute top-5 left-7 flex gap-2 opacity-60 pointer-events-none">
+        <span className="w-2.5 h-2.5 rounded-full bg-white/80 shadow-[0_0_8px_rgba(255,255,255,0.5)]" />
+        <span className="w-2.5 h-2.5 rounded-full bg-white/55 shadow-[0_0_6px_rgba(255,255,255,0.4)]" />
+        <span className="w-2.5 h-2.5 rounded-full bg-white/35 shadow-[0_0_4px_rgba(255,255,255,0.3)]" />
       </div>
 
-      {/* Special sparkles */}
+      {/* Special decorations */}
       {msg.isSpecial && (
         <>
-          <Sparkles size={20} className="absolute top-4 right-6 text-yellow-300 pointer-events-none drop-shadow-[0_0_18px_rgba(253,224,71,0.7)]" strokeWidth={3} />
-          <Zap size={16} className="absolute bottom-4 right-6 text-green-300 pointer-events-none drop-shadow-[0_0_18px_rgba(134,239,172,0.7)]" fill="currentColor" />
+          <Sparkles 
+            size={20} 
+            className="absolute top-5 right-7 text-yellow-300 pointer-events-none drop-shadow-[0_0_18px_rgba(253,224,71,0.7)]" 
+            strokeWidth={3}
+            style={{ animation: 'sb-glow-pulse 2s ease-in-out infinite' }}
+          />
+          <Zap 
+            size={16} 
+            className="absolute bottom-5 right-7 text-green-300 pointer-events-none drop-shadow-[0_0_18px_rgba(134,239,172,0.7)]" 
+            fill="currentColor"
+            style={{ animation: 'sb-badge 2s ease-in-out infinite' }}
+          />
         </>
       )}
     </div>
   );
 };
-    
