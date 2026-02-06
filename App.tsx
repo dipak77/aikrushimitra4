@@ -80,7 +80,7 @@ const App = () => {
        case 'SPLASH': return <SplashScreen onComplete={handleSplashComplete} />;
        case 'LOGIN': return <LoginView onLoginSuccess={handleLoginSuccess} lang={lang} />;
        case 'DASHBOARD': return user ? <Dashboard lang={lang} setLang={setLang} user={user} onNavigate={setView} /> : null;
-       case 'VOICE_ASSISTANT': return user ? <VoiceAssistant lang={lang} user={user} onBack={() => setView('DASHBOARD')} /> : null;
+       case 'VOICE_ASSISTANT': return user ? <VoiceAssistant lang={lang} user={user} onUserUpdate={setUser} onBack={() => setView('DASHBOARD')} /> : null;
        case 'DISEASE_DETECTOR': return <DiseaseDetector lang={lang} onBack={() => setView('DASHBOARD')} />;
        case 'SOIL': return <SoilAnalysis lang={lang} onBack={() => setView('DASHBOARD')} />;
        case 'YIELD': return <YieldPredictor lang={lang} onBack={() => setView('DASHBOARD')} />;

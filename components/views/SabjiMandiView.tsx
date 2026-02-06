@@ -50,10 +50,10 @@ const SabjiMandiView = ({ lang, user, onBack }: { lang: Language, user: UserProf
     });
   };
 
-  const totalItems = Object.values(cart).reduce((a, b) => a + b, 0);
-  const totalPrice = Object.entries(cart).reduce((sum, [id, qty]) => {
+  const totalItems = Object.values(cart).reduce((a: number, b: number) => a + b, 0);
+  const totalPrice = Object.entries(cart).reduce((sum: number, [id, qty]) => {
     const p = MOCK_VEGETABLES.find(v => v.id === Number(id));
-    return sum + (p ? p.price * qty : 0);
+    return sum + (p ? p.price * (qty as number) : 0);
   }, 0);
 
   // WhatsApp Logic
@@ -66,7 +66,7 @@ const SabjiMandiView = ({ lang, user, onBack }: { lang: Language, user: UserProf
         const p = MOCK_VEGETABLES.find(v => v.id === Number(id));
         if(p) {
             const name = lang === 'mr' ? p.nameMr : lang === 'hi' ? p.nameHi : p.nameEn;
-            itemsList += `- ${name} (${qty} ${p.unit}) - ₹${p.price * qty}\n`;
+            itemsList += `- ${name} (${qty} ${p.unit}) - ₹${p.price * (qty as number)}\n`;
         }
     });
 
@@ -293,3 +293,4 @@ ${addrLabel}: ${userDetails.address}`;
 };
 
 export default SabjiMandiView;
+    

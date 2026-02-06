@@ -1,22 +1,30 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { UserProfile, Language } from '../../types';
 import { TRANSLATIONS } from '../../constants';
-import { ArrowLeft, RefreshCw, Mic, WifiOff, MessageSquare } from 'lucide-react';
+import { ArrowLeft, RefreshCw, Mic, MessageSquare, Lock, ShieldCheck } from 'lucide-react';
 import { decode, decodeAudioData, createPCMChunk } from '../../utils/audio';
 import { triggerHaptic } from '../../utils/common';
 import { clsx } from 'clsx';
+import { GoogleLogin } from '@react-oauth/google';
+import { jwtDecode } from "jwt-decode";
+import { logActivity } from '../../services/analyticsService';
 
-
-const VoiceAssistant = ({ lang, user, onBack }: { lang: Language, user: UserProfile, onBack: () => void }) => {
+const VoiceAssistant = ({ lang, user, onUserUpdate, onBack }: { lang: Language, user: UserProfile, onUserUpdate: (u: UserProfile) => void, onBack: () => void }) => {
   const t = TRANSLATIONS[lang];
+  // Extended state for robustness
   const [status, setStatus] = useState<'idle' | 'connecting' | 'connected' | 'reconnecting' | 'error' | 'offline'>('idle');
   const [errorMessage, setErrorMessage] = useState('');
   const [transcripts, setTranscripts] = useState<{role: 'user'|'model', text: string}[]>([]);
   
+  // Ref to keep track of transcripts for reconnection context without dependency loops
   const transcriptsRef = useRef<{role: 'user'|'model', text: string}[]>([]);
+
+  // Robust Session Management
   const shouldStayConnectedRef = useRef(false);
   const activeSocketRef = useRef<WebSocket | null>(null); 
   
+  // Audio Nodes
   const inputContextRef = useRef<AudioContext | null>(null);
   const outputContextRef = useRef<AudioContext | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
@@ -24,25 +32,103 @@ const VoiceAssistant = ({ lang, user, onBack }: { lang: Language, user: UserProf
   
   const reconnectTimeoutRef = useRef<any>(null);
   const retryCountRef = useRef(0);
+  
   const nextStartTimeRef = useRef<number>(0);
   
+  // Animation Refs
   const containerRef = useRef<HTMLDivElement>(null);
   const animationFrameRef = useRef<number>(0);
   const lastVolumeRef = useRef(0); 
   const phaseRef = useRef(0);
 
-
+  // Sync ref with state
   useEffect(() => {
     transcriptsRef.current = transcripts;
   }, [transcripts]);
 
-
+  // Auto-scroll for transcript
   const transcriptEndRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     transcriptEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [transcripts]);
 
+  // Guest Check Logic
+  const isGuest = user.email === 'guest@aikrushimitra.in' || user.email?.includes('guest');
 
+  const handleGoogleUpgrade = (credentialResponse: any) => {
+      try {
+          triggerHaptic('medium');
+          const decoded: any = jwtDecode(credentialResponse.credential);
+          
+          const upgradedUser: UserProfile = {
+              ...user, // Keep location data from guest session
+              name: decoded.name,
+              email: decoded.email,
+              picture: decoded.picture,
+              lastLogin: Date.now()
+          };
+
+          localStorage.setItem('user_session', JSON.stringify(upgradedUser));
+          logActivity('UPGRADE_SUCCESS', user.village, upgradedUser);
+          
+          // Update global state, this will re-render VoiceAssistant with isGuest=false
+          onUserUpdate(upgradedUser); 
+
+      } catch (err) {
+          console.error("Upgrade Error", err);
+          setErrorMessage("Login failed. Please try again.");
+      }
+  };
+
+  // If Guest, Render Lock Screen Immediately
+  if (isGuest) {
+      return (
+        <div className="fixed inset-0 z-[200] bg-[#020617] flex items-center justify-center p-6 animate-enter">
+            {/* Background Effects */}
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,_var(--tw-gradient-stops))] from-indigo-900/40 via-[#020617] to-[#020617]"></div>
+            <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-overlay"></div>
+            
+            <div className="relative z-10 w-full max-w-sm">
+                <div className="glass-panel p-8 rounded-[2rem] border border-red-500/20 bg-slate-900/80 backdrop-blur-xl shadow-2xl flex flex-col items-center text-center">
+                    
+                    <div className="w-20 h-20 bg-gradient-to-br from-red-500/20 to-purple-500/20 rounded-full flex items-center justify-center mb-6 shadow-[0_0_30px_rgba(239,68,68,0.2)] border border-red-500/20 animate-pulse">
+                        <Lock size={32} className="text-red-400" />
+                    </div>
+
+                    <h2 className="text-xl font-bold text-white mb-3">Feature Locked</h2>
+                    <p className="text-slate-400 text-sm mb-8 leading-relaxed">
+                        Voice Assistant requires a verified Google account for security and personalization.
+                    </p>
+
+                    <div className="w-full flex justify-center mb-6">
+                        <GoogleLogin
+                            onSuccess={handleGoogleUpgrade}
+                            onError={() => setErrorMessage("Login Failed")}
+                            theme="filled_black"
+                            shape="pill"
+                            size="large"
+                            text="signin_with"
+                            width="280"
+                        />
+                    </div>
+
+                    <button 
+                        onClick={onBack}
+                        className="text-sm font-bold text-slate-500 hover:text-white transition-colors uppercase tracking-wider"
+                    >
+                        Return to Dashboard
+                    </button>
+
+                    {errorMessage && <p className="text-red-400 text-xs mt-4">{errorMessage}</p>}
+                </div>
+            </div>
+        </div>
+      );
+  }
+
+  // --- NORMAL VOICE ASSISTANT LOGIC BELOW ---
+
+  // Cleanup Function
   const cleanup = (fullyStop: boolean = false) => {
     if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
     
@@ -80,7 +166,6 @@ const VoiceAssistant = ({ lang, user, onBack }: { lang: Language, user: UserProf
     }
   };
 
-
   const handleAutoReconnect = () => {
       if (!shouldStayConnectedRef.current) return;
 
@@ -100,10 +185,11 @@ const VoiceAssistant = ({ lang, user, onBack }: { lang: Language, user: UserProf
       }, delay);
   };
 
-
+  // Advanced Visualizer
   const visualize = (inputAnalyser: AnalyserNode, outputAnalyser: AnalyserNode) => {
       if(!containerRef.current) return;
       
+      // 1. Get Audio Levels
       const inputData = new Uint8Array(inputAnalyser.frequencyBinCount);
       inputAnalyser.getByteFrequencyData(inputData);
       let inputSum = 0;
@@ -116,27 +202,30 @@ const VoiceAssistant = ({ lang, user, onBack }: { lang: Language, user: UserProf
       for(let i = 0; i < outputData.length; i++) outputSum += outputData[i];
       const outputAvg = outputSum / outputData.length;
 
+      // 2. Smooth the volume value (Linear Interpolation)
       const maxAvg = Math.max(inputAvg, outputAvg);
       const targetVolume = maxAvg / 255;
-      lastVolumeRef.current += (targetVolume - lastVolumeRef.current) * 0.15;
+      lastVolumeRef.current += (targetVolume - lastVolumeRef.current) * 0.15; // Smooth transition
       const vol = lastVolumeRef.current;
 
+      // 3. Update CSS Variables for high-performance animation
+      // We control scale, glow intensity, and morph speed via CSS vars
       containerRef.current.style.setProperty('--audio-level', vol.toString());
       containerRef.current.style.setProperty('--glow-opacity', (0.3 + vol * 0.7).toString());
       
-      phaseRef.current += 0.02 + (vol * 0.1);
+      // Phase determines the rotation/morph offset
+      phaseRef.current += 0.02 + (vol * 0.1); // Spin faster on higher volume
       containerRef.current.style.setProperty('--phase', phaseRef.current.toString());
 
       animationFrameRef.current = requestAnimationFrame(() => visualize(inputAnalyser, outputAnalyser));
   };
 
-
   const getWebSocketUrl = () => {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const host = window.location.host;
+    // Uses the proxy path defined in vite.config.js (dev) or server.js (prod)
     return `${protocol}//${host}/ws/live`;
   };
-
 
   const connect = async () => {
     if (!navigator.onLine) {
@@ -150,13 +239,8 @@ const VoiceAssistant = ({ lang, user, onBack }: { lang: Language, user: UserProf
     setStatus(retryCountRef.current > 0 ? 'reconnecting' : 'connecting');
 
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        audio: { 
-          echoCancellation: true, 
-          noiseSuppression: true, 
-          autoGainControl: true 
-        } 
-      });
+      // 1. Setup Audio Input
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
       mediaStreamRef.current = stream;
       
       const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
@@ -164,11 +248,13 @@ const VoiceAssistant = ({ lang, user, onBack }: { lang: Language, user: UserProf
       await inputCtx.resume();
       inputContextRef.current = inputCtx;
 
+      // 2. Setup Audio Output
       const outputCtx = new AudioContextClass({ sampleRate: 24000 });
       await outputCtx.resume();
       outputContextRef.current = outputCtx;
       nextStartTimeRef.current = outputCtx.currentTime;
 
+      // 3. Audio Graph
       const source = inputCtx.createMediaStreamSource(stream);
       const processor = inputCtx.createScriptProcessor(4096, 1, 1);
       processorRef.current = processor;
@@ -187,6 +273,7 @@ const VoiceAssistant = ({ lang, user, onBack }: { lang: Language, user: UserProf
       
       visualize(inputAnalyser, outputAnalyser);
 
+      // 4. Connect to WebSocket Proxy
       const ws = new WebSocket(getWebSocketUrl());
       activeSocketRef.current = ws;
 
@@ -234,8 +321,8 @@ Keep responses short (2-3 sentences) unless asked for detailed information.`;
       ws.onmessage = async (event) => {
           try {
               const msg = JSON.parse(event.data);
-              
-              // Connection established
+
+              // Handshake messages from server.js
               if (msg.setupComplete || msg.type === 'setup_complete') {
                   retryCountRef.current = 0; 
                   setStatus('connected'); 
@@ -265,7 +352,7 @@ Keep responses short (2-3 sentences) unless asked for detailed information.`;
                  nextStartTimeRef.current += buffer.duration;
               }
 
-              // User Transcripts
+              // Transcripts
               const userTranscript = msg.serverContent?.inputTranscription?.text;
               if (userTranscript) {
                   setTranscripts(prev => {
@@ -277,8 +364,6 @@ Keep responses short (2-3 sentences) unless asked for detailed information.`;
                       return [...prev, { role: 'user', text: userTranscript }];
                   });
               }
-              
-              // Model Transcripts
               const modelTranscript = msg.serverContent?.modelTurn?.parts?.[0]?.text;
               if (modelTranscript) {
                   setTranscripts(prev => {
@@ -316,12 +401,13 @@ Keep responses short (2-3 sentences) unless asked for detailed information.`;
            if (shouldStayConnectedRef.current) handleAutoReconnect();
       };
       
-      // Send Audio to Backend
+      // 5. Send Audio
       processor.onaudioprocess = (e) => {
          const inputData = e.inputBuffer.getChannelData(0);
-         const blob = createPCMChunk(inputData, inputCtx.sampleRate);
+         const blob = createPCMChunk(inputData, inputCtx.sampleRate); // Returns { data, mimeType }
          
          if (activeSocketRef.current && activeSocketRef.current.readyState === WebSocket.OPEN && shouldStayConnectedRef.current) {
+             // Construct the payload that server.js expects (it forwards 'realtimeInput' property)
              activeSocketRef.current.send(JSON.stringify({
                  realtimeInput: {
                      media: {
@@ -339,10 +425,10 @@ Keep responses short (2-3 sentences) unless asked for detailed information.`;
     }
   };
 
-
   const handleToggle = () => {
       triggerHaptic();
       if (status === 'idle' || status === 'error') {
+          // Only clear if explicitly starting fresh, not retrying
           if (status !== 'error') setTranscripts([]); 
           connect();
       } else {
@@ -358,6 +444,7 @@ Keep responses short (2-3 sentences) unless asked for detailed information.`;
   return (
     <div className="fixed inset-0 z-[200] bg-[#020617] flex flex-col h-[100dvh] w-full" ref={containerRef} style={{'--audio-level': 0, '--phase': 0} as React.CSSProperties}>
        
+       {/* --- Advanced Animation CSS --- */}
        <style>{`
           @property --angle {
             syntax: '<angle>';
@@ -430,6 +517,7 @@ Keep responses short (2-3 sentences) unless asked for detailed information.`;
           }
        `}</style>
 
+       {/* 1. Deep Space Background with Grid */}
        <div className="absolute inset-0 bg-[#020617] pointer-events-none">
             <div className="absolute inset-0 opacity-20" 
                  style={{backgroundImage: 'linear-gradient(rgba(34, 197, 94, 0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(34, 197, 94, 0.1) 1px, transparent 1px)', backgroundSize: '40px 40px'}}></div>
@@ -437,6 +525,7 @@ Keep responses short (2-3 sentences) unless asked for detailed information.`;
             <div className="absolute bottom-[-10%] right-[-10%] w-[90vw] h-[90vw] bg-cyan-900/20 blur-[120px] rounded-full"></div>
        </div>
 
+       {/* 2. Top Navigation Bar */}
        <div className="absolute top-0 left-0 right-0 p-4 pt-safe-top flex justify-between items-center z-[220] bg-gradient-to-b from-[#020617]/80 to-transparent">
           <button 
              onClick={handleBack} 
@@ -460,8 +549,10 @@ Keep responses short (2-3 sentences) unless asked for detailed information.`;
           </div>
        </div>
 
+       {/* 3. Main Centered Content */}
        <div className="flex-1 flex flex-col items-center justify-center w-full relative z-10 orb-container">
           
+          {/* The Orb */}
           <div 
             className="relative w-[320px] h-[320px] flex items-center justify-center cursor-pointer tap-highlight-transparent group"
             onClick={handleToggle}
@@ -508,6 +599,7 @@ Keep responses short (2-3 sentences) unless asked for detailed information.`;
              </div>
           </div>
           
+          {/* Status Text & Suggestions */}
           <div className="mt-8 w-full px-6 flex flex-col items-center z-40">
               <h2 className="text-2xl font-black text-white tracking-tight mb-2 drop-shadow-[0_0_10px_rgba(0,0,0,0.5)]">
                  {status === 'connected' ? (
@@ -519,6 +611,7 @@ Keep responses short (2-3 sentences) unless asked for detailed information.`;
                   <p className="text-red-400 text-xs font-bold bg-red-500/10 px-3 py-1 rounded-lg border border-red-500/20">{errorMessage}</p>
               )}
 
+              {/* Suggestions Chips (Vertical List) */}
               {(status === 'idle' || (status === 'connected' && transcripts.length < 2)) && (
                  <div className="w-full max-w-[280px] flex flex-col gap-3 mt-6 animate-enter delay-100">
                     {t.voice_hints.map((hint: string, i: number) => (
@@ -534,6 +627,7 @@ Keep responses short (2-3 sentences) unless asked for detailed information.`;
           </div>
        </div>
 
+       {/* 4. Live Transcription Overlay */}
        <div className={clsx("absolute bottom-0 inset-x-0 bg-gradient-to-t from-black via-black/90 to-transparent pt-16 pb-safe-bottom px-6 z-20 transition-transform duration-500 flex flex-col justify-end min-h-[30vh]", 
            transcripts.length === 0 && "translate-y-full opacity-0"
        )}>
