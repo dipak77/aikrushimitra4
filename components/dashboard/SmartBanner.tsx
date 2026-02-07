@@ -1,8 +1,7 @@
-
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   CloudRain, TrendingUp, Lightbulb, Activity, ArrowRight, Flag, Heart, Sparkles,
-  Sun, Moon, Zap, Crown, Calendar as CalendarIcon, AlertTriangle
+  Star, Sun, Moon, Zap, Crown, Calendar as CalendarIcon, AlertTriangle
 } from 'lucide-react';
 import { Language, UserProfile } from '../../types';
 import clsx from 'clsx';
@@ -51,6 +50,7 @@ export const SmartBanner = ({
     return () => clearInterval(t);
   }, []);
 
+  // --- Weather (dynamic) ---
   const temp = weather?.current?.temperature_2m ? Math.round(weather.current.temperature_2m) : '--';
   const wCode = weather?.current?.weather_code || 0;
   const isDay = weather?.current?.is_day !== 0;
@@ -60,12 +60,14 @@ export const SmartBanner = ({
   const isStormy = wCode >= 95;
   const isHighWind = windSpeed > 20;
 
+  // --- Market (dynamic) ---
   const userCropName = user?.crop || 'Soyabean';
   const marketData =
     MOCK_MARKET.find(m => m.name.toLowerCase().includes(userCropName.toLowerCase())) || MOCK_MARKET[0];
   const displayCropName = txt.crops[marketData.name] || marketData.name;
   const isPositiveTrend = marketData.trend.includes('+');
 
+  // --- Calendar (dynamic) ---
   const dayNames: Record<string, string[]> = {
     mr: ['रवि', 'सोम', 'मंगळ', 'बुध', 'गुरु', 'शुक्र', 'शनि'],
     hi: ['रवि', 'सोम', 'मंगल', 'बुध', 'गुरु', 'शुक्र', 'शनि'],
@@ -90,8 +92,10 @@ export const SmartBanner = ({
 
   const isRepublicDay = now.getMonth() === 0 && now.getDate() === 26;
 
+  // --- Fetch AI updates ---
   useEffect(() => {
     let mounted = true;
+
     const fetchAIUpdates = async () => {
       try {
         setIsLoadingAI(true);
@@ -99,10 +103,12 @@ export const SmartBanner = ({
         const updates = await getLiveAgriUpdates(lang);
         if (mounted && updates && updates.length > 0) setLiveUpdates(updates);
       } catch {
+        // silent fail
       } finally {
         if (mounted) setIsLoadingAI(false);
       }
     };
+
     fetchAIUpdates();
     const refreshInterval = setInterval(fetchAIUpdates, 10 * 60 * 1000);
     return () => {
@@ -111,6 +117,7 @@ export const SmartBanner = ({
     };
   }, [lang]);
 
+  // --- Optimized particle seeds ---
   const particleSeeds = useMemo(() => {
     return Array.from({ length: 14 }, (_, i) => ({
       id: i,
@@ -125,9 +132,11 @@ export const SmartBanner = ({
     }));
   }, []);
 
+  // --- Message Queue with DOLBY VISION BACKGROUNDS ---
   const messages: Msg[] = useMemo(() => {
     const list: Msg[] = [];
 
+    // 1) Republic Day - CINEMATIC TRICOLOR
     if (isRepublicDay) {
       list.push({
         id: 'republic-day',
@@ -143,20 +152,30 @@ export const SmartBanner = ({
           en: 'Celebrating 77 years of Indian Democracy & Unity'
         },
         cta: { mr: 'संदेश शेअर करा', hi: 'संदेश शेयर करें', en: 'Share Wishes' },
-        bgBase: 'radial-gradient(ellipse 120% 100% at 30% 40%, rgba(255,153,51,0.92) 0%, rgba(10,15,35,1) 48%, rgba(19,136,8,0.88) 100%)',
-        bgOverlay: 'linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(0,0,0,0.65) 50%, rgba(255,255,255,0.05) 100%)',
-        accentGlow: 'rgba(255, 153, 51, 0.80)',
-        secondaryGlow: 'rgba(19, 136, 8, 0.75)',
-        particleColors: ['#FF9933', '#FFFFFF', '#138808', '#0ea5e9'],
+
+        // Dolby Vision: Deep black core with vibrant tricolor bursts
+        bgBase: `
+          radial-gradient(ellipse 140% 110% at 25% 35%, rgba(255,153,51,1) 0%, rgba(255,120,20,0.85) 18%, rgba(0,0,0,1) 42%),
+          radial-gradient(ellipse 130% 100% at 75% 65%, rgba(19,136,8,0.95) 0%, rgba(15,100,6,0.75) 20%, rgba(0,0,0,1) 45%),
+          radial-gradient(ellipse 100% 100% at 50% 50%, rgba(0,0,0,1) 0%, rgba(5,8,15,1) 100%)
+        `,
+        bgOverlay: `
+          linear-gradient(135deg, rgba(255,153,51,0.15) 0%, rgba(0,0,0,0.85) 40%, rgba(19,136,8,0.15) 100%),
+          linear-gradient(45deg, rgba(255,255,255,0.08) 0%, transparent 50%)
+        `,
+        accentGlow: 'rgba(255, 153, 51, 0.95)',
+        secondaryGlow: 'rgba(19, 136, 8, 0.90)',
+        particleColors: ['#FF9933', '#FFFFFF', '#138808', '#FFD700', '#FF6B00'],
         icon: Flag,
         badges: [
-          { text: { mr: '77वा', hi: '77वां', en: '77th' }, color: 'bg-gradient-to-r from-orange-600/90 to-orange-500/90' },
-          { text: { mr: '26 जानेवारी', hi: '26 जनवरी', en: 'Jan 26' }, color: 'bg-gradient-to-r from-green-700/90 to-green-600/90' }
+          { text: { mr: '77वा', hi: '77वां', en: '77th' }, color: 'bg-gradient-to-r from-orange-600 to-orange-500', glow: 'shadow-[0_0_30px_rgba(255,153,51,0.8)]' },
+          { text: { mr: '26 जानेवारी', hi: '26 जनवरी', en: 'Jan 26' }, color: 'bg-gradient-to-r from-green-700 to-green-600', glow: 'shadow-[0_0_30px_rgba(19,136,8,0.75)]' }
         ],
         isSpecial: true
       });
     }
 
+    // 2) Severe Weather Alert - ELECTRIC STORM
     if (isStormy || (isRainy && isHighWind)) {
       list.push({
         id: 'weather-alert',
@@ -172,19 +191,29 @@ export const SmartBanner = ({
           en: `Wind: ${windSpeed} km/h • Secure your crops now`
         },
         cta: { mr: 'सल्ला पहा', hi: 'सलाह देखें', en: 'View Tips' },
-        bgBase: 'radial-gradient(ellipse 110% 100% at 25% 25%, rgba(59,130,246,0.90) 0%, rgba(8,15,38,1) 52%, rgba(79,70,229,0.82) 100%)',
-        bgOverlay: 'linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(0,0,0,0.70) 55%, rgba(255,255,255,0.05) 100%)',
-        accentGlow: 'rgba(59, 130, 246, 0.80)',
-        secondaryGlow: 'rgba(99, 102, 241, 0.70)',
-        particleColors: ['#60a5fa', '#3b82f6', '#818cf8', '#38bdf8'],
+
+        // Dolby Vision: Deep storm with electric blue-purple lightning
+        bgBase: `
+          radial-gradient(ellipse 130% 100% at 20% 20%, rgba(59,130,246,1) 0%, rgba(37,99,235,0.9) 15%, rgba(0,0,0,1) 40%),
+          radial-gradient(ellipse 120% 110% at 80% 75%, rgba(109,40,217,0.85) 0%, rgba(79,70,229,0.7) 18%, rgba(0,0,0,1) 42%),
+          radial-gradient(ellipse 100% 100% at 50% 50%, rgba(0,0,0,1) 0%, rgba(3,7,18,1) 100%)
+        `,
+        bgOverlay: `
+          linear-gradient(135deg, rgba(59,130,246,0.2) 0%, rgba(0,0,0,0.9) 45%, rgba(109,40,217,0.15) 100%),
+          radial-gradient(circle at 30% 30%, rgba(139,92,246,0.25) 0%, transparent 50%)
+        `,
+        accentGlow: 'rgba(59, 130, 246, 0.95)',
+        secondaryGlow: 'rgba(139, 92, 246, 0.85)',
+        particleColors: ['#3b82f6', '#8b5cf6', '#6366f1', '#a78bfa', '#60a5fa'],
         icon: AlertTriangle,
         badges: [
-          { text: { mr: 'तातडीचे', hi: 'अत्यावश्यक', en: 'Urgent' }, color: 'bg-gradient-to-r from-red-700/90 to-red-600/90' },
-          { text: { mr: `${windSpeed} किमी`, hi: `${windSpeed} किमी`, en: `${windSpeed} km/h` }, color: 'bg-white/12 border border-white/25' }
+          { text: { mr: 'तातडीचे', hi: 'अत्यावश्यक', en: 'Urgent' }, color: 'bg-gradient-to-r from-red-600 to-red-500', glow: 'shadow-[0_0_35px_rgba(239,68,68,0.75)]' },
+          { text: { mr: `${windSpeed} किमी`, hi: `${windSpeed} किमी`, en: `${windSpeed} km/h` }, color: 'bg-white/15 border border-white/30', glow: 'shadow-[0_0_25px_rgba(255,255,255,0.4)]' }
         ],
       });
     }
 
+    // 3) AI Updates - SCHEME (Emerald) / MARKET (Purple-Pink)
     if (liveUpdates.length > 0) {
       liveUpdates.slice(0, 4).forEach((update, idx) => {
         const isScheme = update.type === 'scheme';
@@ -196,22 +225,51 @@ export const SmartBanner = ({
           title: { mr: update.title, hi: update.title, en: update.title },
           subtitle: { mr: update.subtitle, hi: update.subtitle, en: update.subtitle },
           cta: { mr: 'तपशील', hi: 'विवरण', en: 'Details' },
+
+          // Dolby Vision: Emerald/Cyan for schemes, Purple/Magenta for market
           bgBase: isScheme
-            ? 'radial-gradient(ellipse 115% 100% at 30% 35%, rgba(16,185,129,0.90) 0%, rgba(3,7,18,1) 55%, rgba(20,184,166,0.85) 100%)'
-            : 'radial-gradient(ellipse 110% 100% at 65% 30%, rgba(168,85,247,0.88) 0%, rgba(3,7,18,1) 54%, rgba(236,72,153,0.80) 100%)',
-          bgOverlay: 'linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(0,0,0,0.72) 58%, rgba(255,255,255,0.05) 100%)',
-          accentGlow: isScheme ? 'rgba(16, 185, 129, 0.80)' : 'rgba(168, 85, 247, 0.80)',
-          secondaryGlow: isScheme ? 'rgba(20, 184, 166, 0.70)' : 'rgba(236, 72, 153, 0.70)',
-          particleColors: isScheme ? ['#10b981', '#34d399', '#2dd4bf'] : ['#a855f7', '#c084fc', '#ec4899'],
+            ? `
+              radial-gradient(ellipse 135% 105% at 25% 30%, rgba(16,185,129,1) 0%, rgba(5,150,105,0.9) 16%, rgba(0,0,0,1) 40%),
+              radial-gradient(ellipse 125% 100% at 75% 70%, rgba(20,184,166,0.85) 0%, rgba(13,148,136,0.7) 18%, rgba(0,0,0,1) 42%),
+              radial-gradient(ellipse 100% 100% at 50% 50%, rgba(0,0,0,1) 0%, rgba(2,6,23,1) 100%)
+            `
+            : `
+              radial-gradient(ellipse 130% 100% at 70% 25%, rgba(168,85,247,1) 0%, rgba(147,51,234,0.9) 15%, rgba(0,0,0,1) 38%),
+              radial-gradient(ellipse 125% 110% at 30% 75%, rgba(236,72,153,0.9) 0%, rgba(219,39,119,0.75) 18%, rgba(0,0,0,1) 42%),
+              radial-gradient(ellipse 100% 100% at 50% 50%, rgba(0,0,0,1) 0%, rgba(2,6,23,1) 100%)
+            `,
+          bgOverlay: isScheme
+            ? `
+              linear-gradient(135deg, rgba(16,185,129,0.18) 0%, rgba(0,0,0,0.88) 45%, rgba(20,184,166,0.12) 100%),
+              radial-gradient(circle at 25% 25%, rgba(52,211,153,0.2) 0%, transparent 50%)
+            `
+            : `
+              linear-gradient(135deg, rgba(168,85,247,0.18) 0%, rgba(0,0,0,0.88) 45%, rgba(236,72,153,0.15) 100%),
+              radial-gradient(circle at 70% 30%, rgba(192,132,252,0.2) 0%, transparent 50%)
+            `,
+          accentGlow: isScheme ? 'rgba(16, 185, 129, 0.95)' : 'rgba(168, 85, 247, 0.95)',
+          secondaryGlow: isScheme ? 'rgba(20, 184, 166, 0.85)' : 'rgba(236, 72, 153, 0.85)',
+          particleColors: isScheme 
+            ? ['#10b981', '#14b8a6', '#34d399', '#2dd4bf', '#5eead4'] 
+            : ['#a855f7', '#ec4899', '#c084fc', '#f472b6', '#d946ef'],
           icon: isScheme ? Crown : TrendingUp,
           badges: [
-            { text: { mr: update.badge || 'नवीन', hi: update.badge || 'नया', en: update.badge || 'New' }, color: 'bg-white/12 border border-white/25' },
-            { text: { mr: 'AI', hi: 'AI', en: 'AI' }, color: 'bg-gradient-to-r from-cyan-600/90 to-blue-500/90' }
+            {
+              text: { mr: update.badge || 'नवीन', hi: update.badge || 'नया', en: update.badge || 'New' },
+              color: 'bg-white/15 border border-white/30',
+              glow: 'shadow-[0_0_25px_rgba(255,255,255,0.35)]'
+            },
+            {
+              text: { mr: 'AI', hi: 'AI', en: 'AI' },
+              color: 'bg-gradient-to-r from-cyan-500 to-blue-500',
+              glow: 'shadow-[0_0_28px_rgba(6,182,212,0.7)]'
+            }
           ]
         });
       });
     }
 
+    // 4) Calendar - ROYAL PURPLE-PINK
     if (list.length < 2) {
       list.push({
         id: 'calendar',
@@ -227,19 +285,29 @@ export const SmartBanner = ({
           en: `${currentYear} • ${currentTime} • Perfect day for farming`
         },
         cta: { mr: 'कॅलेंडर', hi: 'कैलेंडर', en: 'Calendar' },
-        bgBase: 'radial-gradient(ellipse 110% 100% at 30% 30%, rgba(124,58,237,0.90) 0%, rgba(3,7,18,1) 56%, rgba(236,72,153,0.82) 100%)',
-        bgOverlay: 'linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(0,0,0,0.72) 58%, rgba(255,255,255,0.05) 100%)',
-        accentGlow: 'rgba(168, 85, 247, 0.80)',
-        secondaryGlow: 'rgba(236, 72, 153, 0.70)',
-        particleColors: ['#a855f7', '#ec4899', '#d946ef'],
+
+        // Dolby Vision: Deep purple to pink gradient
+        bgBase: `
+          radial-gradient(ellipse 130% 105% at 30% 25%, rgba(147,51,234,1) 0%, rgba(126,34,206,0.9) 15%, rgba(0,0,0,1) 38%),
+          radial-gradient(ellipse 125% 100% at 70% 70%, rgba(236,72,153,0.9) 0%, rgba(219,39,119,0.75) 18%, rgba(0,0,0,1) 42%),
+          radial-gradient(ellipse 100% 100% at 50% 50%, rgba(0,0,0,1) 0%, rgba(2,6,23,1) 100%)
+        `,
+        bgOverlay: `
+          linear-gradient(135deg, rgba(147,51,234,0.2) 0%, rgba(0,0,0,0.88) 45%, rgba(236,72,153,0.18) 100%),
+          radial-gradient(circle at 35% 30%, rgba(168,85,247,0.25) 0%, transparent 50%)
+        `,
+        accentGlow: 'rgba(168, 85, 247, 0.95)',
+        secondaryGlow: 'rgba(236, 72, 153, 0.90)',
+        particleColors: ['#a855f7', '#ec4899', '#d946ef', '#f472b6', '#c084fc'],
         icon: CalendarIcon,
         badges: [
-          { text: { mr: currentDay, hi: currentDay, en: currentDay }, color: 'bg-white/12 border border-white/25' },
-          { text: { mr: `${currentDate}`, hi: `${currentDate}`, en: `${currentDate}` }, color: 'bg-white/12 border border-white/25' }
+          { text: { mr: currentDay, hi: currentDay, en: currentDay }, color: 'bg-white/15 border border-white/30' },
+          { text: { mr: `${currentDate}`, hi: `${currentDate}`, en: `${currentDate}` }, color: 'bg-white/15 border border-white/30' }
         ]
       });
     }
 
+    // 5) Weather DAY - GOLDEN SUNRISE / NIGHT - DEEP INDIGO
     if (!isStormy && !isHighWind && list.length < 3 && temp !== '--') {
       list.push({
         id: 'weather',
@@ -248,24 +316,53 @@ export const SmartBanner = ({
           ? { mr: 'पावसाची शक्यता', hi: 'बारिश की संभावना', en: 'Rain Expected' }
           : { mr: `${wDesc} • ${temp}°C`, hi: `${wDesc} • ${temp}°C`, en: `${wDesc} • ${temp}°C` },
         subtitle: isRainy
-          ? { mr: 'पुढील काही तासात पाऊस. पिकांची काळजी घ्या.', hi: 'अगले कुछ घंटों में बारिश। फसल सुरक्षा करें।', en: 'Rain in a few hours. Protect crops.' }
-          : { mr: `तापमान ${temp}°C • शेतीसाठी ${isDay ? 'चांगले' : 'शांत'} हवामान`, hi: `तापमान ${temp}°C • खेती के लिए ${isDay ? 'अच्छा' : 'शांत'} मौसम`, en: `Temp ${temp}°C • Weather is ${isDay ? 'good' : 'calm'} for farming` },
+          ? {
+              mr: 'पुढील काही तासात पाऊस. पिकांची काळजी घ्या.',
+              hi: 'अगले कुछ घंटों में बारिश। फसल सुरक्षा करें।',
+              en: 'Rain in a few hours. Protect crops.'
+            }
+          : {
+              mr: `तापमान ${temp}°C • शेतीसाठी ${isDay ? 'चांगले' : 'शांत'} हवामान`,
+              hi: `तापमान ${temp}°C • खेती के लिए ${isDay ? 'अच्छा' : 'शांत'} मौसम`,
+              en: `Temp ${temp}°C • Weather is ${isDay ? 'good' : 'calm'} for farming`
+            },
         cta: { mr: 'तपशील', hi: 'विवरण', en: 'Forecast' },
+
+        // Dolby Vision: Rich golden day / Deep indigo night
         bgBase: isDay
-          ? 'radial-gradient(ellipse 115% 100% at 28% 25%, rgba(245,158,11,0.88) 0%, rgba(3,7,18,1) 58%, rgba(59,130,246,0.78) 100%)'
-          : 'radial-gradient(ellipse 110% 100% at 70% 28%, rgba(99,102,241,0.88) 0%, rgba(3,7,18,1) 58%, rgba(139,92,246,0.78) 100%)',
-        bgOverlay: 'linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(0,0,0,0.72) 58%, rgba(255,255,255,0.05) 100%)',
-        accentGlow: isDay ? 'rgba(245, 158, 11, 0.80)' : 'rgba(99, 102, 241, 0.80)',
-        secondaryGlow: isDay ? 'rgba(59, 130, 246, 0.70)' : 'rgba(168, 85, 247, 0.70)',
-        particleColors: isDay ? ['#f59e0b', '#3b82f6', '#60a5fa'] : ['#6366f1', '#a855f7', '#818cf8'],
+          ? `
+            radial-gradient(ellipse 135% 105% at 25% 20%, rgba(251,191,36,1) 0%, rgba(245,158,11,0.95) 15%, rgba(0,0,0,1) 38%),
+            radial-gradient(ellipse 125% 100% at 75% 70%, rgba(59,130,246,0.85) 0%, rgba(37,99,235,0.7) 18%, rgba(0,0,0,1) 42%),
+            radial-gradient(ellipse 100% 100% at 50% 50%, rgba(0,0,0,1) 0%, rgba(3,7,18,1) 100%)
+          `
+          : `
+            radial-gradient(ellipse 130% 100% at 70% 25%, rgba(99,102,241,1) 0%, rgba(79,70,229,0.9) 15%, rgba(0,0,0,1) 38%),
+            radial-gradient(ellipse 125% 110% at 30% 75%, rgba(139,92,246,0.85) 0%, rgba(124,58,237,0.7) 18%, rgba(0,0,0,1) 42%),
+            radial-gradient(ellipse 100% 100% at 50% 50%, rgba(0,0,0,1) 0%, rgba(3,7,18,1) 100%)
+          `,
+        bgOverlay: isDay
+          ? `
+            linear-gradient(135deg, rgba(251,191,36,0.2) 0%, rgba(0,0,0,0.88) 45%, rgba(59,130,246,0.15) 100%),
+            radial-gradient(circle at 25% 25%, rgba(250,204,21,0.25) 0%, transparent 50%)
+          `
+          : `
+            linear-gradient(135deg, rgba(99,102,241,0.18) 0%, rgba(0,0,0,0.88) 45%, rgba(139,92,246,0.15) 100%),
+            radial-gradient(circle at 70% 30%, rgba(167,139,250,0.2) 0%, transparent 50%)
+          `,
+        accentGlow: isDay ? 'rgba(251, 191, 36, 0.95)' : 'rgba(99, 102, 241, 0.95)',
+        secondaryGlow: isDay ? 'rgba(59, 130, 246, 0.85)' : 'rgba(139, 92, 246, 0.85)',
+        particleColors: isDay 
+          ? ['#fbbf24', '#f59e0b', '#3b82f6', '#60a5fa', '#fcd34d'] 
+          : ['#6366f1', '#8b5cf6', '#a78bfa', '#7c3aed', '#c4b5fd'],
         icon: isRainy ? CloudRain : isDay ? Sun : Moon,
         badges: [
-          { text: { mr: isDay ? 'Day' : 'Night', hi: isDay ? 'Day' : 'Night', en: isDay ? 'Day' : 'Night' }, color: 'bg-white/12 border border-white/25' },
-          { text: { mr: `${temp}°C`, hi: `${temp}°C`, en: `${temp}°C` }, color: 'bg-white/12 border border-white/25' }
+          { text: { mr: isDay ? 'Day' : 'Night', hi: isDay ? 'Day' : 'Night', en: isDay ? 'Day' : 'Night' }, color: 'bg-white/15 border border-white/30' },
+          { text: { mr: `${temp}°C`, hi: `${temp}°C`, en: `${temp}°C` }, color: 'bg-white/15 border border-white/30' }
         ],
       });
     }
 
+    // 6) Market - VIBRANT GREEN (Bullish) / INTENSE RED (Bearish)
     if (list.length < 4) {
       list.push({
         id: 'market',
@@ -277,21 +374,42 @@ export const SmartBanner = ({
           en: `Arrival: ${marketData.arrival} • Trend: ${marketData.trend}`
         },
         cta: { mr: 'भाव', hi: 'कीमत', en: 'Rates' },
+
+        // Dolby Vision: Deep emerald-cyan (bull) / Crimson-orange (bear)
         bgBase: isPositiveTrend
-          ? 'radial-gradient(ellipse 115% 100% at 32% 28%, rgba(16,185,129,0.90) 0%, rgba(3,7,18,1) 58%, rgba(6,182,212,0.82) 100%)'
-          : 'radial-gradient(ellipse 115% 100% at 32% 28%, rgba(239,68,68,0.90) 0%, rgba(3,7,18,1) 58%, rgba(249,115,22,0.80) 100%)',
-        bgOverlay: 'linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(0,0,0,0.72) 58%, rgba(255,255,255,0.05) 100%)',
-        accentGlow: isPositiveTrend ? 'rgba(16, 185, 129, 0.80)' : 'rgba(239, 68, 68, 0.80)',
-        secondaryGlow: isPositiveTrend ? 'rgba(6, 182, 212, 0.70)' : 'rgba(249, 115, 22, 0.70)',
-        particleColors: isPositiveTrend ? ['#10b981', '#06b6d4', '#34d399'] : ['#ef4444', '#f97316', '#fb7185'],
+          ? `
+            radial-gradient(ellipse 135% 105% at 30% 28%, rgba(16,185,129,1) 0%, rgba(5,150,105,0.95) 15%, rgba(0,0,0,1) 38%),
+            radial-gradient(ellipse 125% 100% at 70% 70%, rgba(6,182,212,0.9) 0%, rgba(8,145,178,0.75) 18%, rgba(0,0,0,1) 42%),
+            radial-gradient(ellipse 100% 100% at 50% 50%, rgba(0,0,0,1) 0%, rgba(2,6,23,1) 100%)
+          `
+          : `
+            radial-gradient(ellipse 135% 105% at 30% 28%, rgba(239,68,68,1) 0%, rgba(220,38,38,0.95) 15%, rgba(0,0,0,1) 38%),
+            radial-gradient(ellipse 125% 100% at 70% 70%, rgba(249,115,22,0.9) 0%, rgba(234,88,12,0.75) 18%, rgba(0,0,0,1) 42%),
+            radial-gradient(ellipse 100% 100% at 50% 50%, rgba(0,0,0,1) 0%, rgba(2,6,23,1) 100%)
+          `,
+        bgOverlay: isPositiveTrend
+          ? `
+            linear-gradient(135deg, rgba(16,185,129,0.2) 0%, rgba(0,0,0,0.88) 45%, rgba(6,182,212,0.18) 100%),
+            radial-gradient(circle at 30% 30%, rgba(52,211,153,0.25) 0%, transparent 50%)
+          `
+          : `
+            linear-gradient(135deg, rgba(239,68,68,0.2) 0%, rgba(0,0,0,0.88) 45%, rgba(249,115,22,0.18) 100%),
+            radial-gradient(circle at 30% 30%, rgba(248,113,113,0.25) 0%, transparent 50%)
+          `,
+        accentGlow: isPositiveTrend ? 'rgba(16, 185, 129, 0.95)' : 'rgba(239, 68, 68, 0.95)',
+        secondaryGlow: isPositiveTrend ? 'rgba(6, 182, 212, 0.90)' : 'rgba(249, 115, 22, 0.90)',
+        particleColors: isPositiveTrend 
+          ? ['#10b981', '#06b6d4', '#34d399', '#22d3ee', '#14b8a6'] 
+          : ['#ef4444', '#f97316', '#fb7185', '#f87171', '#ff6b35'],
         icon: TrendingUp,
         badges: [
-          { text: { mr: isPositiveTrend ? 'Bullish' : 'Bearish', hi: isPositiveTrend ? 'Bullish' : 'Bearish', en: isPositiveTrend ? 'Bullish' : 'Bearish' }, color: 'bg-white/12 border border-white/25' },
-          { text: { mr: marketData.trend, hi: marketData.trend, en: marketData.trend }, color: 'bg-white/12 border border-white/25' }
+          { text: { mr: isPositiveTrend ? 'Bullish' : 'Bearish', hi: isPositiveTrend ? 'Bullish' : 'Bearish', en: isPositiveTrend ? 'Bullish' : 'Bearish' }, color: 'bg-white/15 border border-white/30' },
+          { text: { mr: marketData.trend, hi: marketData.trend, en: marketData.trend }, color: 'bg-white/15 border border-white/30' }
         ],
       });
     }
 
+    // 7) Smart Tip - AMBER GOLD
     if (list.length < 4) {
       list.push({
         id: 'tip',
@@ -303,26 +421,53 @@ export const SmartBanner = ({
           ? { mr: 'वारा कमी आहे. फवारणी आता करा (दुपारी ४ पर्यंत)', hi: 'हवा कम है। छिड़काव अभी करें (शाम 4 तक)', en: 'Low wind. Spray now (Before 4 PM)' }
           : { mr: 'रात्री तापमान कमी होऊ शकते. पाणी द्या', hi: 'रात में तापमान गिर सकता है। सिंचाई करें', en: 'Temp may drop tonight. Irrigate crops' },
         cta: { mr: 'सल्ला', hi: 'सलाह', en: 'Read Tip' },
-        bgBase: 'radial-gradient(ellipse 112% 100% at 35% 28%, rgba(251,191,36,0.88) 0%, rgba(3,7,18,1) 58%, rgba(251,146,60,0.80) 100%)',
-        bgOverlay: 'linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(0,0,0,0.72) 58%, rgba(255,255,255,0.05) 100%)',
-        accentGlow: 'rgba(251, 191, 36, 0.80)',
-        secondaryGlow: 'rgba(251, 146, 60, 0.70)',
-        particleColors: ['#fbbf24', '#fb923c', '#f59e0b'],
+
+        // Dolby Vision: Rich amber-gold
+        bgBase: `
+          radial-gradient(ellipse 135% 105% at 32% 28%, rgba(251,191,36,1) 0%, rgba(245,158,11,0.95) 15%, rgba(0,0,0,1) 38%),
+          radial-gradient(ellipse 125% 100% at 68% 70%, rgba(251,146,60,0.9) 0%, rgba(249,115,22,0.75) 18%, rgba(0,0,0,1) 42%),
+          radial-gradient(ellipse 100% 100% at 50% 50%, rgba(0,0,0,1) 0%, rgba(2,6,23,1) 100%)
+        `,
+        bgOverlay: `
+          linear-gradient(135deg, rgba(251,191,36,0.2) 0%, rgba(0,0,0,0.88) 45%, rgba(251,146,60,0.18) 100%),
+          radial-gradient(circle at 35% 30%, rgba(250,204,21,0.25) 0%, transparent 50%)
+        `,
+        accentGlow: 'rgba(251, 191, 36, 0.95)',
+        secondaryGlow: 'rgba(251, 146, 60, 0.90)',
+        particleColors: ['#fbbf24', '#f59e0b', '#fb923c', '#fcd34d', '#fde047'],
         icon: Lightbulb,
         badges: [
-          { text: { mr: 'AI', hi: 'AI', en: 'AI' }, color: 'bg-white/12 border border-white/25' },
-          { text: { mr: 'Tip', hi: 'Tip', en: 'Tip' }, color: 'bg-white/12 border border-white/25' }
+          { text: { mr: 'AI', hi: 'AI', en: 'AI' }, color: 'bg-white/15 border border-white/30' },
+          { text: { mr: 'Tip', hi: 'Tip', en: 'Tip' }, color: 'bg-white/15 border border-white/30' }
         ]
       });
     }
 
     return list;
   }, [
-    isRepublicDay, isStormy, isRainy, isHighWind, windSpeed, temp, wDesc, isDay,
-    currentDay, currentDate, currentMonth, currentYear, currentTime, liveUpdates,
-    lang, displayCropName, marketData.price, marketData.arrival, marketData.trend, isPositiveTrend
+    isRepublicDay,
+    isStormy,
+    isRainy,
+    isHighWind,
+    windSpeed,
+    temp,
+    wDesc,
+    isDay,
+    currentDay,
+    currentDate,
+    currentMonth,
+    currentYear,
+    currentTime,
+    liveUpdates,
+    lang,
+    displayCropName,
+    marketData.price,
+    marketData.arrival,
+    marketData.trend,
+    isPositiveTrend
   ]);
 
+  // --- Rotation animation ---
   useEffect(() => {
     if (messages.length <= 1) return;
     const interval = setInterval(() => {
@@ -332,6 +477,7 @@ export const SmartBanner = ({
         setIsAnimating(false);
       }, 480);
     }, 8500);
+
     return () => clearInterval(interval);
   }, [messages.length]);
 
@@ -345,61 +491,300 @@ export const SmartBanner = ({
 
   return (
     <div className={clsx("relative flex flex-1 lg:max-w-5xl lg:mx-auto min-h-[88px] lg:h-32 rounded-[28px] overflow-hidden shadow-2xl", className)}>
-      {/* Background */}
-      <div className="absolute inset-0 transition-all duration-700 ease-in-out" style={{ background: msg.bgBase, backgroundSize: '200% 200%' }} />
-      <div className="absolute inset-0" style={{ background: msg.bgOverlay }} />
-      <div className="absolute inset-0 pointer-events-none mix-blend-overlay opacity-60 bg-[radial-gradient(circle_400px_at_20%_25%,rgba(255,255,255,0.12)_0%,transparent_50%)]" />
+      <style>{`
+        .sb-gpu { transform: translate3d(0,0,0); backface-visibility: hidden; }
+        .sb-will { will-change: transform, opacity; }
+
+        @keyframes sb-slide-in {
+          0%   { transform: translate3d(-12px, 8px, 0) scale(0.98); opacity: 0; filter: blur(4px); }
+          100% { transform: translate3d(0, 0, 0) scale(1); opacity: 1; filter: blur(0); }
+        }
+
+        @keyframes sb-slide-out {
+          0%   { transform: translate3d(0, 0, 0) scale(1); opacity: 1; filter: blur(0); }
+          100% { transform: translate3d(12px, -8px, 0) scale(0.98); opacity: 0; filter: blur(4px); }
+        }
+
+        @keyframes sb-bg-flow {
+          0%, 100% { background-position: 0% 40%; }
+          50% { background-position: 100% 60%; }
+        }
+
+        @keyframes sb-shine {
+          0% { transform: translate3d(-120%,0,0) skewX(-15deg); opacity: 0; }
+          40% { opacity: 0.7; }
+          100% { transform: translate3d(220%,0,0) skewX(-15deg); opacity: 0; }
+        }
+
+        @keyframes sb-float {
+          0%,100% { transform: translate3d(0,0,0) scale(1); opacity: var(--a); }
+          50% { transform: translate3d(var(--dx), var(--dy), 0) scale(0.85); opacity: calc(var(--a) * 0.6); }
+        }
+
+        @keyframes sb-badge {
+          0%,100% { transform: translateY(0) scale(1); }
+          50% { transform: translateY(-1px) scale(1.05); }
+        }
+
+        @keyframes sb-glow-pulse {
+          0%, 100% { opacity: 0.85; filter: brightness(1.05); }
+          50% { opacity: 1; filter: brightness(1.25); }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          *, *::before, *::after {
+            animation-duration: 0.01ms !important;
+            animation-iteration-count: 1 !important;
+            transition-duration: 0.01ms !important;
+          }
+        }
+      `}</style>
+
+      {/* Dolby Vision Background - Multi-layer */}
+      <div
+        className="absolute inset-0 sb-gpu sb-anim"
+        style={{
+          background: msg.bgBase,
+          backgroundSize: '210% 210%',
+          animation: 'sb-bg-flow 18s ease-in-out infinite',
+        }}
+      />
+
+      {/* Enhanced overlay with depth */}
+      <div
+        className="absolute inset-0 sb-gpu pointer-events-none"
+        style={{
+          background: msg.bgOverlay,
+          boxShadow: `
+            inset 0 -100px 160px rgba(0,0,0,0.6),
+            inset 0 3px 2px rgba(255,255,255,0.18),
+            inset 0 -3px 2px rgba(0,0,0,0.4)
+          `,
+        }}
+      />
+
+      {/* Cinematic highlights */}
+      <div
+        className="absolute inset-0 pointer-events-none mix-blend-overlay opacity-65"
+        style={{
+          background: `
+            radial-gradient(circle 450px at 18% 22%, rgba(255,255,255,0.15) 0%, transparent 50%),
+            radial-gradient(circle 400px at 88% 78%, rgba(0,0,0,0.3) 0%, transparent 50%),
+            linear-gradient(180deg, rgba(255,255,255,0.06) 0%, transparent 25%, rgba(0,0,0,0.18) 100%)
+          `
+        }}
+      />
+
+      {/* Particles */}
+      <div className="absolute inset-0 pointer-events-none">
+        {particleSeeds.slice(0, particleCount).map((p) => {
+          const color = msg.particleColors[p.id % msg.particleColors.length];
+          return (
+            <span
+              key={p.id}
+              className="absolute rounded-full sb-gpu sb-will"
+              style={{
+                top: `${p.top}%`,
+                left: `${p.left}%`,
+                width: `${p.size}px`,
+                height: `${p.size}px`,
+                background: color,
+                opacity: p.alpha,
+                boxShadow: `0 0 16px ${color}70, 0 0 32px ${color}30`,
+                '--dx': `${p.driftX}px`,
+                '--dy': `${p.driftY}px`,
+                '--a': `${p.alpha}`,
+                animation: `sb-float ${p.dur}s ease-in-out ${p.delay}s infinite`,
+              } as React.CSSProperties}
+            />
+          );
+        })}
+      </div>
+
+      {/* Enhanced shine */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-45">
+        <div
+          className="absolute inset-0 w-1/3 bg-gradient-to-r from-transparent via-white/55 to-transparent sb-gpu"
+          style={{ animation: 'sb-shine 9s ease-in-out infinite' }}
+        />
+      </div>
+
+      {/* Accent line */}
+      <div
+        className="absolute bottom-0 left-0 right-0 h-[2.5px] sb-gpu"
+        style={{
+          background: `linear-gradient(90deg, ${msg.accentGlow}, ${msg.secondaryGlow})`,
+          boxShadow: `0 0 28px ${msg.accentGlow}, 0 0 40px ${msg.secondaryGlow}`,
+        }}
+      />
 
       {/* Content */}
-      <div className={clsx("relative z-10 w-full h-full flex flex-col lg:flex-row items-start lg:items-center justify-between p-6 lg:px-8 gap-4 lg:gap-6 transition-all duration-500", isAnimating ? "opacity-0 translate-y-2 blur-sm" : "opacity-100 translate-y-0 blur-0")}>
-        
-        {/* Left */}
+      <div
+        className={clsx(
+          "relative z-10 w-full h-full flex flex-col lg:flex-row items-start lg:items-center justify-between",
+          "p-6 lg:px-8 gap-4 lg:gap-6 sb-anim",
+          isAnimating ? "sb-will sb-gpu animate-[sb-slide-out_0.48s_ease-out_forwards]" : "sb-will sb-gpu animate-[sb-slide-in_0.55s_ease-out_forwards]"
+        )}
+      >
+        {/* Left section */}
         <div className="flex items-start lg:items-center gap-4 lg:gap-6 flex-1 min-w-0 w-full">
-          <div className="relative shrink-0">
-            <div className="w-14 h-14 lg:w-[72px] lg:h-[72px] rounded-[18px] overflow-hidden border border-white/25 bg-white/12 backdrop-blur-xl shadow-2xl flex items-center justify-center">
-              <Icon size={32} className="text-white drop-shadow-md" strokeWidth={2.8} />
+          {/* Icon */}
+          <div className="relative shrink-0 sb-gpu">
+            <div
+              className="absolute -inset-4 rounded-2xl opacity-60 pointer-events-none"
+              style={{
+                background: `radial-gradient(circle at 30% 30%, ${msg.accentGlow} 0%, transparent 65%),
+                             radial-gradient(circle at 70% 70%, ${msg.secondaryGlow} 0%, transparent 65%)`
+              }}
+            />
+            <div className="relative w-14 h-14 lg:w-[72px] lg:h-[72px] rounded-[18px] overflow-hidden border border-white/30 bg-white/15 backdrop-blur-xl shadow-[0_24px_80px_rgba(0,0,0,0.7)]">
+              <div className="absolute inset-0 bg-gradient-to-br from-white/30 via-white/10 to-transparent" />
+              <div className="absolute top-0.5 inset-x-4 h-[2.5px] bg-gradient-to-r from-transparent via-white/90 to-transparent blur-sm" />
+              <div className="absolute inset-0 flex items-center justify-center">
+                <Icon size={32} className="text-white drop-shadow-[0_10px_25px_rgba(0,0,0,0.8)]" strokeWidth={2.8} />
+              </div>
             </div>
           </div>
+
+          {/* Text content */}
           <div className="flex flex-col gap-2 flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-[10px] lg:text-[11px] font-extrabold uppercase tracking-widest text-white/85 bg-black/30 border border-white/15 px-3 py-1 rounded-lg">
+              <span className="text-[10px] lg:text-[11px] font-extrabold uppercase tracking-[0.15em] text-white/90 bg-black/35 border border-white/20 backdrop-blur-lg px-3.5 py-1.5 rounded-[10px] shadow-lg">
                 {msg.category[lang] || msg.category.en}
               </span>
-              {msg.badges?.map((b, idx) => (
-                <span key={idx} className={clsx("px-2 py-1 rounded-md text-[9px] font-black uppercase text-white border", b.color)}>
-                  {b.text[lang] || b.text.en}
-                </span>
-              ))}
+
+              <div className="flex items-center gap-2 flex-wrap">
+                {msg.badges?.slice(0, 2).map((b, idx) => (
+                  <div
+                    key={idx}
+                    className={clsx(
+                      "px-3 py-1 rounded-[10px] text-[10px] font-black uppercase tracking-wide text-white border border-white/25 backdrop-blur-xl sb-gpu sb-will",
+                      b.color,
+                      b.glow
+                    )}
+                    style={{ animation: 'sb-badge 3.2s ease-in-out infinite' }}
+                  >
+                    {b.text[lang] || b.text.en}
+                  </div>
+                ))}
+              </div>
             </div>
-            <h2 className="text-[22px] lg:text-[28px] font-black leading-none text-white drop-shadow-lg line-clamp-1">
+
+            <h2 className="text-[22px] lg:text-[28px] font-black leading-[1.15] tracking-[-0.02em] text-white drop-shadow-[0_12px_30px_rgba(0,0,0,0.8)] line-clamp-1">
               {msg.title[lang] || msg.title.en}
             </h2>
-            <p className="text-xs lg:text-sm font-semibold text-white/90 drop-shadow-md line-clamp-1">
+
+            <p className="text-[13px] lg:text-[15px] font-semibold leading-snug text-white/94 drop-shadow-[0_10px_24px_rgba(0,0,0,0.7)] line-clamp-1">
               {msg.subtitle[lang] || msg.subtitle.en}
             </p>
           </div>
         </div>
 
-        {/* Right */}
-        <div className="flex items-center justify-between w-full lg:w-auto gap-6 shrink-0">
-          <button className="px-6 py-3 rounded-2xl bg-white/10 hover:bg-white/20 border border-white/20 text-white text-sm font-bold flex items-center gap-2 backdrop-blur-md transition-all active:scale-95">
-            {msg.cta[lang] || msg.cta.en} <ArrowRight size={16} />
+        {/* Right section */}
+        <div className="flex items-center justify-between w-full lg:w-auto lg:gap-6 shrink-0">
+          <div className="hidden lg:block h-20 w-px bg-white/25 shadow-[0_0_10px_rgba(255,255,255,0.2)]" />
+
+          <button 
+            className="group/cta relative px-7 py-3.5 rounded-[18px] bg-white/15 hover:bg-white/22 border border-white/30 backdrop-blur-xl transition-all duration-300 hover:scale-105 hover:shadow-[0_24px_70px_rgba(255,255,255,0.2)] sb-gpu sb-will active:scale-100"
+            aria-label={`${msg.cta[lang]} - ${msg.title[lang]}`}
+            role="button"
+            tabIndex={0}
+          >
+            {/* Glossy overlay */}
+            <div className="absolute inset-0 bg-gradient-to-b from-white/25 via-white/8 to-black/25 rounded-[18px]" />
+            
+            {/* Top highlight */}
+            <div className="absolute top-0 inset-x-6 h-[2.5px] bg-gradient-to-r from-transparent via-white/90 to-transparent blur-sm" />
+            
+            <div className="relative flex items-center gap-3">
+              <span className="text-[13px] lg:text-[15px] font-black text-white tracking-wide">
+                {msg.cta[lang] || msg.cta.en}
+              </span>
+              <ArrowRight 
+                size={18} 
+                className="text-white group-hover/cta:translate-x-1.5 transition-transform duration-300" 
+                strokeWidth={3.2} 
+              />
+            </div>
+
+            {/* Special decorations */}
+            {msg.isSpecial && (
+              <>
+                <Heart 
+                  size={13} 
+                  className="absolute -top-1.5 -right-1.5 text-red-400 drop-shadow-[0_0_10px_rgba(248,113,113,0.9)]" 
+                  fill="currentColor" 
+                  style={{ animation: 'sb-glow-pulse 2s ease-in-out infinite' }}
+                />
+                <Sparkles 
+                  size={11} 
+                  className="absolute -bottom-1 -left-1 text-yellow-300 drop-shadow-[0_0_10px_rgba(253,224,71,0.9)]"
+                  style={{ animation: 'sb-badge 2.5s ease-in-out infinite' }}
+                />
+              </>
+            )}
           </button>
-          
-          <div className="flex flex-col items-end gap-2">
-             <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-black/30 border border-white/10 backdrop-blur-md">
-                <Activity size={12} className="text-emerald-400" />
-                <span className="text-[9px] font-bold text-white uppercase">{isLoadingAI ? '...' : 'Live'}</span>
-             </div>
-             <div className="flex gap-1.5">
-               {messages.map((m, idx) => (
-                 <div key={m.id} className={clsx("h-1 rounded-full transition-all duration-300", idx === safeIndex ? "w-6 bg-white" : "w-1.5 bg-white/30")} />
-               ))}
-             </div>
+
+          <div className="flex flex-col items-end gap-2.5">
+            {/* Live indicator */}
+            <div className="flex items-center gap-2.5 px-4 py-2.5 rounded-[12px] bg-black/30 border border-white/25 backdrop-blur-xl shadow-lg">
+              <Activity size={13} className="text-emerald-300" strokeWidth={3.2} />
+              <span className="text-[10px] font-black text-white uppercase tracking-[0.12em]">
+                {isLoadingAI ? 'Loading' : 'Live'}
+              </span>
+              <span 
+                className="relative w-2 h-2 rounded-full bg-emerald-400"
+                style={{
+                  boxShadow: '0 0 14px rgba(52,211,153,1), 0 0 28px rgba(52,211,153,0.6)',
+                  animation: 'sb-glow-pulse 1.5s ease-in-out infinite'
+                }}
+              />
+            </div>
+
+            {/* Progress indicators */}
+            <div className="flex gap-2">
+              {messages.map((m, idx) => (
+                <span
+                  key={m.id}
+                  className={clsx(
+                    "h-1.5 rounded-full transition-all duration-500",
+                    idx === safeIndex ? "w-10" : "w-1.5 bg-white/35"
+                  )}
+                  style={idx === safeIndex ? {
+                    background: `linear-gradient(90deg, ${msg.accentGlow}, ${msg.secondaryGlow})`,
+                    boxShadow: `0 0 18px ${msg.accentGlow}, 0 0 10px ${msg.secondaryGlow}`
+                  } : undefined}
+                />
+              ))}
+            </div>
           </div>
         </div>
-
       </div>
+
+      {/* Corner dots */}
+      <div className="absolute top-5 left-7 flex gap-2 opacity-65 pointer-events-none">
+        <span className="w-2.5 h-2.5 rounded-full bg-white/90 shadow-[0_0_10px_rgba(255,255,255,0.6)]" />
+        <span className="w-2.5 h-2.5 rounded-full bg-white/60 shadow-[0_0_8px_rgba(255,255,255,0.5)]" />
+        <span className="w-2.5 h-2.5 rounded-full bg-white/40 shadow-[0_0_6px_rgba(255,255,255,0.4)]" />
+      </div>
+
+      {/* Special decorations */}
+      {msg.isSpecial && (
+        <>
+          <Sparkles 
+            size={20} 
+            className="absolute top-5 right-7 text-yellow-300 pointer-events-none drop-shadow-[0_0_20px_rgba(253,224,71,0.85)]" 
+            strokeWidth={3}
+            style={{ animation: 'sb-glow-pulse 2s ease-in-out infinite' }}
+          />
+          <Zap 
+            size={16} 
+            className="absolute bottom-5 right-7 text-green-300 pointer-events-none drop-shadow-[0_0_20px_rgba(134,239,172,0.85)]" 
+            fill="currentColor"
+            style={{ animation: 'sb-badge 2s ease-in-out infinite' }}
+          />
+        </>
+      )}
     </div>
   );
 };
