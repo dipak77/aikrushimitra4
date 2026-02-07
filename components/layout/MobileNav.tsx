@@ -1,6 +1,7 @@
+
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ViewState } from "../../types";
-import { LayoutDashboard, Store, Mic, Landmark, ShoppingCart } from "lucide-react";
+import { LayoutDashboard, Store, Mic, ShoppingCart, Landmark } from "lucide-react";
 import clsx from "clsx";
 import { triggerHaptic } from "../../utils/common";
 
@@ -8,17 +9,22 @@ type NavItem = {
   id: ViewState;
   label: string;
   icon: React.ComponentType<any>;
-  gradient: string;          // tailwind gradient classes
-  activeText: string;        // explicit tailwind class (no dynamic templates)
-  ring: string;              // explicit tailwind class
-  glow: string;              // rgba string for inline shadow
+  gradient: string;
+  activeText: string;
+  ring: string;
+  glow: string;
   main?: boolean;
 };
 
-const MobileNav = ({ view, setView }: { view: ViewState; setView: (v: ViewState) => void }) => {
+const MobileNav = ({
+  view,
+  setView,
+}: {
+  view: ViewState;
+  setView: (v: ViewState) => void;
+}) => {
   const [isVisible, setIsVisible] = useState(true);
 
-  // Scroll handling refs
   const scrollTargetRef = useRef<Window | HTMLElement | null>(null);
   const lastYRef = useRef(0);
   const tickingRef = useRef(false);
@@ -42,7 +48,7 @@ const MobileNav = ({ view, setView }: { view: ViewState; setView: (v: ViewState)
         gradient: "from-green-400 to-emerald-500",
         activeText: "text-green-300",
         ring: "ring-green-400/35",
-        glow: "rgba(34,197,94,0.45)",
+        glow: "rgba(74,222,128,0.45)",
       },
       {
         id: "VOICE_ASSISTANT",
@@ -67,16 +73,15 @@ const MobileNav = ({ view, setView }: { view: ViewState; setView: (v: ViewState)
         id: "SCHEMES",
         icon: Landmark,
         label: "Schemes",
-        gradient: "from-sky-400 to-indigo-500",
-        activeText: "text-sky-300",
-        ring: "ring-sky-400/35",
-        glow: "rgba(56,189,248,0.45)",
+        gradient: "from-amber-400 to-orange-500",
+        activeText: "text-amber-300",
+        ring: "ring-amber-400/35",
+        glow: "rgba(251,191,36,0.45)",
       },
     ],
     []
   );
 
-  // Tiny “spark” dots: deterministic + memoized (no Math.random in render)
   const sparks = useMemo(
     () => [
       { top: "18%", left: "14%", d: "0s" },
@@ -90,7 +95,6 @@ const MobileNav = ({ view, setView }: { view: ViewState; setView: (v: ViewState)
   );
 
   const findScrollContainer = useCallback((): Window | HTMLElement => {
-    // Choose the last scrollable container if your app uses nested scroll areas
     const containers = document.querySelectorAll<HTMLElement>(".overflow-y-auto");
     return containers.length ? containers[containers.length - 1] : window;
   }, []);
@@ -109,7 +113,6 @@ const MobileNav = ({ view, setView }: { view: ViewState; setView: (v: ViewState)
     return Math.max(0, el.scrollHeight - el.clientHeight);
   };
 
-  // Attach scroll listener once; throttle with rAF to avoid running logic too often. [web:46]
   useEffect(() => {
     const target = findScrollContainer();
     scrollTargetRef.current = target;
@@ -120,7 +123,6 @@ const MobileNav = ({ view, setView }: { view: ViewState; setView: (v: ViewState)
       if (!t) return;
 
       nextYRef.current = Math.max(0, readScrollY(t));
-
       if (tickingRef.current) return;
       tickingRef.current = true;
 
@@ -147,7 +149,7 @@ const MobileNav = ({ view, setView }: { view: ViewState; setView: (v: ViewState)
     };
 
     target.addEventListener("scroll", onScroll, { passive: true });
-    return () => target.removeEventListener("scroll", onScroll as any);
+    return () => target.removeEventListener("scroll", onScroll);
   }, [findScrollContainer]);
 
   const onTap = useCallback(
@@ -165,22 +167,22 @@ const MobileNav = ({ view, setView }: { view: ViewState; setView: (v: ViewState)
   return (
     <>
       <style>{`
-        @keyframes navShimmer { 
+        @keyframes navShimmer {
           0% { transform: translateX(-140%) skewX(-18deg); opacity: 0; }
           35% { opacity: .55; }
           100% { transform: translateX(140%) skewX(-18deg); opacity: 0; }
         }
-        @keyframes softFloat { 
-          0%,100% { transform: translateY(0); } 
-          50% { transform: translateY(-2px); } 
+        @keyframes softFloat {
+          0%,100% { transform: translateY(0); }
+          50% { transform: translateY(-2px); }
         }
         @keyframes fabPulse {
-          0% { transform: scale(1); opacity: .45; }
+          0% { transform: scale(1); opacity: .42; }
           100% { transform: scale(1.85); opacity: 0; }
         }
         @keyframes sparkTwinkle {
-          0%,100% { opacity: .18; transform: scale(.85); }
-          50% { opacity: .60; transform: scale(1.15); }
+          0%,100% { opacity: .14; transform: scale(.85); }
+          50% { opacity: .58; transform: scale(1.15); }
         }
         @media (prefers-reduced-motion: reduce) {
           .nav-float, .nav-shimmer, .fab-pulse, .spark { animation: none !important; }
@@ -190,21 +192,26 @@ const MobileNav = ({ view, setView }: { view: ViewState; setView: (v: ViewState)
 
       <div
         className={clsx(
-          "lg:hidden fixed bottom-6 inset-x-4 z-[200] flex justify-center pointer-events-none",
+          "lg:hidden fixed inset-x-4 z-[200] flex justify-center pointer-events-none",
           "transition-all duration-500 ease-out",
           isVisible ? "translate-y-0 opacity-100" : "translate-y-[140%] opacity-0"
         )}
+        style={{
+          // safe-area aware bottom spacing
+          bottom: "calc(1.5rem + env(safe-area-inset-bottom))",
+        }}
       >
         <div className="relative w-full max-w-[420px] pointer-events-auto">
-          {/* Ambient glow (light) */}
-          <div className="absolute -inset-x-8 -inset-y-6 rounded-[2.5rem] blur-3xl opacity-50"
+          {/* Ambient glow */}
+          <div
+            className="absolute -inset-x-8 -inset-y-7 rounded-[2.75rem] blur-3xl opacity-55"
             style={{
               background:
-                "linear-gradient(90deg, rgba(16,185,129,0.14), rgba(34,211,238,0.12), rgba(16,185,129,0.14))",
+                "linear-gradient(90deg, rgba(16,185,129,0.16), rgba(34,211,238,0.12), rgba(139,92,246,0.12), rgba(16,185,129,0.14))",
             }}
           />
 
-          {/* Sparks (few, deterministic) */}
+          {/* Sparks */}
           <div className="absolute inset-0 pointer-events-none">
             {sparks.map((s, i) => (
               <span
@@ -223,29 +230,35 @@ const MobileNav = ({ view, setView }: { view: ViewState; setView: (v: ViewState)
           {/* NAV SHELL */}
           <div
             className={clsx(
-              "relative h-[5rem] rounded-[2.25rem] overflow-hidden",
-              "border border-white/10 bg-slate-950/75 backdrop-blur-xl",
-              "shadow-[0_18px_50px_rgba(0,0,0,0.55)]",
+              "relative h-[5rem] rounded-[2.35rem] overflow-hidden",
+              "border border-white/10 bg-slate-950/72 backdrop-blur-xl",
+              "shadow-[0_18px_50px_rgba(0,0,0,0.58)]",
               "nav-float"
             )}
             style={{ animation: "softFloat 4.2s ease-in-out infinite" }}
           >
-            {/* Border glow */}
-            <div className="absolute inset-0 pointer-events-none rounded-[2.25rem] ring-1 ring-emerald-400/15" />
+            {/* Premium border + highlight */}
+            <div className="absolute inset-0 pointer-events-none rounded-[2.35rem] ring-1 ring-white/10" />
+            <div className="absolute inset-0 pointer-events-none opacity-60"
+              style={{
+                background:
+                  "radial-gradient(120% 80% at 50% 0%, rgba(255,255,255,0.14), transparent 55%)",
+              }}
+            />
 
             {/* Shimmer */}
             <div
               className="nav-shimmer absolute inset-0 pointer-events-none opacity-0"
               style={{
                 background:
-                  "linear-gradient(90deg, transparent, rgba(255,255,255,0.10), transparent)",
+                  "linear-gradient(90deg, transparent, rgba(255,255,255,0.12), transparent)",
                 animation: "navShimmer 4.2s ease-in-out infinite",
               }}
             />
 
-            {/* Layout with center gap */}
+            {/* Layout with guaranteed center dead-zone */}
             <div className="absolute inset-0 flex items-center justify-between px-3 pb-2">
-              <div className="flex-1 flex justify-evenly items-center pr-6">
+              <div className="flex-1 flex items-center justify-between gap-1 pr-9">
                 {leftItems.map((item) => (
                   <NavButton
                     key={item.id}
@@ -256,9 +269,14 @@ const MobileNav = ({ view, setView }: { view: ViewState; setView: (v: ViewState)
                 ))}
               </div>
 
-              <div className="w-20 shrink-0" />
+              {/* bigger center gap so Shop can't sit under FAB */}
+              <div
+                className="shrink-0"
+                style={{ width: "clamp(5.6rem, 22vw, 6.4rem)" }}
+                aria-hidden="true"
+              />
 
-              <div className="flex-1 flex justify-evenly items-center pl-6">
+              <div className="flex-1 flex items-center justify-between gap-1 pl-9">
                 {rightItems.map((item) => (
                   <NavButton
                     key={item.id}
@@ -271,42 +289,51 @@ const MobileNav = ({ view, setView }: { view: ViewState; setView: (v: ViewState)
             </div>
           </div>
 
-          {/* CENTER FAB */}
-          <div className="absolute left-1/2 top-0 -translate-x-1/2 -translate-y-[42%] w-[4.6rem] h-[4.6rem] z-30">
+          {/* CENTER FAB (only the real button can receive events) */}
+          <div className="absolute left-1/2 top-0 -translate-x-1/2 -translate-y-[42%] w-[4.7rem] h-[4.7rem] z-30 pointer-events-none">
             <button
+              type="button"
               onClick={() => onTap("VOICE_ASSISTANT")}
-              className="relative w-full h-full rounded-[1.55rem] focus:outline-none active:scale-90 transition-transform duration-200"
+              className="pointer-events-auto relative w-full h-full rounded-[1.6rem]
+                         focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70
+                         active:scale-90 transition-transform duration-200"
               aria-label="Voice assistant"
             >
-              {/* Pulse rings (reduced count) */}
+              {/* Decorative layers NEVER capture taps */}
               <span
-                className="fab-pulse absolute -inset-5 rounded-[2rem] border border-cyan-400/25"
+                className="pointer-events-none fab-pulse absolute -inset-5 rounded-[2rem] border border-cyan-400/25"
                 style={{ animation: "fabPulse 2.2s ease-out infinite" }}
               />
               <span
-                className="fab-pulse absolute -inset-3 rounded-[2rem] border border-emerald-400/20"
+                className="pointer-events-none fab-pulse absolute -inset-3 rounded-[2rem] border border-emerald-400/20"
                 style={{ animation: "fabPulse 2.2s ease-out 0.5s infinite" }}
               />
 
               <div
                 className={clsx(
-                  "relative w-full h-full rounded-[1.55rem] grid place-items-center overflow-hidden",
+                  "relative w-full h-full rounded-[1.6rem] grid place-items-center overflow-hidden",
                   "border-[4px] border-[#020617]",
-                  "shadow-[0_18px_50px_rgba(0,0,0,0.55)]"
+                  "shadow-[0_18px_50px_rgba(0,0,0,0.60)]"
                 )}
                 style={{
-                  background: "linear-gradient(135deg, #34d399 0%, #14b8a6 45%, #2563eb 100%)",
-                  boxShadow: "0 0 28px rgba(34,211,238,0.25)",
+                  background:
+                    "linear-gradient(135deg, #34d399 0%, #14b8a6 42%, #2563eb 100%)",
+                  boxShadow: "0 0 34px rgba(34,211,238,0.22)",
                 }}
               >
-                <div className="absolute inset-0 bg-gradient-to-t from-black/28 via-transparent to-white/18" />
-                <div className="absolute -inset-10 opacity-35 blur-2xl"
+                <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-white/18" />
+                <div
+                  className="pointer-events-none absolute -inset-10 opacity-35 blur-2xl"
                   style={{
                     background:
-                      "radial-gradient(circle, rgba(255,255,255,0.25), transparent 60%)",
+                      "radial-gradient(circle, rgba(255,255,255,0.24), transparent 62%)",
                   }}
                 />
-                <Mic size={32} strokeWidth={3} className="relative z-10 text-white drop-shadow-[0_6px_18px_rgba(0,0,0,0.55)]" />
+                <Mic
+                  size={32}
+                  strokeWidth={3}
+                  className="relative z-10 text-white drop-shadow-[0_6px_18px_rgba(0,0,0,0.55)]"
+                />
               </div>
             </button>
           </div>
@@ -337,51 +364,59 @@ function NavButton({
 
   return (
     <button
+      type="button"
       onClick={() => onTap(item.id)}
       className={clsx(
-        "relative flex flex-col items-center justify-center gap-1.5 w-16 h-full",
-        "active:scale-90 transition-transform duration-200",
-        "touch-manipulation"
+        // Wider + stable tap target
+        "relative flex flex-col items-center justify-center gap-1",
+        "w-full h-full",
+        "active:scale-90 transition-transform duration-200 touch-manipulation",
+        "focus:outline-none focus-visible:ring-2 focus-visible:ring-white/25 focus-visible:rounded-2xl"
       )}
       aria-current={active ? "page" : undefined}
+      aria-label={item.label}
     >
-      {/* Soft glow behind active */}
       {active && (
         <span
-          className="absolute inset-0 rounded-2xl blur-2xl opacity-25"
-          style={{ background: `linear-gradient(135deg, ${item.glow}, transparent)` }}
+          className="pointer-events-none absolute inset-0 rounded-2xl blur-2xl opacity-25"
+          style={{
+            background: `linear-gradient(135deg, ${item.glow}, transparent)`,
+          }}
         />
       )}
 
       <div
         className={clsx(
-          "relative p-2.5 rounded-[1.125rem] overflow-hidden",
+          "relative p-2 rounded-[1rem] overflow-hidden",
           "border border-white/10 bg-white/5 backdrop-blur-xl",
           "transition-[transform,box-shadow,background] duration-300",
           active && "bg-white/8 ring-2",
           active ? item.ring : "ring-0"
         )}
-        style={
-          active
-            ? { boxShadow: `0 0 18px ${item.glow}` }
-            : undefined
-        }
+        style={active ? { boxShadow: `0 0 18px ${item.glow}` } : undefined}
       >
-        {/* Active gradient wash */}
         {active && (
-          <span className={clsx("absolute inset-0 opacity-20 bg-gradient-to-br", item.gradient)} />
+          <span
+            className={clsx(
+              "pointer-events-none absolute inset-0 opacity-20 bg-gradient-to-br",
+              item.gradient
+            )}
+          />
         )}
 
         <Icon
-          size={24}
+          size={20}
           strokeWidth={active ? 2.8 : 2.2}
-          className={clsx("relative z-10 transition-colors duration-300", active ? item.activeText : "text-slate-400")}
+          className={clsx(
+            "relative z-10 transition-colors duration-300",
+            active ? item.activeText : "text-slate-400"
+          )}
         />
       </div>
 
       <span
         className={clsx(
-          "text-[10px] font-black tracking-wider uppercase transition-colors duration-300",
+          "text-[9px] font-black tracking-wider uppercase transition-colors duration-300 scale-90",
           active ? item.activeText : "text-slate-500"
         )}
       >
