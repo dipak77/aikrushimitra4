@@ -10,27 +10,36 @@ export default {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        jakarta: ['"Plus Jakarta Sans"', 'sans-serif'],
+        devanagari: ['"Noto Sans Devanagari"', 'sans-serif'],
+      },
       colors: {
         void: '#020617', // Deep Space Background
-        glass: {
-          100: 'rgba(255, 255, 255, 0.03)',
-          200: 'rgba(255, 255, 255, 0.08)',
-          border: 'rgba(255, 255, 255, 0.08)'
+        
+        // New Semantic Palette
+        agri: {
+          green: '#00D9B0', // Accent Green
+          gold: '#FFB800',  // Premium/Alerts
+          purple: '#7B61FF', // Calendar/AI
+          dark: '#0A1F2E',   // Card BG Base
+          success: '#00E676',
+          warning: '#FFB300',
+          error: '#FF3D71',
+          info: '#00B8D4'
         },
-        neon: {
-          mint: '#00FF9D', // Agri-Tech Green (Growth)
-          cyan: '#06b6d4', // Data Blue (Science)
-          gold: '#FFD700', // Wealth/Sun
-          purple: '#c084fc', // AI
-          danger: '#ff4d4d'
-        }
+
+        glass: {
+          100: 'rgba(255, 255, 255, 0.05)',
+          200: 'rgba(255, 255, 255, 0.1)',
+          border: 'rgba(255, 255, 255, 0.1)'
+        },
       },
       animation: {
         'float': 'float 20s ease-in-out infinite',
         'float-reverse': 'floatReverse 25s ease-in-out infinite',
         'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
         'spin-slow': 'spin 12s linear infinite',
-        'spin-reverse-slow': 'spin 15s linear infinite reverse',
         'shimmer': 'shimmer 2.5s linear infinite',
         'enter': 'enter 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards',
       },
