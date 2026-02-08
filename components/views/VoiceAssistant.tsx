@@ -28,9 +28,6 @@ interface Lightning {
   thickness: number;
 }
 
-type Status = 'idle' | 'connecting' | 'connected' | 'reconnecting' | 'error' | 'offline';
-type Transcript = { role: 'user' | 'model'; text: string };
-
 const VoiceAssistant = ({
   lang,
   user,
@@ -44,16 +41,35 @@ const VoiceAssistant = ({
 }) => {
   const t = TRANSLATIONS[lang];
 
-  const [status, setStatus] = useState<Status>('idle');
+  const [status, setStatus] = useState<'idle' | 'connecting' | 'connected' | 'reconnecting' | 'error' | 'offline'>(
+    'idle'
+  );
   const [errorMessage, setErrorMessage] = useState('');
-  const [transcripts, setTranscripts] = useState<Transcript[]>([]);
+  const [transcripts, setTranscripts] = useState<{ role: 'user' | 'model'; text: string }[]>([]);
 
-  const statusRef = useRef<Status>('idle');
-  useEffect(() => {
-    statusRef.current = status;
-  }, [status]);
+  const transcriptsRef = useRef<{ role: 'user' | 'model'; text: string }[]>([]);
+  const shouldStayConnectedRef = useRef(false);
+  const activeSocketRef = useRef<WebSocket | null>(null);
 
-  const transcriptsRef = useRef<Transcript[]>([]);
+  const inputContextRef = useRef<AudioContext | null>(null);
+  const outputContextRef = useRef<AudioContext | null>(null);
+  const mediaStreamRef = useRef<MediaStream | null>(null);
+  const inputAnalyserRef = useRef<AnalyserNode | null>(null);
+  const outputAnalyserRef = useRef<AnalyserNode | null>(null);
+  const processorRef = useRef<ScriptProcessorNode | null>(null);
+
+  const reconnectTimeoutRef = useRef<any>(null);
+  const retryCountRef = useRef(0);
+  const nextStartTimeRef = useRef<number>(0);
+
+  const containerRef = useRef<HTMLDivElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const ringWrapperRef = useRef<HTMLDivElement>(null);
+  const animationFrameRef = useRef<number>(0);
+  const particlesRef = useRef<Particle[]>([]);
+  const lightningRef = useRef<Lightning[]>([]);
+  const timeRef = useRef(0);
+
   useEffect(() => {
     transcriptsRef.current = transcripts;
   }, [transcripts]);
@@ -62,33 +78,6 @@ const VoiceAssistant = ({
   useEffect(() => {
     transcriptEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [transcripts]);
-
-  // Session / socket
-  const shouldStayConnectedRef = useRef(false);
-  const activeSocketRef = useRef<WebSocket | null>(null);
-
-  // Audio
-  const inputContextRef = useRef<AudioContext | null>(null);
-  const outputContextRef = useRef<AudioContext | null>(null);
-  const mediaStreamRef = useRef<MediaStream | null>(null);
-  const processorRef = useRef<ScriptProcessorNode | null>(null);
-  const inputAnalyserRef = useRef<AnalyserNode | null>(null);
-  const outputAnalyserRef = useRef<AnalyserNode | null>(null);
-  const nextStartTimeRef = useRef<number>(0);
-
-  // Reconnect
-  const reconnectTimeoutRef = useRef<any>(null);
-  const retryCountRef = useRef(0);
-
-  // Canvas / animation
-  const containerRef = useRef<HTMLDivElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const ringWrapperRef = useRef<HTMLDivElement>(null);
-
-  const animationFrameRef = useRef<number>(0);
-  const particlesRef = useRef<Particle[]>([]);
-  const lightningRef = useRef<Lightning[]>([]);
-  const timeRef = useRef(0);
 
   const isGuest = user.email === 'guest@aikrushimitra.in' || user.email?.includes('guest');
 
@@ -114,12 +103,11 @@ const VoiceAssistant = ({
     }
   };
 
-  // ----- Guest Lock Screen -----
   if (isGuest) {
     return (
       <div className="fixed inset-0 z-[200] bg-[#020617] flex items-center justify-center p-6 animate-enter">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,_var(--tw-gradient-stops))] from-indigo-900/40 via-[#020617] to-[#020617]" />
-        <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-overlay" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,_var(--tw-gradient-stops))] from-indigo-900/40 via-[#020617] to-[#020617]"></div>
+        <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-overlay"></div>
 
         <div className="relative z-10 w-full max-w-sm">
           <div className="glass-panel p-8 rounded-[2rem] border border-red-500/20 bg-slate-900/80 backdrop-blur-xl shadow-2xl flex flex-col items-center text-center">
@@ -158,349 +146,67 @@ const VoiceAssistant = ({
     );
   }
 
-  // ----- Canvas sizing (wrapper-based + ResizeObserver) -----
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    const wrapper = ringWrapperRef.current;
-    if (!canvas || !wrapper) return;
-
-    const resize = () => {
-      const dpr = window.devicePixelRatio || 1;
-      const rect = wrapper.getBoundingClientRect();
-      const size = Math.max(1, Math.floor(Math.min(rect.width, rect.height)));
-
-      canvas.style.width = `${size}px`;
-      canvas.style.height = `${size}px`;
-      canvas.width = Math.floor(size * dpr);
-      canvas.height = Math.floor(size * dpr);
-
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return;
-      ctx.setTransform(1, 0, 0, 1, 0, 0);
-      ctx.scale(dpr, dpr);
-    };
-
-    resize();
-
-    const ro = new ResizeObserver(() => resize());
-    ro.observe(wrapper);
-
-    window.addEventListener('resize', resize);
-    return () => {
-      ro.disconnect();
-      window.removeEventListener('resize', resize);
-    };
-  }, []);
-
-  // ----- Orb renderer helpers -----
-  const clamp01 = (x: number) => Math.max(0, Math.min(1, x));
-
-  const createBranchingLightning = (
-    startX: number,
-    startY: number,
-    endX: number,
-    endY: number,
-    segments: number,
-    jitter: number
-  ): { x: number; y: number }[] => {
-    const points = [{ x: startX, y: startY }];
-    for (let i = 1; i < segments; i++) {
-      const t = i / segments;
-      const x = startX + (endX - startX) * t + (Math.random() - 0.5) * jitter;
-      const y = startY + (endY - startY) * t + (Math.random() - 0.5) * jitter;
-      points.push({ x, y });
-    }
-    points.push({ x: endX, y: endY });
-    return points;
-  };
-
-  const spawnParticles = (centerX: number, centerY: number, radius: number, count: number, energy: number) => {
-    for (let i = 0; i < count; i++) {
-      const angle = Math.random() * Math.PI * 2;
-      const speed = 0.5 + Math.random() * 2 + energy * 3;
-      const distance = radius + Math.random() * 20;
-
-      particlesRef.current.push({
-        x: centerX + Math.cos(angle) * distance,
-        y: centerY + Math.sin(angle) * distance,
-        vx: Math.cos(angle) * speed,
-        vy: Math.sin(angle) * speed,
-        life: 1,
-        maxLife: 0.4 + Math.random() * 0.8,
-        size: 1 + Math.random() * 3 + energy * 2,
-        color: Math.random() > 0.5 ? 'emerald' : 'white',
-        type: Math.random() > 0.7 ? 'ember' : 'spark',
-      });
-    }
-  };
-
-  const spawnLightning = (centerX: number, centerY: number, radius: number, energy: number) => {
-    if (Math.random() < 0.10 + energy * 0.25) {
-      const startAngle = Math.random() * Math.PI * 2;
-      const endAngle = startAngle + (Math.random() - 0.5) * Math.PI * 0.8;
-
-      const startX = centerX + Math.cos(startAngle) * radius;
-      const startY = centerY + Math.sin(startAngle) * radius;
-      const endX = centerX + Math.cos(endAngle) * (radius + 20 + Math.random() * 40);
-      const endY = centerY + Math.sin(endAngle) * (radius + 20 + Math.random() * 40);
-
-      lightningRef.current.push({
-        segments: createBranchingLightning(startX, startY, endX, endY, 8 + Math.floor(Math.random() * 6), 8 + energy * 15),
-        life: 0.15 + Math.random() * 0.2,
-        intensity: 0.7 + energy * 0.3,
-        thickness: 1.5 + Math.random() * 2 + energy * 2,
-      });
-
-      if (Math.random() < 0.35) {
-        const last = lightningRef.current[lightningRef.current.length - 1];
-        const midIdx = Math.floor(Math.random() * 6) + 3;
-        const midPoint = last.segments[midIdx];
-        if (midPoint) {
-          const branchAngle = Math.random() * Math.PI * 2;
-          const branchEndX = midPoint.x + Math.cos(branchAngle) * (20 + Math.random() * 30);
-          const branchEndY = midPoint.y + Math.sin(branchAngle) * (20 + Math.random() * 30);
-
-          lightningRef.current.push({
-            segments: createBranchingLightning(midPoint.x, midPoint.y, branchEndX, branchEndY, 4, 6),
-            life: 0.1 + Math.random() * 0.15,
-            intensity: 0.5 + energy * 0.3,
-            thickness: 1 + Math.random() * 1.5,
-          });
-        }
-      }
-    }
-  };
-
-  const drawEnhancedRing = (
-    ctx: CanvasRenderingContext2D,
-    centerX: number,
-    centerY: number,
-    radius: number,
-    energy: number,
-    bass: number,
-    treble: number,
-    peak: number
-  ) => {
-    const segments = 150;
-    const angleStep = (Math.PI * 2) / segments;
-
-    // Outer glow
-    ctx.beginPath();
-    for (let i = 0; i <= segments; i++) {
-      const angle = i * angleStep + timeRef.current * 0.3;
-      const noise = Math.sin(angle * 4 + timeRef.current * 3) * (4 + bass * 8);
-      const r = radius + noise;
-      const x = centerX + Math.cos(angle) * r;
-      const y = centerY + Math.sin(angle) * r;
-      if (i === 0) ctx.moveTo(x, y);
-      else ctx.lineTo(x, y);
-    }
-    ctx.closePath();
-
-    const outerGlow = ctx.createRadialGradient(centerX, centerY, radius - 30, centerX, centerY, radius + 60);
-    outerGlow.addColorStop(0, 'rgba(16, 185, 129, 0)');
-    outerGlow.addColorStop(0.4, `rgba(16, 185, 129, ${0.15 + energy * 0.3})`);
-    outerGlow.addColorStop(0.7, `rgba(52, 211, 153, ${0.35 + energy * 0.4})`);
-    outerGlow.addColorStop(1, `rgba(167, 243, 208, ${0.05 + peak * 0.15})`);
-
-    ctx.strokeStyle = outerGlow;
-    ctx.lineWidth = 18 + energy * 25;
-    ctx.shadowBlur = 50 + energy * 60;
-    ctx.shadowColor = `rgba(16, 185, 129, ${0.6 + energy * 0.4})`;
-    ctx.stroke();
-
-    // Mid layer
-    ctx.beginPath();
-    for (let i = 0; i <= segments; i++) {
-      const angle = i * angleStep + timeRef.current * 0.3;
-      const noise = Math.sin(angle * 4 + timeRef.current * 3) * (3 + bass * 6);
-      const r = radius + noise;
-      const x = centerX + Math.cos(angle) * r;
-      const y = centerY + Math.sin(angle) * r;
-      if (i === 0) ctx.moveTo(x, y);
-      else ctx.lineTo(x, y);
-    }
-    ctx.closePath();
-
-    const midGlow = ctx.createRadialGradient(centerX, centerY, radius - 15, centerX, centerY, radius + 30);
-    midGlow.addColorStop(0, 'rgba(34, 197, 94, 0)');
-    midGlow.addColorStop(0.5, `rgba(52, 211, 153, ${0.5 + energy * 0.4})`);
-    midGlow.addColorStop(0.8, `rgba(110, 231, 183, ${0.7 + energy * 0.3})`);
-    midGlow.addColorStop(1, 'rgba(255, 255, 255, 0)');
-
-    ctx.strokeStyle = midGlow;
-    ctx.lineWidth = 10 + energy * 15;
-    ctx.shadowBlur = 35 + energy * 45;
-    ctx.shadowColor = `rgba(52, 211, 153, 0.8)`;
-    ctx.stroke();
-
-    // Inner core
-    ctx.beginPath();
-    for (let i = 0; i <= segments; i++) {
-      const angle = i * angleStep + timeRef.current * 0.3;
-      const noise = Math.sin(angle * 4 + timeRef.current * 3) * (2 + treble * 5);
-      const r = radius + noise;
-      const x = centerX + Math.cos(angle) * r;
-      const y = centerY + Math.sin(angle) * r;
-      if (i === 0) ctx.moveTo(x, y);
-      else ctx.lineTo(x, y);
-    }
-    ctx.closePath();
-
-    ctx.strokeStyle = `rgba(220, 252, 231, ${0.85 + energy * 0.15})`;
-    ctx.lineWidth = 3 + energy * 6;
-    ctx.shadowBlur = 25 + energy * 35;
-    ctx.shadowColor = 'rgba(255, 255, 255, 1)';
-    ctx.stroke();
-
-    // Ultra bright line
-    ctx.beginPath();
-    for (let i = 0; i <= segments; i++) {
-      const angle = i * angleStep + timeRef.current * 0.3;
-      const noise = Math.sin(angle * 4 + timeRef.current * 3) * (2 + treble * 5);
-      const r = radius + noise;
-      const x = centerX + Math.cos(angle) * r;
-      const y = centerY + Math.sin(angle) * r;
-      if (i === 0) ctx.moveTo(x, y);
-      else ctx.lineTo(x, y);
-    }
-    ctx.closePath();
-
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.95)';
-    ctx.lineWidth = 1 + energy * 2;
-    ctx.shadowBlur = 20;
-    ctx.shadowColor = 'rgba(255, 255, 255, 1)';
-    ctx.stroke();
-
-    ctx.shadowBlur = 0;
-  };
-
-  const drawLightning = (ctx: CanvasRenderingContext2D, lightning: Lightning) => {
-    // Outer glow
-    ctx.beginPath();
-    ctx.moveTo(lightning.segments[0].x, lightning.segments[0].y);
-    for (let i = 1; i < lightning.segments.length; i++) ctx.lineTo(lightning.segments[i].x, lightning.segments[i].y);
-    ctx.strokeStyle = `rgba(52, 211, 153, ${lightning.life * lightning.intensity * 0.4})`;
-    ctx.lineWidth = lightning.thickness * 3;
-    ctx.shadowBlur = 20;
-    ctx.shadowColor = `rgba(52, 211, 153, ${lightning.life * 0.8})`;
-    ctx.stroke();
-
-    // Core
-    ctx.beginPath();
-    ctx.moveTo(lightning.segments[0].x, lightning.segments[0].y);
-    for (let i = 1; i < lightning.segments.length; i++) ctx.lineTo(lightning.segments[i].x, lightning.segments[i].y);
-    ctx.strokeStyle = `rgba(255, 255, 255, ${lightning.life * lightning.intensity})`;
-    ctx.lineWidth = lightning.thickness;
-    ctx.shadowBlur = 15;
-    ctx.shadowColor = 'rgba(255, 255, 255, 1)';
-    ctx.stroke();
-
-    ctx.shadowBlur = 0;
-  };
-
-  const drawParticles = (ctx: CanvasRenderingContext2D) => {
-    for (const p of particlesRef.current) {
-      const alpha = p.life;
-      const size = p.size * (0.5 + p.life * 0.5);
-
-      if (p.type === 'ember') {
-        const grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, size * 3);
-        grad.addColorStop(0, `rgba(250, 204, 21, ${alpha * 0.8})`);
-        grad.addColorStop(0.4, `rgba(251, 146, 60, ${alpha * 0.5})`);
-        grad.addColorStop(1, 'rgba(234, 88, 12, 0)');
-        ctx.fillStyle = grad;
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, size * 3, 0, Math.PI * 2);
-        ctx.fill();
-      } else {
-        const color = p.color === 'emerald' ? '52, 211, 153' : '255, 255, 255';
-        const grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, size * 2.5);
-        grad.addColorStop(0, `rgba(${color}, ${alpha})`);
-        grad.addColorStop(0.5, `rgba(${color}, ${alpha * 0.6})`);
-        grad.addColorStop(1, `rgba(${color}, 0)`);
-
-        ctx.fillStyle = grad;
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, size * 2.5, 0, Math.PI * 2);
-        ctx.fill();
-
-        ctx.fillStyle = `rgba(255, 255, 255, ${alpha * 0.9})`;
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, size * 0.6, 0, Math.PI * 2);
-        ctx.shadowBlur = 8;
-        ctx.shadowColor = 'rgba(255, 255, 255, 1)';
-        ctx.fill();
-        ctx.shadowBlur = 0;
-      }
-    }
-  };
-
-  const renderOrbFrame = (energy: number, bass: number, treble: number, peak: number) => {
-    const canvas = canvasRef.current;
-    const ctx = canvas?.getContext('2d');
-    if (!canvas || !ctx) return;
-
-    timeRef.current += 0.016;
-
-    const w = canvas.offsetWidth;
-    const h = canvas.offsetHeight;
-    if (w <= 1 || h <= 1) return;
-
-    const centerX = w / 2;
-    const centerY = h / 2;
-    const radius = Math.min(w, h) * 0.42;
-
-    if (Math.random() < 0.22 + energy * 0.35) {
-      spawnParticles(centerX, centerY, radius, Math.floor(1 + energy * 4), energy);
-    }
-    spawnLightning(centerX, centerY, radius, energy);
-
-    particlesRef.current = particlesRef.current.filter((p) => {
-      p.x += p.vx;
-      p.y += p.vy;
-      p.vy += 0.05;
-      p.life -= 0.016 / p.maxLife;
-      return p.life > 0;
-    });
-
-    lightningRef.current = lightningRef.current.filter((l) => {
-      l.life -= 0.06;
-      return l.life > 0;
-    });
-
-    ctx.fillStyle = 'rgba(2, 6, 23, 0.15)';
-    ctx.fillRect(0, 0, w, h);
-
-    drawEnhancedRing(ctx, centerX, centerY, radius, energy, bass, treble, peak);
-    for (const l of lightningRef.current) drawLightning(ctx, l);
-    drawParticles(ctx);
-  };
-
-  // ----- Animation loops (idle vs audio-driven) -----
-  const startIdleLoop = () => {
+  const cleanup = (fullyStop: boolean = false) => {
     if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
 
-    const tick = () => {
-      const s = statusRef.current;
-      if (s === 'connected') return; // audio loop takes over
+    if (processorRef.current) {
+      processorRef.current.disconnect();
+      processorRef.current.onaudioprocess = null;
+      processorRef.current = null;
+    }
 
-      const pulse = 0.5 + 0.5 * Math.sin(timeRef.current * 1.2);
-      const energy = 0.10 + pulse * 0.10; // visible but calm
-      const bass = energy * 0.7;
-      const treble = energy * 0.5;
-      const peak = energy * 0.9;
+    if (mediaStreamRef.current) {
+      mediaStreamRef.current.getTracks().forEach((track) => track.stop());
+      mediaStreamRef.current = null;
+    }
 
-      renderOrbFrame(energy, bass, treble, peak);
-      animationFrameRef.current = requestAnimationFrame(tick);
-    };
+    if (inputContextRef.current) {
+      inputContextRef.current.close();
+      inputContextRef.current = null;
+    }
 
-    animationFrameRef.current = requestAnimationFrame(tick);
+    if (outputContextRef.current) {
+      outputContextRef.current.close();
+      outputContextRef.current = null;
+    }
+
+    if (activeSocketRef.current) {
+      activeSocketRef.current.close();
+      activeSocketRef.current = null;
+    }
+
+    if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
+
+    inputAnalyserRef.current = null;
+    outputAnalyserRef.current = null;
+
+    if (fullyStop) {
+      shouldStayConnectedRef.current = false;
+      setStatus('idle');
+    }
   };
 
-  const startAudioLoop = (inputAnalyser: AnalyserNode, outputAnalyser: AnalyserNode) => {
-    if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
+  const handleAutoReconnect = () => {
+    if (!shouldStayConnectedRef.current) return;
 
+    if (retryCountRef.current >= 5) {
+      setStatus('error');
+      setErrorMessage('Network unstable. Stopped.');
+      shouldStayConnectedRef.current = false;
+      return;
+    }
+
+    setStatus('reconnecting');
+    const delay = Math.min(1000 * Math.pow(2, retryCountRef.current), 10000);
+
+    reconnectTimeoutRef.current = setTimeout(() => {
+      retryCountRef.current++;
+      connect();
+    }, delay);
+  };
+
+  // ---- Visualize (unchanged from your attached code) ----
+  const visualize = (() => {
     let inTimeBuf: Uint8Array | null = null;
     let outTimeBuf: Uint8Array | null = null;
     let inFreqBuf: Uint8Array | null = null;
@@ -509,9 +215,12 @@ const VoiceAssistant = ({
     let inEnv = 0;
     let outEnv = 0;
     let bassEnv = 0;
+    let midEnv = 0;
     let trebleEnv = 0;
     let peakEnv = 0;
     let peakVel = 0;
+
+    const clamp01 = (x: number) => Math.max(0, Math.min(1, x));
 
     const rmsByteTime = (arr: Uint8Array) => {
       let sum = 0;
@@ -528,12 +237,244 @@ const VoiceAssistant = ({
       return (sum / (endBin - startBin + 1)) / 255;
     };
 
-    const tick = () => {
-      const s = statusRef.current;
-      if (s === 'idle') {
-        startIdleLoop();
-        return;
+    const createBranchingLightning = (
+      startX: number,
+      startY: number,
+      endX: number,
+      endY: number,
+      segments: number,
+      jitter: number
+    ): { x: number; y: number }[] => {
+      const points = [{ x: startX, y: startY }];
+      for (let i = 1; i < segments; i++) {
+        const t = i / segments;
+        const x = startX + (endX - startX) * t + (Math.random() - 0.5) * jitter;
+        const y = startY + (endY - startY) * t + (Math.random() - 0.5) * jitter;
+        points.push({ x, y });
       }
+      points.push({ x: endX, y: endY });
+      return points;
+    };
+
+    const spawnParticles = (centerX: number, centerY: number, radius: number, count: number, energy: number) => {
+      for (let i = 0; i < count; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 0.5 + Math.random() * 2 + energy * 3;
+        const distance = radius + Math.random() * 20;
+
+        particlesRef.current.push({
+          x: centerX + Math.cos(angle) * distance,
+          y: centerY + Math.sin(angle) * distance,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          life: 1,
+          maxLife: 0.4 + Math.random() * 0.8,
+          size: 1 + Math.random() * 3 + energy * 2,
+          color: Math.random() > 0.5 ? 'emerald' : 'white',
+          type: Math.random() > 0.7 ? 'ember' : 'spark',
+        });
+      }
+    };
+
+    const spawnLightning = (centerX: number, centerY: number, radius: number, energy: number) => {
+      if (Math.random() < 0.12 + energy * 0.35) {
+        const startAngle = Math.random() * Math.PI * 2;
+        const endAngle = startAngle + (Math.random() - 0.5) * Math.PI * 0.8;
+
+        const startX = centerX + Math.cos(startAngle) * radius;
+        const startY = centerY + Math.sin(startAngle) * radius;
+        const endX = centerX + Math.cos(endAngle) * (radius + 20 + Math.random() * 40);
+        const endY = centerY + Math.sin(endAngle) * (radius + 20 + Math.random() * 40);
+
+        lightningRef.current.push({
+          segments: createBranchingLightning(startX, startY, endX, endY, 8 + Math.floor(Math.random() * 6), 8 + energy * 15),
+          life: 0.15 + Math.random() * 0.2,
+          intensity: 0.7 + energy * 0.3,
+          thickness: 1.5 + Math.random() * 2 + energy * 2,
+        });
+
+        if (Math.random() < 0.4) {
+          const midIdx = Math.floor(Math.random() * 6) + 3;
+          const midPoint = lightningRef.current[lightningRef.current.length - 1].segments[midIdx];
+          if (midPoint) {
+            const branchAngle = Math.random() * Math.PI * 2;
+            const branchEndX = midPoint.x + Math.cos(branchAngle) * (20 + Math.random() * 30);
+            const branchEndY = midPoint.y + Math.sin(branchAngle) * (20 + Math.random() * 30);
+
+            lightningRef.current.push({
+              segments: createBranchingLightning(midPoint.x, midPoint.y, branchEndX, branchEndY, 4, 6),
+              life: 0.1 + Math.random() * 0.15,
+              intensity: 0.5 + energy * 0.3,
+              thickness: 1 + Math.random() * 1.5,
+            });
+          }
+        }
+      }
+    };
+
+    const drawEnhancedRing = (
+      ctx: CanvasRenderingContext2D,
+      centerX: number,
+      centerY: number,
+      radius: number,
+      energy: number,
+      bass: number,
+      treble: number,
+      peak: number
+    ) => {
+      const segments = 150;
+      const angleStep = (Math.PI * 2) / segments;
+
+      ctx.beginPath();
+      for (let i = 0; i <= segments; i++) {
+        const angle = i * angleStep + timeRef.current * 0.3;
+        const noise = Math.sin(angle * 4 + timeRef.current * 3) * (4 + bass * 8);
+        const r = radius + noise;
+        const x = centerX + Math.cos(angle) * r;
+        const y = centerY + Math.sin(angle) * r;
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.closePath();
+
+      const outerGlow = ctx.createRadialGradient(centerX, centerY, radius - 30, centerX, centerY, radius + 60);
+      outerGlow.addColorStop(0, 'rgba(16, 185, 129, 0)');
+      outerGlow.addColorStop(0.4, `rgba(16, 185, 129, ${0.15 + energy * 0.3})`);
+      outerGlow.addColorStop(0.7, `rgba(52, 211, 153, ${0.35 + energy * 0.4})`);
+      outerGlow.addColorStop(1, `rgba(167, 243, 208, ${0.05 + peak * 0.15})`);
+
+      ctx.strokeStyle = outerGlow;
+      ctx.lineWidth = 18 + energy * 25;
+      ctx.shadowBlur = 50 + energy * 60;
+      ctx.shadowColor = `rgba(16, 185, 129, ${0.6 + energy * 0.4})`;
+      ctx.stroke();
+
+      ctx.beginPath();
+      for (let i = 0; i <= segments; i++) {
+        const angle = i * angleStep + timeRef.current * 0.3;
+        const noise = Math.sin(angle * 4 + timeRef.current * 3) * (3 + bass * 6);
+        const r = radius + noise;
+        const x = centerX + Math.cos(angle) * r;
+        const y = centerY + Math.sin(angle) * r;
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.closePath();
+
+      const midGlow = ctx.createRadialGradient(centerX, centerY, radius - 15, centerX, centerY, radius + 30);
+      midGlow.addColorStop(0, 'rgba(34, 197, 94, 0)');
+      midGlow.addColorStop(0.5, `rgba(52, 211, 153, ${0.5 + energy * 0.4})`);
+      midGlow.addColorStop(0.8, `rgba(110, 231, 183, ${0.7 + energy * 0.3})`);
+      midGlow.addColorStop(1, 'rgba(255, 255, 255, 0)');
+
+      ctx.strokeStyle = midGlow;
+      ctx.lineWidth = 10 + energy * 15;
+      ctx.shadowBlur = 35 + energy * 45;
+      ctx.shadowColor = `rgba(52, 211, 153, 0.8)`;
+      ctx.stroke();
+
+      ctx.beginPath();
+      for (let i = 0; i <= segments; i++) {
+        const angle = i * angleStep + timeRef.current * 0.3;
+        const noise = Math.sin(angle * 4 + timeRef.current * 3) * (2 + treble * 5);
+        const r = radius + noise;
+        const x = centerX + Math.cos(angle) * r;
+        const y = centerY + Math.sin(angle) * r;
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.closePath();
+
+      ctx.strokeStyle = `rgba(220, 252, 231, ${0.85 + energy * 0.15})`;
+      ctx.lineWidth = 3 + energy * 6;
+      ctx.shadowBlur = 25 + energy * 35;
+      ctx.shadowColor = 'rgba(255, 255, 255, 1)';
+      ctx.stroke();
+
+      ctx.beginPath();
+      for (let i = 0; i <= segments; i++) {
+        const angle = i * angleStep + timeRef.current * 0.3;
+        const noise = Math.sin(angle * 4 + timeRef.current * 3) * (2 + treble * 5);
+        const r = radius + noise;
+        const x = centerX + Math.cos(angle) * r;
+        const y = centerY + Math.sin(angle) * r;
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.closePath();
+
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.95)';
+      ctx.lineWidth = 1 + energy * 2;
+      ctx.shadowBlur = 20;
+      ctx.shadowColor = 'rgba(255, 255, 255, 1)';
+      ctx.stroke();
+
+      ctx.shadowBlur = 0;
+    };
+
+    const drawLightning = (ctx: CanvasRenderingContext2D, lightning: Lightning) => {
+      ctx.beginPath();
+      ctx.moveTo(lightning.segments[0].x, lightning.segments[0].y);
+      for (let i = 1; i < lightning.segments.length; i++) ctx.lineTo(lightning.segments[i].x, lightning.segments[i].y);
+      ctx.strokeStyle = `rgba(52, 211, 153, ${lightning.life * lightning.intensity * 0.4})`;
+      ctx.lineWidth = lightning.thickness * 3;
+      ctx.shadowBlur = 20;
+      ctx.shadowColor = `rgba(52, 211, 153, ${lightning.life * 0.8})`;
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(lightning.segments[0].x, lightning.segments[0].y);
+      for (let i = 1; i < lightning.segments.length; i++) ctx.lineTo(lightning.segments[i].x, lightning.segments[i].y);
+      ctx.strokeStyle = `rgba(255, 255, 255, ${lightning.life * lightning.intensity})`;
+      ctx.lineWidth = lightning.thickness;
+      ctx.shadowBlur = 15;
+      ctx.shadowColor = 'rgba(255, 255, 255, 1)';
+      ctx.stroke();
+    };
+
+    const drawParticles = (ctx: CanvasRenderingContext2D) => {
+      particlesRef.current.forEach((p) => {
+        const alpha = p.life;
+        const size = p.size * (0.5 + p.life * 0.5);
+
+        if (p.type === 'ember') {
+          const grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, size * 3);
+          grad.addColorStop(0, `rgba(250, 204, 21, ${alpha * 0.8})`);
+          grad.addColorStop(0.4, `rgba(251, 146, 60, ${alpha * 0.5})`);
+          grad.addColorStop(1, 'rgba(234, 88, 12, 0)');
+          ctx.fillStyle = grad;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, size * 3, 0, Math.PI * 2);
+          ctx.fill();
+        } else {
+          const color = p.color === 'emerald' ? '52, 211, 153' : '255, 255, 255';
+          const grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, size * 2.5);
+          grad.addColorStop(0, `rgba(${color}, ${alpha})`);
+          grad.addColorStop(0.5, `rgba(${color}, ${alpha * 0.6})`);
+          grad.addColorStop(1, `rgba(${color}, 0)`);
+
+          ctx.fillStyle = grad;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, size * 2.5, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.fillStyle = `rgba(255, 255, 255, ${alpha * 0.9})`;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, size * 0.6, 0, Math.PI * 2);
+          ctx.shadowBlur = 8;
+          ctx.shadowColor = 'rgba(255, 255, 255, 1)';
+          ctx.fill();
+        }
+      });
+      ctx.shadowBlur = 0;
+    };
+
+    return (inputAnalyser: AnalyserNode, outputAnalyser: AnalyserNode) => {
+      const canvas = canvasRef.current;
+      const ctx = canvas?.getContext('2d');
+      if (!canvas || !ctx) return;
+
+      timeRef.current += 0.016;
 
       const fftSize = inputAnalyser.fftSize;
       const binCount = inputAnalyser.frequencyBinCount;
@@ -558,103 +499,56 @@ const VoiceAssistant = ({
       outEnv += (outRMS - outEnv) * (outRMS > outEnv ? attack : release);
 
       const bassTarget = Math.max(getBandEnergy(inFreqBuf, 3, 32), getBandEnergy(outFreqBuf, 3, 32));
+      const midTarget = Math.max(getBandEnergy(inFreqBuf, 32, 256), getBandEnergy(outFreqBuf, 32, 256));
       const trebleTarget = Math.max(
         getBandEnergy(inFreqBuf, 256, Math.min(1024, binCount - 1)),
         getBandEnergy(outFreqBuf, 256, Math.min(1024, binCount - 1))
       );
 
       bassEnv += (bassTarget - bassEnv) * 0.28;
+      midEnv += (midTarget - midEnv) * 0.32;
       trebleEnv += (trebleTarget - trebleEnv) * 0.38;
 
       const energy = Math.max(inEnv, outEnv);
 
       const peakTarget = Math.max(peakEnv, energy);
-      peakVel += (peakTarget - peakEnv) * 0.30;
+      peakVel += (peakTarget - peakEnv) * 0.3;
       peakVel *= 0.75;
       peakEnv += peakVel;
       peakEnv *= 0.982;
 
-      renderOrbFrame(energy, bassEnv, trebleEnv, peakEnv);
-      animationFrameRef.current = requestAnimationFrame(tick);
+      const w = canvas.offsetWidth;
+      const h = canvas.offsetHeight;
+      const centerX = w / 2;
+      const centerY = h / 2;
+      const radius = Math.min(w, h) * 0.42;
+
+      if (Math.random() < 0.4 + energy * 0.6) spawnParticles(centerX, centerY, radius, Math.floor(2 + energy * 5), energy);
+      spawnLightning(centerX, centerY, radius, energy);
+
+      particlesRef.current = particlesRef.current.filter((p) => {
+        p.x += p.vx;
+        p.y += p.vy;
+        p.vy += 0.05;
+        p.life -= 0.016 / p.maxLife;
+        return p.life > 0;
+      });
+
+      lightningRef.current = lightningRef.current.filter((l) => {
+        l.life -= 0.06;
+        return l.life > 0;
+      });
+
+      ctx.fillStyle = 'rgba(2, 6, 23, 0.15)';
+      ctx.fillRect(0, 0, w, h);
+
+      drawEnhancedRing(ctx, centerX, centerY, radius, energy, bassEnv, trebleEnv, peakEnv);
+      lightningRef.current.forEach((l) => drawLightning(ctx, l));
+      drawParticles(ctx);
+
+      animationFrameRef.current = requestAnimationFrame(() => visualize(inputAnalyser, outputAnalyser));
     };
-
-    animationFrameRef.current = requestAnimationFrame(tick);
-  };
-
-  // Start idle animation immediately (load time)
-  useEffect(() => {
-    startIdleLoop();
-    return () => {
-      if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // ----- Cleanup / reconnect -----
-  const cleanup = (fullyStop: boolean = false) => {
-    if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
-
-    if (processorRef.current) {
-      try {
-        processorRef.current.disconnect();
-      } catch {}
-      processorRef.current.onaudioprocess = null;
-      processorRef.current = null;
-    }
-
-    if (mediaStreamRef.current) {
-      mediaStreamRef.current.getTracks().forEach((track) => track.stop());
-      mediaStreamRef.current = null;
-    }
-
-    if (inputContextRef.current) {
-      inputContextRef.current.close().catch(() => {});
-      inputContextRef.current = null;
-    }
-
-    if (outputContextRef.current) {
-      outputContextRef.current.close().catch(() => {});
-      outputContextRef.current = null;
-    }
-
-    if (activeSocketRef.current) {
-      try {
-        activeSocketRef.current.close();
-      } catch {}
-      activeSocketRef.current = null;
-    }
-
-    if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
-
-    inputAnalyserRef.current = null;
-    outputAnalyserRef.current = null;
-
-    if (fullyStop) {
-      shouldStayConnectedRef.current = false;
-      setStatus('idle');
-      // restart idle visuals
-      startIdleLoop();
-    }
-  };
-
-  const handleAutoReconnect = () => {
-    if (!shouldStayConnectedRef.current) return;
-
-    if (retryCountRef.current >= 5) {
-      setStatus('error');
-      setErrorMessage('Network unstable. Stopped.');
-      shouldStayConnectedRef.current = false;
-      return;
-    }
-
-    setStatus('reconnecting');
-    const delay = Math.min(1000 * Math.pow(2, retryCountRef.current), 10000);
-
-    reconnectTimeoutRef.current = setTimeout(() => {
-      retryCountRef.current++;
-      connect();
-    }, delay);
-  };
+  })();
 
   const getWebSocketUrl = () => {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -707,8 +601,7 @@ const VoiceAssistant = ({
       source.connect(processor);
       processor.connect(inputCtx.destination);
 
-      // Switch to audio-driven loop immediately (even while "connecting")
-      startAudioLoop(inputAnalyser, outputAnalyser);
+      visualize(inputAnalyser, outputAnalyser);
 
       const ws = new WebSocket(getWebSocketUrl());
       activeSocketRef.current = ws;
@@ -785,8 +678,8 @@ Keep responses short (2-3 sentences) unless asked for detailed information.`;
           const userTranscript = msg.serverContent?.inputTranscription?.text;
           if (userTranscript) {
             setTranscripts((prev) => {
-              const last = prev[prev.length - 1];
-              if (last?.role === 'user' && last?.text === userTranscript) return prev;
+              const lastMsg = prev[prev.length - 1];
+              if (lastMsg?.role === 'user' && lastMsg?.text === userTranscript) return prev;
               return [...prev, { role: 'user', text: userTranscript }];
             });
           }
@@ -794,8 +687,8 @@ Keep responses short (2-3 sentences) unless asked for detailed information.`;
           const modelTranscript = msg.serverContent?.modelTurn?.parts?.[0]?.text;
           if (modelTranscript) {
             setTranscripts((prev) => {
-              const last = prev[prev.length - 1];
-              if (last?.role === 'model' && last?.text === modelTranscript) return prev;
+              const lastMsg = prev[prev.length - 1];
+              if (lastMsg?.role === 'model' && lastMsg?.text === modelTranscript) return prev;
               return [...prev, { role: 'model', text: modelTranscript }];
             });
           }
@@ -817,11 +710,11 @@ Keep responses short (2-3 sentences) unless asked for detailed information.`;
         } else {
           setStatus('idle');
           shouldStayConnectedRef.current = false;
-          startIdleLoop();
         }
       };
 
-      ws.onerror = () => {
+      ws.onerror = (err) => {
+        console.error('WebSocket Error', err);
         if (shouldStayConnectedRef.current) handleAutoReconnect();
       };
 
@@ -847,9 +740,8 @@ Keep responses short (2-3 sentences) unless asked for detailed information.`;
         }
       };
     } catch (e: any) {
-      setErrorMessage(e?.message || 'Failed to connect microphone');
+      setErrorMessage(e.message || 'Failed to connect microphone');
       setStatus('error');
-      startIdleLoop();
     }
   };
 
@@ -868,13 +760,41 @@ Keep responses short (2-3 sentences) unless asked for detailed information.`;
     onBack();
   };
 
-  const showCenteredIdle = status === 'idle' && transcripts.length === 0;
+  // Canvas resize (keep)
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    const wrapper = ringWrapperRef.current;
+    if (!canvas || !wrapper) return;
+
+    const resize = () => {
+      const dpr = window.devicePixelRatio || 1;
+      const rect = wrapper.getBoundingClientRect();
+      const size = Math.min(rect.width, rect.height);
+
+      canvas.style.width = `${size}px`;
+      canvas.style.height = `${size}px`;
+      canvas.width = size * dpr;
+      canvas.height = size * dpr;
+
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.scale(dpr, dpr);
+    };
+
+    resize();
+    window.addEventListener('resize', resize);
+    return () => window.removeEventListener('resize', resize);
+  }, []);
+
+  const isIdleScreen = status === 'idle' && transcripts.length === 0;
 
   return (
     <div className="fixed inset-0 z-[200] bg-[#020617] flex flex-col h-[100dvh] w-full overflow-hidden" ref={containerRef}>
+      {/* Styles */}
       <style>{`
         @keyframes pulse-glow {
-          0%, 100% { opacity: 0.85; transform: scale(1); }
+          0%, 100% { opacity: 0.8; transform: scale(1); }
           50% { opacity: 1; transform: scale(1.05); }
         }
         @keyframes shimmer {
@@ -894,9 +814,7 @@ Keep responses short (2-3 sentences) unless asked for detailed information.`;
           -webkit-text-fill-color: transparent;
           animation: shimmer 3s linear infinite;
         }
-        .idle-pulse {
-          animation: pulse-glow 2s ease-in-out infinite;
-        }
+        .idle-pulse { animation: pulse-glow 2s ease-in-out infinite; }
       `}</style>
 
       {/* Background */}
@@ -914,8 +832,8 @@ Keep responses short (2-3 sentences) unless asked for detailed information.`;
         <div className="absolute bottom-[-10%] right-[-10%] w-[90vw] h-[90vw] bg-cyan-900/20 blur-[120px] rounded-full" />
       </div>
 
-      {/* Top bar (IN FLOW now, fixes centering) */}
-      <div className="relative z-[220] shrink-0 px-4 pt-safe-top pb-3 flex justify-between items-center bg-gradient-to-b from-[#020617]/90 via-[#020617]/60 to-transparent">
+      {/* ✅ Top bar is now sticky (NOT absolute) */}
+      <div className="sticky top-0 z-[220] px-4 pt-safe-top pb-3 flex justify-between items-center bg-gradient-to-b from-[#020617]/90 via-[#020617]/60 to-transparent">
         <button
           onClick={handleBack}
           className="flex items-center gap-2.5 pl-2 pr-5 py-2.5 rounded-full bg-slate-900/70 backdrop-blur-xl border border-emerald-500/30 text-white hover:border-emerald-400/50 active:scale-95 transition-all shadow-2xl group"
@@ -947,20 +865,22 @@ Keep responses short (2-3 sentences) unless asked for detailed information.`;
         </div>
       </div>
 
-      {/* Main content */}
+      {/* ✅ Main area centers content INSIDE padding (so orb never crosses top) */}
       <div
         className={clsx(
-          'flex-1 w-full relative z-10 flex flex-col items-center px-4',
-          showCenteredIdle ? 'justify-center pb-10' : 'justify-start pt-4'
+          'relative z-10 flex-1 w-full px-4',
+          // Top padding guarantees orb stays below top margin even when centered
+          'pt-6 pb-10'
         )}
       >
-        <div className={clsx('w-full flex flex-col items-center', showCenteredIdle ? 'gap-8' : 'gap-6')}>
-          {/* Orb block */}
+        <div className={clsx('w-full flex flex-col items-center', isIdleScreen ? 'my-auto' : 'mt-2')}>
+          {/* Orb */}
           <div
             ref={ringWrapperRef}
             className="w-full flex items-center justify-center"
             style={{
-              height: showCenteredIdle ? '320px' : '280px',
+              // Responsive height prevents giant orb from pushing into top area
+              height: isIdleScreen ? 'clamp(260px, 34vh, 320px)' : 'clamp(240px, 30vh, 280px)',
               maxWidth: 420,
             }}
           >
@@ -968,14 +888,14 @@ Keep responses short (2-3 sentences) unless asked for detailed information.`;
               className="relative flex items-center justify-center cursor-pointer select-none w-full"
               onClick={handleToggle}
             >
-              <canvas ref={canvasRef} className="drop-shadow-2xl" />
+              <canvas ref={canvasRef} className="drop-shadow-2xl block" />
 
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                 <div className="text-center flex flex-col items-center justify-center">
                   {status === 'idle' ? (
                     <div className="flex flex-col items-center idle-pulse">
                       <div className="w-20 h-20 rounded-full bg-gradient-to-br from-emerald-500/30 to-cyan-600/20 backdrop-blur-md border-2 border-emerald-400/40 flex items-center justify-center mb-4 shadow-[0_0_40px_rgba(16,185,129,0.4)]">
-                        <Mic size={40} className="text-emerald-200 drop-shadow-[0_0_15px_rgba(16,185,129,0.8)]" />
+                        <Mic size={40} className="text-emerald-300 drop-shadow-[0_0_15px_rgba(16,185,129,0.8)]" />
                       </div>
                       <span className="text-xs font-bold uppercase tracking-widest text-emerald-200/90 drop-shadow-lg">
                         Tap to Start
@@ -1026,8 +946,8 @@ Keep responses short (2-3 sentences) unless asked for detailed information.`;
             </div>
           </div>
 
-          {/* Status + suggestions */}
-          <div className="w-full flex flex-col items-center">
+          {/* Text + hints */}
+          <div className="mt-7 w-full flex flex-col items-center">
             <h2 className="text-2xl font-black text-emerald-100 tracking-tight mb-3 drop-shadow-[0_2px_30px_rgba(16,185,129,0.7)]">
               {status === 'connected'
                 ? 'मी ऐकतोय...'
@@ -1047,14 +967,14 @@ Keep responses short (2-3 sentences) unless asked for detailed information.`;
             )}
 
             {(status === 'idle' || (status === 'connected' && transcripts.length < 2)) && (
-              <div className="w-full max-w-[360px] flex flex-col gap-3 mt-4">
+              <div className="w-full max-w-[320px] flex flex-col gap-3 mt-5">
                 {t.voice_hints.slice(0, 3).map((hint: string, i: number) => (
                   <div
                     key={i}
                     className="w-full px-5 py-3.5 rounded-2xl bg-gradient-to-br from-emerald-500/15 to-cyan-500/8 border border-emerald-400/25 backdrop-blur-xl text-sm font-medium text-emerald-50 shadow-2xl flex items-center gap-3 hover:from-emerald-500/20 hover:to-cyan-500/12 transition-all cursor-pointer active:scale-[0.97]"
                   >
                     <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-500/30 to-cyan-500/20 flex items-center justify-center shrink-0 shadow-lg">
-                      <MessageSquare size={14} className="text-emerald-200" />
+                      <MessageSquare size={14} className="text-emerald-300" />
                     </div>
                     <span className="truncate">{hint}</span>
                   </div>
