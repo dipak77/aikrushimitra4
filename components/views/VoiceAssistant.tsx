@@ -44,10 +44,9 @@ const VoiceAssistant = ({
 }) => {
   const t = TRANSLATIONS[lang];
 
-  // ---- Layout tuning (change these) ----
-  const TOP_GUARD_PT_CLASS = 'pt-10'; // increase to pt-12 / pt-14 if you want more top space
-  const ORB_HEIGHT_IDLE = 'clamp(240px, 36vh, 360px)';
-  const ORB_HEIGHT_ACTIVE = 'clamp(220px, 32vh, 320px)';
+  // ---- Layout tuning ----
+  const ORB_HEIGHT_IDLE = 'clamp(260px, 40vh, 380px)';
+  const ORB_HEIGHT_ACTIVE = 'clamp(200px, 30vh, 280px)';
 
   const [status, setStatus] = useState<Status>('idle');
   const [errorMessage, setErrorMessage] = useState('');
@@ -847,15 +846,14 @@ Keep responses short (2-3 sentences) unless asked for detailed information.`;
       {/* Main row (centering + top guard padding) */}
       <div
         className={clsx(
-          'relative z-10 min-h-0 flex flex-col items-center px-4 pb-10 overflow-hidden',
-          TOP_GUARD_PT_CLASS,
-          isIdleLayout ? 'justify-center' : 'justify-start'
+          'relative z-10 w-full h-full flex flex-col items-center px-4 overflow-hidden',
+          isIdleLayout ? 'justify-center pb-20' : 'justify-start pt-10 pb-40'
         )}
       >
         {/* Orb wrapper */}
         <div
           ref={ringWrapperRef}
-          className="w-full flex items-center justify-center"
+          className="w-full flex items-center justify-center transition-all duration-700"
           style={{
             height: isIdleLayout ? ORB_HEIGHT_IDLE : ORB_HEIGHT_ACTIVE,
             maxWidth: 420,
@@ -908,7 +906,7 @@ Keep responses short (2-3 sentences) unless asked for detailed information.`;
             </div>
           )}
 
-          {(status === 'idle' || (status === 'connected' && transcripts.length < 2)) && (
+          {(isIdleLayout) && (
             <div className="w-full max-w-[320px] flex flex-col gap-3 mt-5">
               {t.voice_hints.slice(0, 3).map((hint: string, i: number) => (
                 <div
@@ -929,12 +927,12 @@ Keep responses short (2-3 sentences) unless asked for detailed information.`;
         <div
           className={clsx(
             'absolute bottom-0 inset-x-0 bg-gradient-to-t from-black via-black/95 to-transparent pt-20 pb-safe-bottom px-6 z-20 transition-all duration-700 flex flex-col justify-end',
-            transcripts.length === 0 ? 'translate-y-full opacity-0' : 'translate-y-0 opacity-100'
+            transcripts.length === 0 ? 'translate-y-full opacity-0 pointer-events-none' : 'translate-y-0 opacity-100'
           )}
           style={{ minHeight: '32vh', maxHeight: '45vh' }}
         >
           <div
-            className="flex flex-col gap-3.5 max-h-full overflow-y-auto pb-5"
+            className="flex flex-col gap-3.5 max-h-full overflow-y-auto pb-5 hide-scrollbar"
             style={{
               maskImage: 'linear-gradient(to bottom, transparent, black 5%, black 95%, transparent)',
               WebkitMaskImage: 'linear-gradient(to bottom, transparent, black 5%, black 95%, transparent)',
@@ -944,7 +942,7 @@ Keep responses short (2-3 sentences) unless asked for detailed information.`;
               <div
                 key={i}
                 className={clsx(
-                  'p-4 rounded-2xl backdrop-blur-xl border max-w-[85%] text-sm font-medium shadow-2xl',
+                  'p-4 rounded-2xl backdrop-blur-xl border max-w-[85%] text-sm font-medium shadow-2xl animate-[fadeInUp_0.4s_ease-out_forwards]',
                   msg.role === 'user'
                     ? 'self-end bg-gradient-to-br from-emerald-500/30 to-emerald-600/20 text-emerald-50 border-emerald-400/40 rounded-tr-md shadow-[0_4px_20px_rgba(16,185,129,0.3)]'
                     : 'self-start bg-gradient-to-br from-white/15 to-white/8 text-slate-100 border-white/20 rounded-tl-md'
