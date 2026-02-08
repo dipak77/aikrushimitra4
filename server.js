@@ -146,19 +146,14 @@ if (!isProduction) {
   app.use('*', async (req, res, next) => {
     const url = req.originalUrl;
 
-    // 1. Pass API/WS requests to next handlers
     if (url.startsWith('/api') || url.startsWith('/ws')) {
         return next();
     }
 
-    // 2. Prevent serving index.html for missing JS/CSS/Images
-    // If it has an extension and isn't .html, assume it's a missing asset -> 404
-    // This prevents the "MIME type text/html" error for missing .js files
     if (path.extname(url) && !url.endsWith('.html')) {
         return next(); 
     }
 
-    // 3. Serve index.html for SPA routes (e.g. /dashboard)
     try {
       const template = fs.readFileSync(path.resolve(__dirname, 'index.html'), 'utf-8');
       const html = await vite.transformIndexHtml(url, template);
@@ -171,15 +166,18 @@ if (!isProduction) {
 
 } else {
   // PRODUCTION: Serve Built Assets
-  console.log('🚀 Serving static assets from dist/...');
   const distPath = path.resolve(__dirname, 'dist');
+  console.log(`🚀 Serving static assets from: ${distPath}`);
   
-  // 1. Serve Static Assets (JS, CSS, Images)
+  // Check if dist exists
+  if (!fs.existsSync(distPath)) {
+      console.error("❌ ERROR: 'dist' directory not found. Did you run 'npm run build'?");
+  }
+
+  // 1. Serve Static Assets
   app.use(express.static(distPath));
 
   // 2. Strict 404 for missing assets
-  // If a request asks for a file with an extension (e.g. /assets/main.js) and it wasn't found by express.static, return 404.
-  // This prevents the server from returning index.html for missing JS files.
   app.use((req, res, next) => {
     if (path.extname(req.path).length > 0) {
       res.status(404).end();
@@ -188,7 +186,7 @@ if (!isProduction) {
     }
   });
 
-  // 3. SPA Fallback for all other routes (e.g. /dashboard -> index.html)
+  // 3. SPA Fallback
   app.get('*', (req, res) => {
     res.sendFile(path.resolve(distPath, 'index.html'));
   });
