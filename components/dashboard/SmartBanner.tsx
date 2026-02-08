@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   CloudRain, TrendingUp, Lightbulb, Activity, ArrowRight, Flag, Heart, Sparkles,
   Star, Sun, Moon, Zap, Crown, Calendar as CalendarIcon, AlertTriangle
@@ -42,13 +42,85 @@ export const SmartBanner = ({
   const [liveUpdates, setLiveUpdates] = useState<any[]>([]);
   const [isLoadingAI, setIsLoadingAI] = useState(true);
   const [now, setNow] = useState(() => new Date());
+  const [isPaused, setIsPaused] = useState(false);
+  const [reduceMotion, setReduceMotion] = useState(false);
+
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  const rafRef = useRef<number | null>(null);
 
   const txt = DASH_TEXT[lang];
 
+  // Real-time clock update
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 30_000);
     return () => clearInterval(t);
   }, []);
+
+  // prefers-reduced-motion (also used to disable JS-driven rotation/parallax)
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return;
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+    const apply = () => setReduceMotion(!!mq.matches);
+    apply();
+
+    // Safari fallback: addListener/removeListener
+    if (mq.addEventListener) {
+      mq.addEventListener('change', apply);
+      return () => mq.removeEventListener('change', apply);
+    }
+
+    // @ts-ignore
+    mq.addListener?.(apply);
+    // @ts-ignore
+    return () => mq.removeListener?.(apply);
+  }, []);
+
+  // Pause when tab is hidden (saves GPU/CPU)
+  useEffect(() => {
+    const onVis = () => setIsPaused(document.visibilityState === 'hidden');
+    onVis();
+    document.addEventListener('visibilitychange', onVis);
+    return () => document.removeEventListener('visibilitychange', onVis);
+  }, []);
+
+  // Pointer parallax via CSS variables (no React state updates)
+  useEffect(() => {
+    const el = rootRef.current;
+    if (!el) return;
+    if (reduceMotion) return;
+
+    const finePointer = window.matchMedia?.('(pointer:fine)').matches;
+    if (!finePointer) return;
+
+    const onMove = (e: PointerEvent) => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      rafRef.current = requestAnimationFrame(() => {
+        const r = el.getBoundingClientRect();
+        const x = (e.clientX - r.left) / r.width;   // 0..1
+        const y = (e.clientY - r.top) / r.height;  // 0..1
+        const mx = (x - 0.5) * 2;                  // -1..1
+        const my = (y - 0.5) * 2;                  // -1..1
+        el.style.setProperty('--mx', mx.toFixed(4));
+        el.style.setProperty('--my', my.toFixed(4));
+      });
+    };
+
+    const onLeave = () => {
+      el.style.setProperty('--mx', '0');
+      el.style.setProperty('--my', '0');
+    };
+
+    // passive listeners help scroll/perf where applicable
+    el.addEventListener('pointermove', onMove, { passive: true } as AddEventListenerOptions);
+    el.addEventListener('pointerleave', onLeave, { passive: true } as AddEventListenerOptions);
+
+    return () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      el.removeEventListener('pointermove', onMove as any);
+      el.removeEventListener('pointerleave', onLeave as any);
+    };
+  }, [reduceMotion]);
 
   // --- Weather (dynamic) ---
   const temp = weather?.current?.temperature_2m ? Math.round(weather.current.temperature_2m) : '--';
@@ -117,7 +189,7 @@ export const SmartBanner = ({
     };
   }, [lang]);
 
-  // --- Optimized particle seeds ---
+  // --- Stable particle seeds ---
   const particleSeeds = useMemo(() => {
     return Array.from({ length: 14 }, (_, i) => ({
       id: i,
@@ -128,11 +200,11 @@ export const SmartBanner = ({
       driftY: -22 - Math.random() * 20,
       dur: 5.5 + Math.random() * 2.5,
       delay: Math.random() * 3,
-      alpha: 0.25 + Math.random() * 0.35,
+      alpha: 0.22 + Math.random() * 0.28,
     }));
   }, []);
 
-  // --- Message Queue with DOLBY VISION BACKGROUNDS ---
+  // --- Message Queue (unchanged content, cinematic backgrounds) ---
   const messages: Msg[] = useMemo(() => {
     const list: Msg[] = [];
 
@@ -153,7 +225,6 @@ export const SmartBanner = ({
         },
         cta: { mr: 'संदेश शेअर करा', hi: 'संदेश शेयर करें', en: 'Share Wishes' },
 
-        // Dolby Vision: Deep black core with vibrant tricolor bursts
         bgBase: `
           radial-gradient(ellipse 140% 110% at 25% 35%, rgba(255,153,51,1) 0%, rgba(255,120,20,0.85) 18%, rgba(0,0,0,1) 42%),
           radial-gradient(ellipse 130% 100% at 75% 65%, rgba(19,136,8,0.95) 0%, rgba(15,100,6,0.75) 20%, rgba(0,0,0,1) 45%),
@@ -192,7 +263,6 @@ export const SmartBanner = ({
         },
         cta: { mr: 'सल्ला पहा', hi: 'सलाह देखें', en: 'View Tips' },
 
-        // Dolby Vision: Deep storm with electric blue-purple lightning
         bgBase: `
           radial-gradient(ellipse 130% 100% at 20% 20%, rgba(59,130,246,1) 0%, rgba(37,99,235,0.9) 15%, rgba(0,0,0,1) 40%),
           radial-gradient(ellipse 120% 110% at 80% 75%, rgba(109,40,217,0.85) 0%, rgba(79,70,229,0.7) 18%, rgba(0,0,0,1) 42%),
@@ -226,7 +296,6 @@ export const SmartBanner = ({
           subtitle: { mr: update.subtitle, hi: update.subtitle, en: update.subtitle },
           cta: { mr: 'तपशील', hi: 'विवरण', en: 'Details' },
 
-          // Dolby Vision: Emerald/Cyan for schemes, Purple/Magenta for market
           bgBase: isScheme
             ? `
               radial-gradient(ellipse 135% 105% at 25% 30%, rgba(16,185,129,1) 0%, rgba(5,150,105,0.9) 16%, rgba(0,0,0,1) 40%),
@@ -249,8 +318,8 @@ export const SmartBanner = ({
             `,
           accentGlow: isScheme ? 'rgba(16, 185, 129, 0.95)' : 'rgba(168, 85, 247, 0.95)',
           secondaryGlow: isScheme ? 'rgba(20, 184, 166, 0.85)' : 'rgba(236, 72, 153, 0.85)',
-          particleColors: isScheme 
-            ? ['#10b981', '#14b8a6', '#34d399', '#2dd4bf', '#5eead4'] 
+          particleColors: isScheme
+            ? ['#10b981', '#14b8a6', '#34d399', '#2dd4bf', '#5eead4']
             : ['#a855f7', '#ec4899', '#c084fc', '#f472b6', '#d946ef'],
           icon: isScheme ? Crown : TrendingUp,
           badges: [
@@ -286,7 +355,6 @@ export const SmartBanner = ({
         },
         cta: { mr: 'कॅलेंडर', hi: 'कैलेंडर', en: 'Calendar' },
 
-        // Dolby Vision: Deep purple to pink gradient
         bgBase: `
           radial-gradient(ellipse 130% 105% at 30% 25%, rgba(147,51,234,1) 0%, rgba(126,34,206,0.9) 15%, rgba(0,0,0,1) 38%),
           radial-gradient(ellipse 125% 100% at 70% 70%, rgba(236,72,153,0.9) 0%, rgba(219,39,119,0.75) 18%, rgba(0,0,0,1) 42%),
@@ -328,7 +396,6 @@ export const SmartBanner = ({
             },
         cta: { mr: 'तपशील', hi: 'विवरण', en: 'Forecast' },
 
-        // Dolby Vision: Rich golden day / Deep indigo night
         bgBase: isDay
           ? `
             radial-gradient(ellipse 135% 105% at 25% 20%, rgba(251,191,36,1) 0%, rgba(245,158,11,0.95) 15%, rgba(0,0,0,1) 38%),
@@ -351,8 +418,8 @@ export const SmartBanner = ({
           `,
         accentGlow: isDay ? 'rgba(251, 191, 36, 0.95)' : 'rgba(99, 102, 241, 0.95)',
         secondaryGlow: isDay ? 'rgba(59, 130, 246, 0.85)' : 'rgba(139, 92, 246, 0.85)',
-        particleColors: isDay 
-          ? ['#fbbf24', '#f59e0b', '#3b82f6', '#60a5fa', '#fcd34d'] 
+        particleColors: isDay
+          ? ['#fbbf24', '#f59e0b', '#3b82f6', '#60a5fa', '#fcd34d']
           : ['#6366f1', '#8b5cf6', '#a78bfa', '#7c3aed', '#c4b5fd'],
         icon: isRainy ? CloudRain : isDay ? Sun : Moon,
         badges: [
@@ -375,7 +442,6 @@ export const SmartBanner = ({
         },
         cta: { mr: 'भाव', hi: 'कीमत', en: 'Rates' },
 
-        // Dolby Vision: Deep emerald-cyan (bull) / Crimson-orange (bear)
         bgBase: isPositiveTrend
           ? `
             radial-gradient(ellipse 135% 105% at 30% 28%, rgba(16,185,129,1) 0%, rgba(5,150,105,0.95) 15%, rgba(0,0,0,1) 38%),
@@ -398,8 +464,8 @@ export const SmartBanner = ({
           `,
         accentGlow: isPositiveTrend ? 'rgba(16, 185, 129, 0.95)' : 'rgba(239, 68, 68, 0.95)',
         secondaryGlow: isPositiveTrend ? 'rgba(6, 182, 212, 0.90)' : 'rgba(249, 115, 22, 0.90)',
-        particleColors: isPositiveTrend 
-          ? ['#10b981', '#06b6d4', '#34d399', '#22d3ee', '#14b8a6'] 
+        particleColors: isPositiveTrend
+          ? ['#10b981', '#06b6d4', '#34d399', '#22d3ee', '#14b8a6']
           : ['#ef4444', '#f97316', '#fb7185', '#f87171', '#ff6b35'],
         icon: TrendingUp,
         badges: [
@@ -422,7 +488,6 @@ export const SmartBanner = ({
           : { mr: 'रात्री तापमान कमी होऊ शकते. पाणी द्या', hi: 'रात में तापमान गिर सकता है। सिंचाई करें', en: 'Temp may drop tonight. Irrigate crops' },
         cta: { mr: 'सल्ला', hi: 'सलाह', en: 'Read Tip' },
 
-        // Dolby Vision: Rich amber-gold
         bgBase: `
           radial-gradient(ellipse 135% 105% at 32% 28%, rgba(251,191,36,1) 0%, rgba(245,158,11,0.95) 15%, rgba(0,0,0,1) 38%),
           radial-gradient(ellipse 125% 100% at 68% 70%, rgba(251,146,60,0.9) 0%, rgba(249,115,22,0.75) 18%, rgba(0,0,0,1) 42%),
@@ -467,19 +532,23 @@ export const SmartBanner = ({
     isPositiveTrend
   ]);
 
-  // --- Rotation animation ---
+  // --- Rotation animation (paused + reduced motion aware) ---
   useEffect(() => {
     if (messages.length <= 1) return;
+    if (reduceMotion || isPaused) return;
+
     const interval = setInterval(() => {
       setIsAnimating(true);
-      setTimeout(() => {
+      const t = setTimeout(() => {
         setCurrentIndex(prev => (prev + 1) % messages.length);
         setIsAnimating(false);
-      }, 480);
-    }, 8500);
+      }, 520);
+
+      return () => clearTimeout(t);
+    }, 8200);
 
     return () => clearInterval(interval);
-  }, [messages.length]);
+  }, [messages.length, reduceMotion, isPaused]);
 
   const safeIndex = currentIndex >= messages.length ? 0 : currentIndex;
   const msg = messages[safeIndex];
@@ -490,90 +559,130 @@ export const SmartBanner = ({
   const particleCount = msg.isSpecial ? 14 : 10;
 
   return (
-    <div className={clsx("relative flex flex-1 lg:max-w-5xl lg:mx-auto min-h-[88px] lg:h-32 rounded-[28px] overflow-hidden shadow-2xl", className)}>
+    <div
+      ref={rootRef}
+      className={clsx(
+        "sb-root relative flex flex-1 lg:max-w-5xl lg:mx-auto min-h-[88px] lg:h-32 rounded-[28px] overflow-hidden",
+        "shadow-[0_24px_80px_rgba(0,0,0,0.55)]",
+        isPaused && "sb-paused",
+        className
+      )}
+    >
       <style>{`
-        .sb-gpu { transform: translate3d(0,0,0); backface-visibility: hidden; }
+        .sb-root{
+          --mx: 0;
+          --my: 0;
+          isolation: isolate;
+          contain: layout paint;
+        }
+
+        .sb-paused, .sb-paused * { animation-play-state: paused !important; }
+
+        /* Use will-change only for big moving layers */
         .sb-will { will-change: transform, opacity; }
 
         @keyframes sb-slide-in {
-          0%   { transform: translate3d(-12px, 8px, 0) scale(0.98); opacity: 0; filter: blur(4px); }
+          0%   { transform: translate3d(-12px, 8px, 0) scale(0.985); opacity: 0; filter: blur(5px); }
           100% { transform: translate3d(0, 0, 0) scale(1); opacity: 1; filter: blur(0); }
         }
-
         @keyframes sb-slide-out {
           0%   { transform: translate3d(0, 0, 0) scale(1); opacity: 1; filter: blur(0); }
-          100% { transform: translate3d(12px, -8px, 0) scale(0.98); opacity: 0; filter: blur(4px); }
+          100% { transform: translate3d(12px, -8px, 0) scale(0.985); opacity: 0; filter: blur(5px); }
         }
-
         @keyframes sb-bg-flow {
-          0%, 100% { background-position: 0% 40%; }
-          50% { background-position: 100% 60%; }
+          0%,100% { background-position: 0% 45%; }
+          50% { background-position: 100% 55%; }
         }
-
         @keyframes sb-shine {
-          0% { transform: translate3d(-120%,0,0) skewX(-15deg); opacity: 0; }
+          0% { transform: translate3d(-140%,0,0) skewX(-16deg); opacity: 0; }
           40% { opacity: 0.7; }
-          100% { transform: translate3d(220%,0,0) skewX(-15deg); opacity: 0; }
+          100% { transform: translate3d(240%,0,0) skewX(-16deg); opacity: 0; }
         }
-
         @keyframes sb-float {
           0%,100% { transform: translate3d(0,0,0) scale(1); opacity: var(--a); }
-          50% { transform: translate3d(var(--dx), var(--dy), 0) scale(0.85); opacity: calc(var(--a) * 0.6); }
+          50% { transform: translate3d(var(--dx), var(--dy), 0) scale(0.86); opacity: calc(var(--a) * 0.6); }
         }
-
         @keyframes sb-badge {
-          0%,100% { transform: translateY(0) scale(1); }
-          50% { transform: translateY(-1px) scale(1.05); }
+          0%,100% { transform: translate3d(0,0,0) scale(1); }
+          50% { transform: translate3d(0,-1px,0) scale(1.05); }
+        }
+        @keyframes sb-orb {
+          0%,100% { transform: translate3d(calc(var(--mx) * 10px), calc(var(--my) * 10px), 0); opacity: .55; }
+          50% { transform: translate3d(calc(var(--mx) * -12px), calc(var(--my) * -12px), 0); opacity: .75; }
         }
 
-        @keyframes sb-glow-pulse {
-          0%, 100% { opacity: 0.85; filter: brightness(1.05); }
-          50% { opacity: 1; filter: brightness(1.25); }
+        .sb-grain{
+          background-image:
+            radial-gradient(circle at 20% 15%, rgba(255,255,255,.05) 0 1px, transparent 2px),
+            radial-gradient(circle at 65% 35%, rgba(255,255,255,.04) 0 1px, transparent 2px),
+            radial-gradient(circle at 35% 70%, rgba(255,255,255,.03) 0 1px, transparent 2px),
+            radial-gradient(circle at 85% 80%, rgba(255,255,255,.035) 0 1px, transparent 2px);
+          background-size: 120px 120px, 140px 140px, 160px 160px, 180px 180px;
+          mix-blend-mode: overlay;
+          opacity: .28;
+        }
+
+        .sb-vignette{
+          background:
+            radial-gradient(120% 100% at 50% 10%, rgba(255,255,255,.08) 0%, transparent 55%),
+            radial-gradient(120% 120% at 50% 90%, rgba(0,0,0,.55) 0%, transparent 55%),
+            linear-gradient(180deg, rgba(0,0,0,.10) 0%, rgba(0,0,0,.25) 100%);
+          opacity: .95;
+        }
+
+        .sb-borderGlow{
+          box-shadow:
+            inset 0 1px 0 rgba(255,255,255,.18),
+            inset 0 -1px 0 rgba(0,0,0,.35),
+            0 30px 90px rgba(0,0,0,.55);
         }
 
         @media (prefers-reduced-motion: reduce) {
-          *, *::before, *::after {
-            animation-duration: 0.01ms !important;
-            animation-iteration-count: 1 !important;
-            transition-duration: 0.01ms !important;
-          }
+          .sb-anim, .sb-anim * { animation: none !important; transition: none !important; }
         }
       `}</style>
 
-      {/* Dolby Vision Background - Multi-layer */}
+      {/* Base background */}
       <div
-        className="absolute inset-0 sb-gpu sb-anim"
+        className="absolute inset-0 sb-anim sb-will"
         style={{
           background: msg.bgBase,
-          backgroundSize: '210% 210%',
+          backgroundSize: '220% 220%',
           animation: 'sb-bg-flow 18s ease-in-out infinite',
+          transform: 'translate3d(0,0,0)',
         }}
       />
 
-      {/* Enhanced overlay with depth */}
+      {/* Ambient orb light (cinematic depth) */}
       <div
-        className="absolute inset-0 sb-gpu pointer-events-none"
+        className="absolute inset-0 pointer-events-none sb-will"
         style={{
-          background: msg.bgOverlay,
-          boxShadow: `
-            inset 0 -100px 160px rgba(0,0,0,0.6),
-            inset 0 3px 2px rgba(255,255,255,0.18),
-            inset 0 -3px 2px rgba(0,0,0,0.4)
-          `,
-        }}
-      />
-
-      {/* Cinematic highlights */}
-      <div
-        className="absolute inset-0 pointer-events-none mix-blend-overlay opacity-65"
-        style={{
+          animation: 'sb-orb 7.5s ease-in-out infinite',
           background: `
-            radial-gradient(circle 450px at 18% 22%, rgba(255,255,255,0.15) 0%, transparent 50%),
-            radial-gradient(circle 400px at 88% 78%, rgba(0,0,0,0.3) 0%, transparent 50%),
-            linear-gradient(180deg, rgba(255,255,255,0.06) 0%, transparent 25%, rgba(0,0,0,0.18) 100%)
-          `
+            radial-gradient(520px 420px at 18% 28%,
+              ${msg.accentGlow} 0%,
+              rgba(255,255,255,0.08) 25%,
+              transparent 62%),
+            radial-gradient(520px 420px at 82% 72%,
+              ${msg.secondaryGlow} 0%,
+              rgba(255,255,255,0.06) 25%,
+              transparent 62%)
+          `,
+          opacity: 0.72,
+          mixBlendMode: 'screen',
+          transform: 'translate3d(calc(var(--mx) * 6px), calc(var(--my) * 6px), 0)',
         }}
       />
+
+      {/* Overlay tone + border depth */}
+      <div
+        className="absolute inset-0 pointer-events-none sb-borderGlow"
+        style={{ background: msg.bgOverlay }}
+      />
+
+      {/* Vignette + grain */}
+      <div className="absolute inset-0 pointer-events-none sb-vignette" />
+      <div className="absolute inset-0 pointer-events-none sb-grain" />
 
       {/* Particles */}
       <div className="absolute inset-0 pointer-events-none">
@@ -582,7 +691,7 @@ export const SmartBanner = ({
           return (
             <span
               key={p.id}
-              className="absolute rounded-full sb-gpu sb-will"
+              className="absolute rounded-full sb-anim"
               style={{
                 top: `${p.top}%`,
                 left: `${p.left}%`,
@@ -590,31 +699,35 @@ export const SmartBanner = ({
                 height: `${p.size}px`,
                 background: color,
                 opacity: p.alpha,
-                boxShadow: `0 0 16px ${color}70, 0 0 32px ${color}30`,
+                boxShadow: `0 0 18px ${color}70, 0 0 42px ${color}20`,
                 '--dx': `${p.driftX}px`,
                 '--dy': `${p.driftY}px`,
                 '--a': `${p.alpha}`,
                 animation: `sb-float ${p.dur}s ease-in-out ${p.delay}s infinite`,
+                transform: 'translate3d(calc(var(--mx) * 2px), calc(var(--my) * 2px), 0)',
               } as React.CSSProperties}
             />
           );
         })}
       </div>
 
-      {/* Enhanced shine */}
+      {/* Shine */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-45">
         <div
-          className="absolute inset-0 w-1/3 bg-gradient-to-r from-transparent via-white/55 to-transparent sb-gpu"
-          style={{ animation: 'sb-shine 9s ease-in-out infinite' }}
+          className="absolute inset-0 w-1/3 bg-gradient-to-r from-transparent via-white/55 to-transparent sb-will"
+          style={{
+            animation: 'sb-shine 9s ease-in-out infinite',
+            transform: 'translate3d(calc(var(--mx) * 10px), calc(var(--my) * 6px), 0)',
+          }}
         />
       </div>
 
       {/* Accent line */}
       <div
-        className="absolute bottom-0 left-0 right-0 h-[2.5px] sb-gpu"
+        className="absolute bottom-0 left-0 right-0 h-[2.5px]"
         style={{
           background: `linear-gradient(90deg, ${msg.accentGlow}, ${msg.secondaryGlow})`,
-          boxShadow: `0 0 28px ${msg.accentGlow}, 0 0 40px ${msg.secondaryGlow}`,
+          boxShadow: `0 0 28px ${msg.accentGlow}, 0 0 42px ${msg.secondaryGlow}`,
         }}
       />
 
@@ -622,14 +735,19 @@ export const SmartBanner = ({
       <div
         className={clsx(
           "relative z-10 w-full h-full flex flex-col lg:flex-row items-start lg:items-center justify-between",
-          "p-6 lg:px-8 gap-4 lg:gap-6 sb-anim",
-          isAnimating ? "sb-will sb-gpu animate-[sb-slide-out_0.48s_ease-out_forwards]" : "sb-will sb-gpu animate-[sb-slide-in_0.55s_ease-out_forwards]"
+          "p-6 lg:px-8 gap-4 lg:gap-6",
+          isAnimating
+            ? "sb-will sb-anim animate-[sb-slide-out_0.52s_ease-out_forwards]"
+            : "sb-will sb-anim animate-[sb-slide-in_0.55s_ease-out_forwards]"
         )}
+        style={{
+          transform: 'translate3d(calc(var(--mx) * 2px), calc(var(--my) * 2px), 0)',
+        }}
       >
-        {/* Left section */}
+        {/* Left */}
         <div className="flex items-start lg:items-center gap-4 lg:gap-6 flex-1 min-w-0 w-full">
           {/* Icon */}
-          <div className="relative shrink-0 sb-gpu">
+          <div className="relative shrink-0">
             <div
               className="absolute -inset-4 rounded-2xl opacity-60 pointer-events-none"
               style={{
@@ -637,7 +755,12 @@ export const SmartBanner = ({
                              radial-gradient(circle at 70% 70%, ${msg.secondaryGlow} 0%, transparent 65%)`
               }}
             />
-            <div className="relative w-14 h-14 lg:w-[72px] lg:h-[72px] rounded-[18px] overflow-hidden border border-white/30 bg-white/15 backdrop-blur-xl shadow-[0_24px_80px_rgba(0,0,0,0.7)]">
+            <div
+              className="relative w-14 h-14 lg:w-[72px] lg:h-[72px] rounded-[18px] overflow-hidden border border-white/30 bg-white/15 backdrop-blur-xl shadow-[0_24px_80px_rgba(0,0,0,0.7)]"
+              style={{
+                transform: 'translate3d(calc(var(--mx) * 5px), calc(var(--my) * 5px), 0)',
+              }}
+            >
               <div className="absolute inset-0 bg-gradient-to-br from-white/30 via-white/10 to-transparent" />
               <div className="absolute top-0.5 inset-x-4 h-[2.5px] bg-gradient-to-r from-transparent via-white/90 to-transparent blur-sm" />
               <div className="absolute inset-0 flex items-center justify-center">
@@ -646,7 +769,7 @@ export const SmartBanner = ({
             </div>
           </div>
 
-          {/* Text content */}
+          {/* Text */}
           <div className="flex flex-col gap-2 flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-[10px] lg:text-[11px] font-extrabold uppercase tracking-[0.15em] text-white/90 bg-black/35 border border-white/20 backdrop-blur-lg px-3.5 py-1.5 rounded-[10px] shadow-lg">
@@ -658,11 +781,11 @@ export const SmartBanner = ({
                   <div
                     key={idx}
                     className={clsx(
-                      "px-3 py-1 rounded-[10px] text-[10px] font-black uppercase tracking-wide text-white border border-white/25 backdrop-blur-xl sb-gpu sb-will",
+                      "px-3 py-1 rounded-[10px] text-[10px] font-black uppercase tracking-wide text-white border border-white/25 backdrop-blur-xl",
                       b.color,
                       b.glow
                     )}
-                    style={{ animation: 'sb-badge 3.2s ease-in-out infinite' }}
+                    style={{ animation: reduceMotion ? undefined : 'sb-badge 3.2s ease-in-out infinite' }}
                   >
                     {b.text[lang] || b.text.en}
                   </div>
@@ -680,68 +803,64 @@ export const SmartBanner = ({
           </div>
         </div>
 
-        {/* Right section */}
+        {/* Right */}
         <div className="flex items-center justify-between w-full lg:w-auto lg:gap-6 shrink-0">
           <div className="hidden lg:block h-20 w-px bg-white/25 shadow-[0_0_10px_rgba(255,255,255,0.2)]" />
 
-          <button 
-            className="group/cta relative px-7 py-3.5 rounded-[18px] bg-white/15 hover:bg-white/22 border border-white/30 backdrop-blur-xl transition-all duration-300 hover:scale-105 hover:shadow-[0_24px_70px_rgba(255,255,255,0.2)] sb-gpu sb-will active:scale-100"
-            aria-label={`${msg.cta[lang]} - ${msg.title[lang]}`}
+          <button
+            className="group/cta relative px-7 py-3.5 rounded-[18px] bg-white/15 hover:bg-white/22 border border-white/30 backdrop-blur-xl transition-all duration-300 hover:scale-105 hover:shadow-[0_24px_70px_rgba(255,255,255,0.2)] active:scale-100"
+            aria-label={`${msg.cta[lang] || msg.cta.en} - ${msg.title[lang] || msg.title.en}`}
             role="button"
             tabIndex={0}
+            style={{
+              transform: 'translate3d(calc(var(--mx) * -3px), calc(var(--my) * -3px), 0)',
+            }}
           >
-            {/* Glossy overlay */}
             <div className="absolute inset-0 bg-gradient-to-b from-white/25 via-white/8 to-black/25 rounded-[18px]" />
-            
-            {/* Top highlight */}
             <div className="absolute top-0 inset-x-6 h-[2.5px] bg-gradient-to-r from-transparent via-white/90 to-transparent blur-sm" />
-            
+
             <div className="relative flex items-center gap-3">
               <span className="text-[13px] lg:text-[15px] font-black text-white tracking-wide">
                 {msg.cta[lang] || msg.cta.en}
               </span>
-              <ArrowRight 
-                size={18} 
-                className="text-white group-hover/cta:translate-x-1.5 transition-transform duration-300" 
-                strokeWidth={3.2} 
+              <ArrowRight
+                size={18}
+                className="text-white group-hover/cta:translate-x-1.5 transition-transform duration-300"
+                strokeWidth={3.2}
               />
             </div>
 
-            {/* Special decorations */}
             {msg.isSpecial && (
               <>
-                <Heart 
-                  size={13} 
-                  className="absolute -top-1.5 -right-1.5 text-red-400 drop-shadow-[0_0_10px_rgba(248,113,113,0.9)]" 
-                  fill="currentColor" 
-                  style={{ animation: 'sb-glow-pulse 2s ease-in-out infinite' }}
+                <Heart
+                  size={13}
+                  className="absolute -top-1.5 -right-1.5 text-red-400 drop-shadow-[0_0_10px_rgba(248,113,113,0.9)]"
+                  fill="currentColor"
+                  style={{ animation: reduceMotion ? undefined : 'sb-badge 2.2s ease-in-out infinite' }}
                 />
-                <Sparkles 
-                  size={11} 
+                <Sparkles
+                  size={11}
                   className="absolute -bottom-1 -left-1 text-yellow-300 drop-shadow-[0_0_10px_rgba(253,224,71,0.9)]"
-                  style={{ animation: 'sb-badge 2.5s ease-in-out infinite' }}
+                  style={{ animation: reduceMotion ? undefined : 'sb-badge 2.6s ease-in-out infinite' }}
                 />
               </>
             )}
           </button>
 
           <div className="flex flex-col items-end gap-2.5">
-            {/* Live indicator */}
             <div className="flex items-center gap-2.5 px-4 py-2.5 rounded-[12px] bg-black/30 border border-white/25 backdrop-blur-xl shadow-lg">
               <Activity size={13} className="text-emerald-300" strokeWidth={3.2} />
               <span className="text-[10px] font-black text-white uppercase tracking-[0.12em]">
                 {isLoadingAI ? 'Loading' : 'Live'}
               </span>
-              <span 
+              <span
                 className="relative w-2 h-2 rounded-full bg-emerald-400"
                 style={{
                   boxShadow: '0 0 14px rgba(52,211,153,1), 0 0 28px rgba(52,211,153,0.6)',
-                  animation: 'sb-glow-pulse 1.5s ease-in-out infinite'
                 }}
               />
             </div>
 
-            {/* Progress indicators */}
             <div className="flex gap-2">
               {messages.map((m, idx) => (
                 <span
@@ -771,17 +890,15 @@ export const SmartBanner = ({
       {/* Special decorations */}
       {msg.isSpecial && (
         <>
-          <Sparkles 
-            size={20} 
-            className="absolute top-5 right-7 text-yellow-300 pointer-events-none drop-shadow-[0_0_20px_rgba(253,224,71,0.85)]" 
+          <Sparkles
+            size={20}
+            className="absolute top-5 right-7 text-yellow-300 pointer-events-none drop-shadow-[0_0_20px_rgba(253,224,71,0.85)]"
             strokeWidth={3}
-            style={{ animation: 'sb-glow-pulse 2s ease-in-out infinite' }}
           />
-          <Zap 
-            size={16} 
-            className="absolute bottom-5 right-7 text-green-300 pointer-events-none drop-shadow-[0_0_20px_rgba(134,239,172,0.85)]" 
+          <Zap
+            size={16}
+            className="absolute bottom-5 right-7 text-green-300 pointer-events-none drop-shadow-[0_0_20px_rgba(134,239,172,0.85)]"
             fill="currentColor"
-            style={{ animation: 'sb-badge 2s ease-in-out infinite' }}
           />
         </>
       )}

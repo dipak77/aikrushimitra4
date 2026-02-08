@@ -1,6 +1,8 @@
+
 import 'dotenv/config';
 import express from 'express';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { GoogleGenAI } from '@google/genai';
 import { WebSocketServer } from 'ws';
@@ -9,15 +11,20 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
 const PORT = process.env.PORT || 8080;
 
+// API Key Logic
 const cleanKey = (key) => key ? key.trim().replace(/^["']|["']$/g, '') : '';
 const RAW_API_KEY = process.env.API_KEY || process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY;
 const API_KEY = cleanKey(RAW_API_KEY);
 
-console.log('🚀 Starting server...');
-console.log('📍 Environment:', process.env.NODE_ENV || 'development');
+// Environment Detection
+const isProduction = process.env.NODE_ENV === 'production';
 
+console.log('🚀 Starting server...');
+console.log('📍 Environment:', isProduction ? 'PRODUCTION' : 'DEVELOPMENT');
+
+// Middleware
 app.use((req, res, next) => {
-  if (process.env.NODE_ENV === 'production' && req.headers['x-forwarded-proto'] === 'http') {
+  if (isProduction && req.headers['x-forwarded-proto'] === 'http') {
     return res.redirect(`https://${req.headers.host}${req.url}`);
   }
   next();
@@ -33,15 +40,17 @@ app.use((req, res, next) => {
 
 app.use(express.json({ limit: '10mb' }));
 
+// Health Check
 app.get('/api/health', (req, res) => {
   res.json({ 
     status: 'ok',
     apiKeyConfigured: !!API_KEY,
-    environment: process.env.NODE_ENV || 'development',
+    environment: isProduction ? 'production' : 'development',
     timestamp: new Date().toISOString()
   });
 });
 
+// AI Client Factory
 const getAIClient = () => {
   if (!API_KEY) {
     console.error('❌ CRITICAL: API_KEY not found in environment');
@@ -50,7 +59,7 @@ const getAIClient = () => {
   return new GoogleGenAI({ apiKey: API_KEY });
 };
 
-// API Routes
+// --- API Routes ---
 app.post('/api/chat', async (req, res) => {
   try {
     const { prompt, systemInstruction } = req.body;
@@ -106,7 +115,7 @@ app.post('/api/updates', async (req, res) => {
   }
 });
 
-// Server & WebSocket Setup
+// --- Server & WebSocket Setup ---
 const server = app.listen(PORT, '0.0.0.0', () => {
   console.log(`✅ Server running on port ${PORT}`);
 });
@@ -117,30 +126,60 @@ const wss = new WebSocketServer({
   maxPayload: 20 * 1024 * 1024
 });
 
-// Configure Frontend Serving
-const isProduction = process.env.NODE_ENV === 'production';
+// --- Frontend Serving Logic ---
 
 if (!isProduction) {
-  console.log('🔧 Starting in DEVELOPMENT mode with Vite...');
+  // DEVELOPMENT: Use Vite Middleware
+  console.log('🔧 Initializing Vite middleware for hot-reloading...');
   const { createServer } = await import('vite');
   const vite = await createServer({
     server: { 
       middlewareMode: true, 
       hmr: { server }
     },
-    appType: 'spa',
+    appType: 'custom',
   });
+  
   app.use(vite.middlewares);
+
+  // Dev SPA Fallback
+  app.use('*', async (req, res, next) => {
+    const url = req.originalUrl;
+
+    // 1. Pass API/WS requests to next handlers
+    if (url.startsWith('/api') || url.startsWith('/ws')) {
+        return next();
+    }
+
+    // 2. Prevent serving index.html for missing JS/CSS/Images
+    // If it has an extension and isn't .html, assume it's a missing asset -> 404
+    // This prevents the "MIME type text/html" error for missing .js files
+    if (path.extname(url) && !url.endsWith('.html')) {
+        return next(); 
+    }
+
+    // 3. Serve index.html for SPA routes (e.g. /dashboard)
+    try {
+      const template = fs.readFileSync(path.resolve(__dirname, 'index.html'), 'utf-8');
+      const html = await vite.transformIndexHtml(url, template);
+      res.status(200).set({ 'Content-Type': 'text/html' }).end(html);
+    } catch (e) {
+      vite.ssrFixStacktrace(e);
+      next(e);
+    }
+  });
+
 } else {
-  console.log('🚀 Starting in PRODUCTION mode...');
+  // PRODUCTION: Serve Built Assets
+  console.log('🚀 Serving static assets from dist/...');
   const distPath = path.resolve(__dirname, 'dist');
   
-  // 1. Serve Static Assets
+  // 1. Serve Static Assets (JS, CSS, Images)
   app.use(express.static(distPath));
 
-  // 2. IMPORTANT: Return 404 for missing assets (files with dots in name)
-  // This prevents the SPA fallback from serving index.html for missing .js/.css files
-  // which causes the "MIME type text/html" error.
+  // 2. Strict 404 for missing assets
+  // If a request asks for a file with an extension (e.g. /assets/main.js) and it wasn't found by express.static, return 404.
+  // This prevents the server from returning index.html for missing JS files.
   app.use((req, res, next) => {
     if (path.extname(req.path).length > 0) {
       res.status(404).end();
@@ -149,13 +188,13 @@ if (!isProduction) {
     }
   });
 
-  // 3. SPA Fallback for routes (no extension)
+  // 3. SPA Fallback for all other routes (e.g. /dashboard -> index.html)
   app.get('*', (req, res) => {
     res.sendFile(path.resolve(distPath, 'index.html'));
   });
 }
 
-// WebSocket Logic
+// --- WebSocket Logic ---
 wss.on('connection', async (clientWs) => {
   const clientId = Math.random().toString(36).substr(2, 9);
   console.log(`🔗 NEW CONNECTION: ${clientId}`);
@@ -174,7 +213,6 @@ wss.on('connection', async (clientWs) => {
       const parsed = JSON.parse(data.toString());
       
       if (parsed.type === 'setup') {
-        // Initialize Gemini Session
         const config = parsed.config || {};
         session = await ai.live.connect({
           model: 'gemini-2.5-flash-native-audio-preview-12-2025',

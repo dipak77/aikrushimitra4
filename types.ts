@@ -1,5 +1,6 @@
 
 
+
 export type Language = 'mr' | 'hi' | 'en';
 
 export type ViewState = 
@@ -20,6 +21,7 @@ export type ViewState =
   | 'CALENDAR'
   | 'NEWS'
   | 'AGRI_KNOWLEDGE'
+  | 'KNOWLEDGE_DETAIL'
   | 'BLOG'
   | 'BLOG_DETAIL'
   | 'SABJI_MANDI'

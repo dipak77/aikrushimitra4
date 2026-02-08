@@ -25,6 +25,8 @@ import CropCalendarView from './components/views/CropCalendarView';
 import AdminDashboard from './components/views/AdminDashboard';
 import SplashScreen from './components/views/SplashScreen';
 import SabjiMandiView from './components/views/SabjiMandiView';
+import AgriKnowledgeView from './components/views/AgriKnowledgeView';
+import KnowledgeDetailView from './components/views/KnowledgeDetailView';
 import LoginView from './components/views/LoginView';
 
 const App = () => {
@@ -35,6 +37,7 @@ const App = () => {
   const [user, setUser] = useState<UserProfile | null>(null);
   
   const [selectedScheme, setSelectedScheme] = useState<any>(null);
+  const [selectedKnowledge, setSelectedKnowledge] = useState<any>(null);
 
   // --- GOOGLE CLIENT ID ---
   // Ensure this is set in your .env file as VITE_GOOGLE_CLIENT_ID
@@ -88,6 +91,8 @@ const App = () => {
        case 'CALENDAR': return <CropCalendarView lang={lang} onBack={() => setView('DASHBOARD')} />;
        case 'ADMIN': return <AdminDashboard onBack={() => setView('DASHBOARD')} />;
        case 'SABJI_MANDI': return user ? <SabjiMandiView lang={lang} user={user} onBack={() => setView('DASHBOARD')} /> : null;
+       case 'AGRI_KNOWLEDGE': return <AgriKnowledgeView lang={lang} onBack={() => setView('DASHBOARD')} onSelect={(item) => { setSelectedKnowledge(item); setView('KNOWLEDGE_DETAIL'); }} />;
+       case 'KNOWLEDGE_DETAIL': return selectedKnowledge ? <KnowledgeDetailView item={selectedKnowledge} lang={lang} onBack={() => setView('AGRI_KNOWLEDGE')} /> : null;
        case 'SCHEMES': 
           if(selectedScheme) {
              return <SchemeDetailView scheme={selectedScheme} lang={lang} onBack={() => setSelectedScheme(null)} />;
@@ -104,7 +109,7 @@ const App = () => {
   };
 
   // Fullscreen views hide the standard nav but may implement their own internal nav
-  const isFullScreen = view === 'VOICE_ASSISTANT' || view === 'AREA_CALCULATOR' || view === 'SPLASH' || view === 'ADMIN' || view === 'LOGIN';
+  const isFullScreen = view === 'VOICE_ASSISTANT' || view === 'AREA_CALCULATOR' || view === 'SPLASH' || view === 'ADMIN' || view === 'LOGIN' || view === 'KNOWLEDGE_DETAIL';
 
   return (
     <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
