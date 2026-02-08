@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { UserProfile, Language } from '../../types';
 import { TRANSLATIONS } from '../../constants';
@@ -780,7 +781,7 @@ Keep responses short (2-3 sentences) unless asked for detailed information.`;
     onBack();
   };
 
-  const isIdleScreen = status === 'idle' && transcripts.length === 0;
+  const isIdleLayout = transcripts.length === 0;
 
   return (
     <div
@@ -848,7 +849,7 @@ Keep responses short (2-3 sentences) unless asked for detailed information.`;
         className={clsx(
           'relative z-10 min-h-0 flex flex-col items-center px-4 pb-10 overflow-hidden',
           TOP_GUARD_PT_CLASS,
-          isIdleScreen ? 'justify-center' : 'justify-start'
+          isIdleLayout ? 'justify-center' : 'justify-start'
         )}
       >
         {/* Orb wrapper */}
@@ -856,7 +857,7 @@ Keep responses short (2-3 sentences) unless asked for detailed information.`;
           ref={ringWrapperRef}
           className="w-full flex items-center justify-center"
           style={{
-            height: isIdleScreen ? ORB_HEIGHT_IDLE : ORB_HEIGHT_ACTIVE,
+            height: isIdleLayout ? ORB_HEIGHT_IDLE : ORB_HEIGHT_ACTIVE,
             maxWidth: 420,
           }}
         >
