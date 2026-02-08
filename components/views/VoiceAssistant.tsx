@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { UserProfile, Language } from '../../types';
 import { TRANSLATIONS } from '../../constants';
@@ -161,7 +160,7 @@ const VoiceAssistant = ({
     );
   }
 
-  // ---------- Canvas sizing (with ResizeObserver) ----------
+  // ✅ FIX: Canvas sizing with proper center calculation
   useEffect(() => {
     const canvas = canvasRef.current;
     const wrapper = ringWrapperRef.current;
@@ -357,6 +356,7 @@ const VoiceAssistant = ({
     }
   };
 
+  // ✅ FIX: Proper center calculation using scaled canvas dimensions
   const renderOrbFrame = (energy: number, bass: number, treble: number, peak: number) => {
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext('2d');
@@ -364,13 +364,14 @@ const VoiceAssistant = ({
 
     timeRef.current += 0.016;
 
+    // Use offsetWidth/offsetHeight for accurate center (accounts for DPR scaling)
     const w = canvas.offsetWidth;
     const h = canvas.offsetHeight;
     if (w < 2 || h < 2) return;
 
     const centerX = w / 2;
     const centerY = h / 2;
-    const radius = Math.min(w, h) * 0.42;
+    const radius = Math.min(w, h) * 0.38;
 
     if (Math.random() < 0.22 + energy * 0.35) spawnParticles(centerX, centerY, radius, Math.floor(1 + energy * 4), energy);
     spawnLightning(centerX, centerY, radius, energy);
@@ -489,7 +490,7 @@ const VoiceAssistant = ({
     return `${protocol}//${host}/ws/live`;
   };
 
-  // ---------- Audio visualize loop (same behavior as your file) ----------
+  // ---------- Audio visualize loop ----------
   const startAudioLoop = (inputAnalyser: AnalyserNode, outputAnalyser: AnalyserNode) => {
     if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
 
@@ -618,7 +619,7 @@ const VoiceAssistant = ({
       source.connect(processor);
       processor.connect(inputCtx.destination);
 
-      // Start audio-driven visuals immediately (during connecting too)
+      // Start audio-driven visuals immediately
       startAudioLoop(inputAnalyser, outputAnalyser);
 
       const ws = new WebSocket(getWebSocketUrl());
@@ -666,6 +667,7 @@ Keep responses short (2-3 sentences) unless asked for detailed information.`;
         try {
           const msg = JSON.parse(event.data);
 
+          // Handle setup complete
           if (msg.setupComplete || msg.type === 'setup_complete') {
             retryCountRef.current = 0;
             setStatus('connected');
@@ -673,12 +675,14 @@ Keep responses short (2-3 sentences) unless asked for detailed information.`;
             return;
           }
 
+          // Handle errors
           if (msg.error) {
             setErrorMessage(msg.message || 'Server Error');
             setStatus('error');
             return;
           }
 
+          // Handle audio data
           const audioData = msg.serverContent?.modelTurn?.parts?.[0]?.inlineData?.data;
           if (audioData && outputContextRef.current && outputAnalyserRef.current) {
             const buffer = await decodeAudioData(decode(audioData), outputContextRef.current, 24000, 1);
@@ -693,6 +697,7 @@ Keep responses short (2-3 sentences) unless asked for detailed information.`;
             nextStartTimeRef.current += buffer.duration;
           }
 
+          // Handle user transcript (input transcription)
           const userTranscript = msg.serverContent?.inputTranscription?.text;
           if (userTranscript) {
             setTranscripts((prev) => {
@@ -702,7 +707,11 @@ Keep responses short (2-3 sentences) unless asked for detailed information.`;
             });
           }
 
-          const modelTranscript = msg.serverContent?.modelTurn?.parts?.[0]?.text;
+          // Handle model transcript (output transcription or text part)
+          const modelTranscript = 
+            msg.serverContent?.outputTranscription?.text || 
+            msg.serverContent?.modelTurn?.parts?.[0]?.text;
+          
           if (modelTranscript) {
             setTranscripts((prev) => {
               const last = prev[prev.length - 1];
@@ -739,7 +748,7 @@ Keep responses short (2-3 sentences) unless asked for detailed information.`;
 
       processor.onaudioprocess = (e) => {
         const inputData = e.inputBuffer.getChannelData(0);
-        const blob = createPCMChunk(inputData, inputCtx.sampleRate);
+        const pcmData = createPCMChunk(inputData, inputCtx.sampleRate);
 
         if (
           activeSocketRef.current &&
@@ -751,7 +760,7 @@ Keep responses short (2-3 sentences) unless asked for detailed information.`;
               realtimeInput: {
                 media: {
                   mimeType: 'audio/pcm;rate=16000',
-                  data: blob.data,
+                  data: pcmData.data,
                 },
               },
             })
@@ -793,6 +802,12 @@ Keep responses short (2-3 sentences) unless asked for detailed information.`;
           50% { opacity: 1; transform: scale(1.05); }
         }
         .idle-pulse { animation: pulse-glow 2s ease-in-out infinite; }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        @keyframes fadeInUp {
+          from { opacity: 0; transform: translateY(10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
       `}</style>
 
       {/* Background */}
@@ -810,7 +825,7 @@ Keep responses short (2-3 sentences) unless asked for detailed information.`;
         <div className="absolute bottom-[-10%] right-[-10%] w-[90vw] h-[90vw] bg-cyan-900/20 blur-[120px] rounded-full" />
       </div>
 
-      {/* Header row (reserves space) */}
+      {/* Header */}
       <div className="relative z-[220] px-4 pt-safe-top pb-3 flex justify-between items-center bg-gradient-to-b from-[#020617]/90 via-[#020617]/60 to-transparent">
         <button
           onClick={handleBack}
@@ -843,7 +858,7 @@ Keep responses short (2-3 sentences) unless asked for detailed information.`;
         </div>
       </div>
 
-      {/* Main row (centering + top guard padding) */}
+      {/* Main content */}
       <div
         className={clsx(
           'relative z-10 w-full h-full flex flex-col items-center px-4 overflow-hidden',
@@ -860,7 +875,7 @@ Keep responses short (2-3 sentences) unless asked for detailed information.`;
           }}
         >
           <div className="relative w-full flex items-center justify-center cursor-pointer select-none" onClick={handleToggle}>
-            <canvas ref={canvasRef} className="drop-shadow-2xl block" />
+            <canvas ref={canvasRef} className="drop-shadow-2xl block" style={{ width: '240px', height: '240px' }} />
 
             {/* Center overlay */}
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
@@ -906,7 +921,7 @@ Keep responses short (2-3 sentences) unless asked for detailed information.`;
             </div>
           )}
 
-          {(isIdleLayout) && (
+          {isIdleLayout && (
             <div className="w-full max-w-[320px] flex flex-col gap-3 mt-5">
               {t.voice_hints.slice(0, 3).map((hint: string, i: number) => (
                 <div
