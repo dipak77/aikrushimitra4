@@ -1,4 +1,10 @@
-import { Blob as GenAIBlob } from '@google/genai';
+
+// GenAIBlob isn't exported by the package usually. We can define a simplified type.
+
+export type GenAIBlob = {
+  mimeType: string;
+  data: string;
+};
 
 /**
  * High-performance Base64 Encoder for ArrayBuffer
