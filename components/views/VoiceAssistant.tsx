@@ -33,12 +33,10 @@ interface Lightning {
 const VoiceAssistant = ({
   lang,
   user,
-  onUserUpdate,
   onBack,
 }: {
   lang: Language;
   user: UserProfile;
-  onUserUpdate?: (u: UserProfile) => void;
   onBack: () => void;
 }) => {
   const t = TRANSLATIONS[lang];
@@ -221,7 +219,7 @@ const VoiceAssistant = ({
         const angle = Math.random() * Math.PI * 2;
         const speed = 0.5 + Math.random() * 2 + energy * 3;
         const distance = radius + Math.random() * 20;
-
+        
         particlesRef.current.push({
           x: centerX + Math.cos(angle) * distance,
           y: centerY + Math.sin(angle) * distance,
@@ -240,7 +238,7 @@ const VoiceAssistant = ({
       if (Math.random() < 0.12 + energy * 0.35) {
         const startAngle = Math.random() * Math.PI * 2;
         const endAngle = startAngle + (Math.random() - 0.5) * Math.PI * 0.8;
-
+        
         const startX = centerX + Math.cos(startAngle) * radius;
         const startY = centerY + Math.sin(startAngle) * radius;
         const endX = centerX + Math.cos(endAngle) * (radius + 20 + Math.random() * 40);
@@ -260,7 +258,7 @@ const VoiceAssistant = ({
             const branchAngle = Math.random() * Math.PI * 2;
             const branchEndX = midPoint.x + Math.cos(branchAngle) * (20 + Math.random() * 30);
             const branchEndY = midPoint.y + Math.sin(branchAngle) * (20 + Math.random() * 30);
-
+            
             lightningRef.current.push({
               segments: createBranchingLightning(midPoint.x, midPoint.y, branchEndX, branchEndY, 4, 6),
               life: 0.1 + Math.random() * 0.15,
@@ -296,13 +294,13 @@ const VoiceAssistant = ({
         else ctx.lineTo(x, y);
       }
       ctx.closePath();
-
+      
       const outerGlow = ctx.createRadialGradient(centerX, centerY, radius - 30, centerX, centerY, radius + 60);
       outerGlow.addColorStop(0, 'rgba(0, 100, 200, 0)');
       outerGlow.addColorStop(0.4, `rgba(0, 180, 255, ${0.15 + energy * 0.3})`);
       outerGlow.addColorStop(0.7, `rgba(100, 220, 255, ${0.35 + energy * 0.4})`);
       outerGlow.addColorStop(1, `rgba(200, 240, 255, ${0.05 + peak * 0.15})`);
-
+      
       ctx.strokeStyle = outerGlow;
       ctx.lineWidth = 18 + energy * 25;
       ctx.shadowBlur = 50 + energy * 60;
@@ -320,13 +318,13 @@ const VoiceAssistant = ({
         else ctx.lineTo(x, y);
       }
       ctx.closePath();
-
+      
       const midGlow = ctx.createRadialGradient(centerX, centerY, radius - 15, centerX, centerY, radius + 30);
       midGlow.addColorStop(0, 'rgba(50, 150, 255, 0)');
       midGlow.addColorStop(0.5, `rgba(100, 200, 255, ${0.5 + energy * 0.4})`);
       midGlow.addColorStop(0.8, `rgba(150, 230, 255, ${0.7 + energy * 0.3})`);
       midGlow.addColorStop(1, 'rgba(255, 255, 255, 0)');
-
+      
       ctx.strokeStyle = midGlow;
       ctx.lineWidth = 10 + energy * 15;
       ctx.shadowBlur = 35 + energy * 45;
@@ -344,7 +342,7 @@ const VoiceAssistant = ({
         else ctx.lineTo(x, y);
       }
       ctx.closePath();
-
+      
       ctx.strokeStyle = `rgba(220, 245, 255, ${0.85 + energy * 0.15})`;
       ctx.lineWidth = 3 + energy * 6;
       ctx.shadowBlur = 25 + energy * 35;
@@ -362,7 +360,7 @@ const VoiceAssistant = ({
         else ctx.lineTo(x, y);
       }
       ctx.closePath();
-
+      
       ctx.strokeStyle = 'rgba(255, 255, 255, 0.95)';
       ctx.lineWidth = 1 + energy * 2;
       ctx.shadowBlur = 20;
@@ -416,7 +414,7 @@ const VoiceAssistant = ({
           grad.addColorStop(0, `rgba(${color}, ${alpha})`);
           grad.addColorStop(0.5, `rgba(${color}, ${alpha * 0.6})`);
           grad.addColorStop(1, `rgba(${color}, 0)`);
-
+          
           ctx.fillStyle = grad;
           ctx.beginPath();
           ctx.arc(p.x, p.y, size * 2.5, 0, Math.PI * 2);
@@ -557,6 +555,13 @@ const VoiceAssistant = ({
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
       });
+      
+      // Fix: Check if canceled during permission prompt
+      if (!shouldStayConnectedRef.current) {
+          stream.getTracks().forEach(t => t.stop());
+          return;
+      }
+
       mediaStreamRef.current = stream;
 
       const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
@@ -768,20 +773,21 @@ const VoiceAssistant = ({
         }} />
       </div>
 
-      <div className="absolute top-0 left-0 right-0 p-4 pt-safe-top flex justify-between items-center z-[220] bg-gradient-to-b from-black/90 via-black/50 to-transparent">
+      {/* Increased Z-Index to 1000 and used fixed to guarantee visibility on top of everything */}
+      <div className="fixed top-0 left-0 right-0 p-4 pt-safe-top flex justify-between items-center z-[1000] bg-gradient-to-b from-black/90 via-black/50 to-transparent pointer-events-none">
         <button
           onClick={handleBack}
-          className="flex items-center gap-2.5 pl-2 pr-5 py-2.5 rounded-full bg-slate-900/70 backdrop-blur-xl border border-cyan-500/30 text-white hover:border-cyan-400/50 active:scale-95 transition-all shadow-2xl group"
+          className="flex items-center gap-2.5 pl-2 pr-5 py-2.5 rounded-full bg-slate-900/70 backdrop-blur-xl border border-cyan-500/30 text-white hover:border-cyan-400/50 active:scale-95 transition-all shadow-2xl group pointer-events-auto cursor-pointer"
         >
           <div className="w-8 h-8 rounded-full bg-cyan-500/15 flex items-center justify-center group-hover:bg-cyan-500/25 transition-colors">
             <ArrowLeft size={18} />
           </div>
-          <span className="font-bold text-sm tracking-wide">Back</span>
+          <span className="font-bold text-sm tracking-wide text-white">Back</span>
         </button>
 
         <div
           className={clsx(
-            'px-4 py-1.5 rounded-full border backdrop-blur-xl transition-all duration-500 shadow-2xl',
+            'px-4 py-1.5 rounded-full border backdrop-blur-xl transition-all duration-500 shadow-2xl pointer-events-auto',
             status === 'connected'
               ? 'border-cyan-400/50 bg-cyan-500/20 text-cyan-100'
               : status === 'error'
@@ -844,11 +850,11 @@ const VoiceAssistant = ({
                     <h1 className="text-3xl font-black leading-tight mb-2 brand-shimmer drop-shadow-[0_0_30px_rgba(34,211,238,0.9)]">
                       कृषी मित्र
                     </h1>
-
+                    
                     <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300/80 drop-shadow-lg">
                       Voice Assistant
                     </p>
-
+                    
                     <div className="flex items-center gap-1 mt-4">
                       {[...Array(5)].map((_, i) => (
                         <div
