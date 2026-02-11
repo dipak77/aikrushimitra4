@@ -71,6 +71,10 @@ const VoiceAssistant = ({
   const workletUrlRef = useRef<string | null>(null);
   const nextStartTimeRef = useRef<number>(0);
 
+  // ✅ LOW VOLUME FIX: output processing nodes (boost + protect from clipping)
+  const outputGainRef = useRef<GainNode | null>(null);
+  const outputCompressorRef = useRef<DynamicsCompressorNode | null>(null);
+
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const ringWrapperRef = useRef<HTMLDivElement>(null);
@@ -107,8 +111,24 @@ const VoiceAssistant = ({
     }
 
     if (muteGainRef.current) {
-      try { muteGainRef.current.disconnect(); } catch {}
+      try {
+        muteGainRef.current.disconnect();
+      } catch {}
       muteGainRef.current = null;
+    }
+
+    // ✅ LOW VOLUME FIX: disconnect output nodes
+    if (outputGainRef.current) {
+      try {
+        outputGainRef.current.disconnect();
+      } catch {}
+      outputGainRef.current = null;
+    }
+    if (outputCompressorRef.current) {
+      try {
+        outputCompressorRef.current.disconnect();
+      } catch {}
+      outputCompressorRef.current = null;
     }
 
     if (mediaStreamRef.current) {
@@ -127,12 +147,16 @@ const VoiceAssistant = ({
     }
 
     if (workletUrlRef.current) {
-      try { URL.revokeObjectURL(workletUrlRef.current); } catch {}
+      try {
+        URL.revokeObjectURL(workletUrlRef.current);
+      } catch {}
       workletUrlRef.current = null;
     }
 
     if (activeSessionRef.current) {
-      try { activeSessionRef.current.close(); } catch {}
+      try {
+        activeSessionRef.current.close();
+      } catch {}
       activeSessionRef.current = null;
     }
 
@@ -219,7 +243,7 @@ const VoiceAssistant = ({
         const angle = Math.random() * Math.PI * 2;
         const speed = 0.5 + Math.random() * 2 + energy * 3;
         const distance = radius + Math.random() * 20;
-        
+
         particlesRef.current.push({
           x: centerX + Math.cos(angle) * distance,
           y: centerY + Math.sin(angle) * distance,
@@ -238,14 +262,21 @@ const VoiceAssistant = ({
       if (Math.random() < 0.12 + energy * 0.35) {
         const startAngle = Math.random() * Math.PI * 2;
         const endAngle = startAngle + (Math.random() - 0.5) * Math.PI * 0.8;
-        
+
         const startX = centerX + Math.cos(startAngle) * radius;
         const startY = centerY + Math.sin(startAngle) * radius;
         const endX = centerX + Math.cos(endAngle) * (radius + 20 + Math.random() * 40);
         const endY = centerY + Math.sin(endAngle) * (radius + 20 + Math.random() * 40);
 
         lightningRef.current.push({
-          segments: createBranchingLightning(startX, startY, endX, endY, 8 + Math.floor(Math.random() * 6), 8 + energy * 15),
+          segments: createBranchingLightning(
+            startX,
+            startY,
+            endX,
+            endY,
+            8 + Math.floor(Math.random() * 6),
+            8 + energy * 15
+          ),
           life: 0.15 + Math.random() * 0.2,
           intensity: 0.7 + energy * 0.3,
           thickness: 1.5 + Math.random() * 2 + energy * 2,
@@ -258,7 +289,7 @@ const VoiceAssistant = ({
             const branchAngle = Math.random() * Math.PI * 2;
             const branchEndX = midPoint.x + Math.cos(branchAngle) * (20 + Math.random() * 30);
             const branchEndY = midPoint.y + Math.sin(branchAngle) * (20 + Math.random() * 30);
-            
+
             lightningRef.current.push({
               segments: createBranchingLightning(midPoint.x, midPoint.y, branchEndX, branchEndY, 4, 6),
               life: 0.1 + Math.random() * 0.15,
@@ -294,13 +325,13 @@ const VoiceAssistant = ({
         else ctx.lineTo(x, y);
       }
       ctx.closePath();
-      
+
       const outerGlow = ctx.createRadialGradient(centerX, centerY, radius - 30, centerX, centerY, radius + 60);
       outerGlow.addColorStop(0, 'rgba(0, 100, 200, 0)');
       outerGlow.addColorStop(0.4, `rgba(0, 180, 255, ${0.15 + energy * 0.3})`);
       outerGlow.addColorStop(0.7, `rgba(100, 220, 255, ${0.35 + energy * 0.4})`);
       outerGlow.addColorStop(1, `rgba(200, 240, 255, ${0.05 + peak * 0.15})`);
-      
+
       ctx.strokeStyle = outerGlow;
       ctx.lineWidth = 18 + energy * 25;
       ctx.shadowBlur = 50 + energy * 60;
@@ -318,13 +349,13 @@ const VoiceAssistant = ({
         else ctx.lineTo(x, y);
       }
       ctx.closePath();
-      
+
       const midGlow = ctx.createRadialGradient(centerX, centerY, radius - 15, centerX, centerY, radius + 30);
       midGlow.addColorStop(0, 'rgba(50, 150, 255, 0)');
       midGlow.addColorStop(0.5, `rgba(100, 200, 255, ${0.5 + energy * 0.4})`);
       midGlow.addColorStop(0.8, `rgba(150, 230, 255, ${0.7 + energy * 0.3})`);
       midGlow.addColorStop(1, 'rgba(255, 255, 255, 0)');
-      
+
       ctx.strokeStyle = midGlow;
       ctx.lineWidth = 10 + energy * 15;
       ctx.shadowBlur = 35 + energy * 45;
@@ -342,7 +373,7 @@ const VoiceAssistant = ({
         else ctx.lineTo(x, y);
       }
       ctx.closePath();
-      
+
       ctx.strokeStyle = `rgba(220, 245, 255, ${0.85 + energy * 0.15})`;
       ctx.lineWidth = 3 + energy * 6;
       ctx.shadowBlur = 25 + energy * 35;
@@ -360,7 +391,7 @@ const VoiceAssistant = ({
         else ctx.lineTo(x, y);
       }
       ctx.closePath();
-      
+
       ctx.strokeStyle = 'rgba(255, 255, 255, 0.95)';
       ctx.lineWidth = 1 + energy * 2;
       ctx.shadowBlur = 20;
@@ -414,7 +445,7 @@ const VoiceAssistant = ({
           grad.addColorStop(0, `rgba(${color}, ${alpha})`);
           grad.addColorStop(0.5, `rgba(${color}, ${alpha * 0.6})`);
           grad.addColorStop(1, `rgba(${color}, 0)`);
-          
+
           ctx.fillStyle = grad;
           ctx.beginPath();
           ctx.arc(p.x, p.y, size * 2.5, 0, Math.PI * 2);
@@ -555,16 +586,17 @@ const VoiceAssistant = ({
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
       });
-      
+
       // Fix: Check if canceled during permission prompt
       if (!shouldStayConnectedRef.current) {
-          stream.getTracks().forEach(t => t.stop());
-          return;
+        stream.getTracks().forEach((t) => t.stop());
+        return;
       }
 
       mediaStreamRef.current = stream;
 
       const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+
       const inputCtx = new AudioContextClass({ sampleRate: 16000 });
       await inputCtx.resume();
       inputContextRef.current = inputCtx;
@@ -583,6 +615,24 @@ const VoiceAssistant = ({
       outputAnalyser.fftSize = 2048;
       outputAnalyser.smoothingTimeConstant = 0.82;
       outputAnalyserRef.current = outputAnalyser;
+
+      // ✅ LOW VOLUME FIX: Build output chain ONCE
+      // sourceNode -> compressor -> gain -> outputAnalyser -> destination
+      const comp = outputCtx.createDynamicsCompressor();
+      comp.threshold.value = -26;
+      comp.knee.value = 24;
+      comp.ratio.value = 10;
+      comp.attack.value = 0.003;
+      comp.release.value = 0.25;
+      outputCompressorRef.current = comp;
+
+      const outGain = outputCtx.createGain();
+      outGain.gain.value = 3.0; // 2.0–4.0 (increase if still low)
+      outputGainRef.current = outGain;
+
+      comp.connect(outGain);
+      outGain.connect(outputAnalyser);
+      outputAnalyser.connect(outputCtx.destination);
 
       const source = inputCtx.createMediaStreamSource(stream);
       const mute = inputCtx.createGain();
@@ -632,14 +682,18 @@ const VoiceAssistant = ({
           },
           onmessage: async (msg: any) => {
             const audioData = msg.serverContent?.modelTurn?.parts?.[0]?.inlineData?.data;
-            if (audioData && outputContextRef.current && outputAnalyserRef.current) {
+
+            // ✅ LOW VOLUME FIX: route chunk into compressor/gain chain
+            if (audioData && outputContextRef.current && outputCompressorRef.current) {
               const ctx = outputContextRef.current;
-              const analyser = outputAnalyserRef.current;
               const buffer = await decodeAudioData(decode(audioData), ctx, 24000, 1);
+
               const sourceNode = ctx.createBufferSource();
               sourceNode.buffer = buffer;
-              sourceNode.connect(analyser);
-              sourceNode.connect(ctx.destination);
+
+              // IMPORTANT: do NOT connect directly to ctx.destination (that bypasses gain boost)
+              sourceNode.connect(outputCompressorRef.current);
+
               const now = ctx.currentTime;
               if (nextStartTimeRef.current < now) nextStartTimeRef.current = now;
               sourceNode.start(nextStartTimeRef.current);
@@ -672,7 +726,9 @@ const VoiceAssistant = ({
       });
 
       sessionPromiseRef.current = sessionPromise;
-      sessionPromise.then((sess) => { activeSessionRef.current = sess; }).catch(() => handleAutoReconnect());
+      sessionPromise.then((sess) => {
+        activeSessionRef.current = sess;
+      }).catch(() => handleAutoReconnect());
 
       workletNode.port.onmessage = (evt: MessageEvent) => {
         const chunk = evt.data as Float32Array;
@@ -773,7 +829,6 @@ const VoiceAssistant = ({
         }} />
       </div>
 
-      {/* Increased Z-Index to 1000 and used fixed to guarantee visibility on top of everything */}
       <div className="fixed top-0 left-0 right-0 p-4 pt-safe-top flex justify-between items-center z-[1000] bg-gradient-to-b from-black/90 via-black/50 to-transparent pointer-events-none">
         <button
           onClick={handleBack}
@@ -850,11 +905,11 @@ const VoiceAssistant = ({
                     <h1 className="text-3xl font-black leading-tight mb-2 brand-shimmer drop-shadow-[0_0_30px_rgba(34,211,238,0.9)]">
                       कृषी मित्र
                     </h1>
-                    
+
                     <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300/80 drop-shadow-lg">
                       Voice Assistant
                     </p>
-                    
+
                     <div className="flex items-center gap-1 mt-4">
                       {[...Array(5)].map((_, i) => (
                         <div
