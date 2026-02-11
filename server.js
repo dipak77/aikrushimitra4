@@ -169,15 +169,34 @@ if (!isProduction) {
   const distPath = path.resolve(__dirname, 'dist');
   console.log(`🚀 Serving static assets from: ${distPath}`);
   
-  // Check if dist exists
   if (!fs.existsSync(distPath)) {
       console.error("❌ ERROR: 'dist' directory not found. Did you run 'npm run build'?");
   }
 
-  // 1. Serve Static Assets
-  app.use(express.static(distPath));
+  // Helper to serve index.html with API key injection
+  const serveIndexWithInjection = (req, res) => {
+    const indexPath = path.resolve(distPath, 'index.html');
+    if (fs.existsSync(indexPath)) {
+      let html = fs.readFileSync(indexPath, 'utf-8');
+      
+      // Inject API Key into window.ENV for frontend to use
+      if (API_KEY) {
+        html = html.replace(
+          '</head>', 
+          `<script>window.ENV = { API_KEY: "${API_KEY}" };</script></head>`
+        );
+      }
+      
+      res.status(200).set({ 'Content-Type': 'text/html' }).send(html);
+    } else {
+      res.status(404).send('Index not found');
+    }
+  };
 
-  // 2. Strict 404 for missing assets
+  // 1. Serve Static Assets (exclude index.html to allow injection)
+  app.use(express.static(distPath, { index: false }));
+
+  // 2. Strict 404 for missing assets (files with extensions)
   app.use((req, res, next) => {
     if (path.extname(req.path).length > 0) {
       res.status(404).end();
@@ -186,10 +205,10 @@ if (!isProduction) {
     }
   });
 
-  // 3. SPA Fallback
-  app.get('*', (req, res) => {
-    res.sendFile(path.resolve(distPath, 'index.html'));
-  });
+  // 3. Serve Root and SPA Fallback with Injection
+  app.get('/', serveIndexWithInjection);
+  app.get('/index.html', serveIndexWithInjection);
+  app.get('*', serveIndexWithInjection);
 }
 
 // --- WebSocket Logic ---
