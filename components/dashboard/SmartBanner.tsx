@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import {
   CloudRain, TrendingUp, Lightbulb, Activity, ArrowRight, Flag, Heart, Sparkles,
   Star, Sun, Moon, Zap, Crown, Calendar as CalendarIcon, AlertTriangle
@@ -9,896 +9,744 @@ import { MOCK_MARKET } from '../../data/mock';
 import { DASH_TEXT } from './constants';
 import { getLiveAgriUpdates } from '../../services/geminiService';
 
-type Badge = { text: Record<string, string>; color: string; glow?: string };
-type Msg = {
-  id: string;
-  category: Record<string, string>;
-  title: Record<string, string>;
-  subtitle: Record<string, string>;
-  cta: Record<string, string>;
-  bgBase: string;
-  bgOverlay: string;
-  accentGlow: string;
-  secondaryGlow: string;
-  particleColors: string[];
-  icon: any;
-  badges: Badge[];
-  isSpecial?: boolean;
+/* ═══════════════════════════════════════════════════════════════
+   TYPES
+   ═══════════════════════════════════════════════════════════════ */
+
+type Badge = {
+  label: Record<string, string>;
+  bg: string;
+  icon?: React.ComponentType<any>;
 };
 
+type Palette = {
+  a: string;   // primary color
+  b: string;   // secondary color
+  c: string;   // accent / highlight
+  spark: string[];
+};
+
+type Slide = {
+  id: string;
+  tag: Record<string, string>;
+  title: Record<string, string>;
+  sub: Record<string, string>;
+  cta: Record<string, string>;
+  icon: React.ComponentType<any>;
+  pal: Palette;
+  badges: Badge[];
+  special?: boolean;
+};
+
+/* ═══════════════════════════════════════════════════════════════
+   PALETTES — vivid two-tone + accent
+   ═══════════════════════════════════════════════════════════════ */
+
+const P: Record<string, Palette> = {
+  india:   { a: '#FF8C00', b: '#15803D', c: '#FFD700', spark: ['#FF8C00','#FFD700','#fff','#15803D','#FFA500'] },
+  storm:   { a: '#2563EB', b: '#7C3AED', c: '#38BDF8', spark: ['#3B82F6','#8B5CF6','#38BDF8','#A78BFA','#6366F1'] },
+  jade:    { a: '#059669', b: '#0D9488', c: '#6EE7B7', spark: ['#10B981','#34D399','#14B8A6','#6EE7B7','#2DD4BF'] },
+  orchid:  { a: '#9333EA', b: '#DB2777', c: '#E879F9', spark: ['#A855F7','#EC4899','#D946EF','#F472B6','#C084FC'] },
+  sun:     { a: '#EA580C', b: '#D97706', c: '#FDE047', spark: ['#F59E0B','#FBBF24','#FB923C','#FDE047','#FCD34D'] },
+  night:   { a: '#4F46E5', b: '#6D28D9', c: '#A5B4FC', spark: ['#6366F1','#8B5CF6','#A78BFA','#818CF8','#C4B5FD'] },
+  bull:    { a: '#059669', b: '#0891B2', c: '#34D399', spark: ['#10B981','#06B6D4','#34D399','#22D3EE','#2DD4BF'] },
+  bear:    { a: '#DC2626', b: '#EA580C', c: '#FCA5A5', spark: ['#EF4444','#F97316','#FB7185','#FBBF24','#F87171'] },
+  gold:    { a: '#D97706', b: '#EA580C', c: '#FDE68A', spark: ['#FBBF24','#F59E0B','#FB923C','#FDE047','#FCD34D'] },
+};
+
+/* ═══════════════════════════════════════════════════════════════
+   TIMING
+   ═══════════════════════════════════════════════════════════════ */
+
+const SLIDE_DUR = 600;
+const AUTO_MS = 7200;
+const N_PARTICLES = 22;
+
+/* ═══════════════════════════════════════════════════════════════
+   COMPONENT
+   ═══════════════════════════════════════════════════════════════ */
+
 export const SmartBanner = ({
-  lang,
-  className,
-  weather,
-  user
+  lang, className, weather, user,
 }: {
   lang: Language;
   className?: string;
   weather?: any;
   user?: UserProfile;
 }) => {
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [isAnimating, setIsAnimating] = useState(false);
-  const [liveUpdates, setLiveUpdates] = useState<any[]>([]);
-  const [isLoadingAI, setIsLoadingAI] = useState(true);
+  /* ── state ── */
+  const [ci, setCi] = useState(0);
+  const [anim, setAnim] = useState<'idle'|'out'|'in'>('idle');
+  const [live, setLive] = useState<any[]>([]);
+  const [aiSync, setAiSync] = useState(true);
   const [now, setNow] = useState(() => new Date());
-  const [isPaused, setIsPaused] = useState(false);
-  const [reduceMotion, setReduceMotion] = useState(false);
+  const [paused, setPaused] = useState(false);
+  const [noMo, setNoMo] = useState(false);
+  const [hover, setHover] = useState(false);
+  const [swX, setSwX] = useState<number|null>(null);
 
-  const rootRef = useRef<HTMLDivElement | null>(null);
-  const rafRef = useRef<number | null>(null);
+  const root = useRef<HTMLDivElement>(null);
+  const raf = useRef<number>();
+  const tmr = useRef<ReturnType<typeof setInterval>>();
 
   const txt = DASH_TEXT[lang];
 
-  // Real-time clock update
+  /* ── clock ── */
+  useEffect(() => { const t = setInterval(() => setNow(new Date()), 30000); return () => clearInterval(t); }, []);
+
+  /* ── reduced motion ── */
   useEffect(() => {
-    const t = setInterval(() => setNow(new Date()), 30_000);
-    return () => clearInterval(t);
+    const mq = window.matchMedia?.('(prefers-reduced-motion:reduce)');
+    if (!mq) return;
+    const fn = () => setNoMo(mq.matches);
+    fn(); mq.addEventListener?.('change', fn);
+    return () => mq.removeEventListener?.('change', fn);
   }, []);
 
-  // prefers-reduced-motion (also used to disable JS-driven rotation/parallax)
+  /* ── visibility ── */
   useEffect(() => {
-    if (typeof window === 'undefined' || !window.matchMedia) return;
-    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
-
-    const apply = () => setReduceMotion(!!mq.matches);
-    apply();
-
-    // Safari fallback: addListener/removeListener
-    if (mq.addEventListener) {
-      mq.addEventListener('change', apply);
-      return () => mq.removeEventListener('change', apply);
-    }
-
-    // @ts-ignore
-    mq.addListener?.(apply);
-    // @ts-ignore
-    return () => mq.removeListener?.(apply);
+    const fn = () => setPaused(document.visibilityState === 'hidden');
+    fn(); document.addEventListener('visibilitychange', fn);
+    return () => document.removeEventListener('visibilitychange', fn);
   }, []);
 
-  // Pause when tab is hidden (saves GPU/CPU)
+  /* ── parallax (CSS vars only) ── */
   useEffect(() => {
-    const onVis = () => setIsPaused(document.visibilityState === 'hidden');
-    onVis();
-    document.addEventListener('visibilitychange', onVis);
-    return () => document.removeEventListener('visibilitychange', onVis);
-  }, []);
-
-  // Pointer parallax via CSS variables (no React state updates)
-  useEffect(() => {
-    const el = rootRef.current;
-    if (!el) return;
-    if (reduceMotion) return;
-
-    const finePointer = window.matchMedia?.('(pointer:fine)').matches;
-    if (!finePointer) return;
-
-    const onMove = (e: PointerEvent) => {
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
-      rafRef.current = requestAnimationFrame(() => {
+    const el = root.current;
+    if (!el || noMo || !window.matchMedia?.('(pointer:fine)').matches) return;
+    const onM = (e: PointerEvent) => {
+      if (raf.current) cancelAnimationFrame(raf.current);
+      raf.current = requestAnimationFrame(() => {
         const r = el.getBoundingClientRect();
-        const x = (e.clientX - r.left) / r.width;   // 0..1
-        const y = (e.clientY - r.top) / r.height;  // 0..1
-        const mx = (x - 0.5) * 2;                  // -1..1
-        const my = (y - 0.5) * 2;                  // -1..1
-        el.style.setProperty('--mx', mx.toFixed(4));
-        el.style.setProperty('--my', my.toFixed(4));
+        el.style.setProperty('--mx', (((e.clientX-r.left)/r.width)-.5).toFixed(3));
+        el.style.setProperty('--my', (((e.clientY-r.top)/r.height)-.5).toFixed(3));
       });
     };
+    const onL = () => { el.style.setProperty('--mx','0'); el.style.setProperty('--my','0'); };
+    el.addEventListener('pointermove', onM, {passive:true});
+    el.addEventListener('pointerleave', onL, {passive:true});
+    return () => { if(raf.current) cancelAnimationFrame(raf.current); el.removeEventListener('pointermove',onM); el.removeEventListener('pointerleave',onL); };
+  }, [noMo]);
 
-    const onLeave = () => {
-      el.style.setProperty('--mx', '0');
-      el.style.setProperty('--my', '0');
-    };
-
-    // passive listeners help scroll/perf where applicable
-    el.addEventListener('pointermove', onMove, { passive: true } as AddEventListenerOptions);
-    el.addEventListener('pointerleave', onLeave, { passive: true } as AddEventListenerOptions);
-
-    return () => {
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
-      el.removeEventListener('pointermove', onMove as any);
-      el.removeEventListener('pointerleave', onLeave as any);
-    };
-  }, [reduceMotion]);
-
-  // --- Weather (dynamic) ---
+  /* ── data ── */
   const temp = weather?.current?.temperature_2m ? Math.round(weather.current.temperature_2m) : '--';
   const wCode = weather?.current?.weather_code || 0;
   const isDay = weather?.current?.is_day !== 0;
-  const windSpeed = weather?.current?.wind_speed_10m || 0;
+  const wind = weather?.current?.wind_speed_10m || 0;
   const wDesc = txt.weather_desc[wCode] || txt.weather_desc[0];
-  const isRainy = wCode >= 51;
-  const isStormy = wCode >= 95;
-  const isHighWind = windSpeed > 20;
+  const rainy = wCode >= 51, stormy = wCode >= 95, hiWind = wind > 20;
 
-  // --- Market (dynamic) ---
-  const userCropName = user?.crop || 'Soyabean';
-  const marketData =
-    MOCK_MARKET.find(m => m.name.toLowerCase().includes(userCropName.toLowerCase())) || MOCK_MARKET[0];
-  const displayCropName = txt.crops[marketData.name] || marketData.name;
-  const isPositiveTrend = marketData.trend.includes('+');
+  const crop = user?.crop || 'Soyabean';
+  const mkt = MOCK_MARKET.find(m => m.name.toLowerCase().includes(crop.toLowerCase())) || MOCK_MARKET[0];
+  const cropL = txt.crops[mkt.name] || mkt.name;
+  const bull = mkt.trend.includes('+');
 
-  // --- Calendar (dynamic) ---
-  const dayNames: Record<string, string[]> = {
-    mr: ['रवि', 'सोम', 'मंगळ', 'बुध', 'गुरु', 'शुक्र', 'शनि'],
-    hi: ['रवि', 'सोम', 'मंगल', 'बुध', 'गुरु', 'शुक्र', 'शनि'],
-    en: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+  const dn: Record<string,string[]> = {
+    mr:['रवि','सोम','मंगळ','बुध','गुरु','शुक्र','शनि'],
+    hi:['रवि','सोम','मंगल','बुध','गुरु','शुक्र','शनि'],
+    en:['Sun','Mon','Tue','Wed','Thu','Fri','Sat'],
+  };
+  const mn: Record<string,string[]> = {
+    mr:['जानेवारी','फेब्रुवारी','मार्च','एप्रिल','मे','जून','जुलै','ऑगस्ट','सप्टेंबर','ऑक्टोबर','नोव्हेंबर','डिसेंबर'],
+    hi:['जनवरी','फरवरी','मार्च','अप्रैल','मई','जून','जुलाई','अगस्त','सितंबर','अक्टूबर','नवंबर','दिसंबर'],
+    en:['January','February','March','April','May','June','July','August','September','October','November','December'],
   };
 
-  const monthNames: Record<string, string[]> = {
-    mr: ['जानेवारी', 'फेब्रुवारी', 'मार्च', 'एप्रिल', 'मे', 'जून', 'जुलै', 'ऑगस्ट', 'सप्टेंबर', 'ऑक्टोबर', 'नोव्हेंबर', 'डिसेंबर'],
-    hi: ['जनवरी', 'फरवरी', 'मार्च', 'अप्रैल', 'मई', 'जून', 'जुलाई', 'अगस्त', 'सितंबर', 'अक्टूबर', 'नवंबर', 'दिसंबर'],
-    en: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
-  };
+  const dy = dn[lang]?.[now.getDay()] ?? dn.en[now.getDay()];
+  const dt = now.getDate();
+  const mo = mn[lang]?.[now.getMonth()] ?? mn.en[now.getMonth()];
+  const yr = now.getFullYear();
+  const tm = now.toLocaleTimeString(lang==='en'?'en-US':'hi-IN',{hour:'2-digit',minute:'2-digit',hour12:true});
+  const repDay = now.getMonth()===0 && now.getDate()===26;
 
-  const currentDay = dayNames[lang]?.[now.getDay()] ?? dayNames.en[now.getDay()];
-  const currentDate = now.getDate();
-  const currentMonth = monthNames[lang]?.[now.getMonth()] ?? monthNames.en[now.getMonth()];
-  const currentYear = now.getFullYear();
-  const currentTime = now.toLocaleTimeString(lang === 'en' ? 'en-US' : 'hi-IN', {
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: true
-  });
-
-  const isRepublicDay = now.getMonth() === 0 && now.getDate() === 26;
-
-  // --- Fetch AI updates ---
+  /* ── AI fetch ── */
   useEffect(() => {
-    let mounted = true;
-
-    const fetchAIUpdates = async () => {
-      try {
-        setIsLoadingAI(true);
-        await new Promise(resolve => setTimeout(resolve, 900));
-        const updates = await getLiveAgriUpdates(lang);
-        if (mounted && updates && updates.length > 0) setLiveUpdates(updates);
-      } catch {
-        // silent fail
-      } finally {
-        if (mounted) setIsLoadingAI(false);
-      }
-    };
-
-    fetchAIUpdates();
-    const refreshInterval = setInterval(fetchAIUpdates, 10 * 60 * 1000);
-    return () => {
-      mounted = false;
-      clearInterval(refreshInterval);
-    };
+    let ok = true;
+    (async()=>{
+      try { setAiSync(true); await new Promise(r=>setTimeout(r,800));
+        const u = await getLiveAgriUpdates(lang);
+        if(ok && u?.length) setLive(u);
+      } catch{} finally{ if(ok) setAiSync(false); }
+    })();
+    const t = setInterval(async()=>{
+      try{ const u = await getLiveAgriUpdates(lang); if(ok&&u?.length) setLive(u); }catch{}
+    }, 10*60000);
+    return()=>{ ok=false; clearInterval(t); };
   }, [lang]);
 
-  // --- Stable particle seeds ---
-  const particleSeeds = useMemo(() => {
-    return Array.from({ length: 14 }, (_, i) => ({
-      id: i,
-      top: 5 + Math.random() * 90,
-      left: 5 + Math.random() * 90,
-      size: 3 + Math.random() * 5,
-      driftX: -15 + Math.random() * 30,
-      driftY: -22 - Math.random() * 20,
-      dur: 5.5 + Math.random() * 2.5,
-      delay: Math.random() * 3,
-      alpha: 0.22 + Math.random() * 0.28,
-    }));
-  }, []);
+  /* ── particle seeds (stable) ── */
+  const seeds = useMemo(() => Array.from({length:N_PARTICLES},(_,i)=>({
+    i, x:Math.random()*100, y:Math.random()*100,
+    s:2+Math.random()*5, dx:-20+Math.random()*40,
+    dy:-28-Math.random()*20, dur:4+Math.random()*5,
+    del:Math.random()*5, a:.12+Math.random()*.38,
+    blur:Math.random()>.75,
+  })),[]);
 
-  // --- Message Queue (unchanged content, cinematic backgrounds) ---
-  const messages: Msg[] = useMemo(() => {
-    const list: Msg[] = [];
+  /* ── build slides ── */
+  const slides: Slide[] = useMemo(() => {
+    const s: Slide[] = [];
 
-    // 1) Republic Day - CINEMATIC TRICOLOR
-    if (isRepublicDay) {
-      list.push({
-        id: 'republic-day',
-        category: { mr: 'राष्ट्रीय सण', hi: 'राष्ट्रीय पर्व', en: 'National Festival' },
-        title: {
-          mr: '🇮🇳 प्रजासत्ताक दिन शुभेच्छा 🇮🇳',
-          hi: '🇮🇳 गणतंत्र दिवस की शुभकामनाएं 🇮🇳',
-          en: '🇮🇳 Happy Republic Day 🇮🇳'
-        },
-        subtitle: {
-          mr: 'भारताच्या 77व्या प्रजासत्ताक दिनाच्या हार्दिक शुभेच्छा',
-          hi: 'भारत के 77वें गणतंत्र दिवस की हार्दिक शुभकामनाएं',
-          en: 'Celebrating 77 years of Indian Democracy & Unity'
-        },
-        cta: { mr: 'संदेश शेअर करा', hi: 'संदेश शेयर करें', en: 'Share Wishes' },
+    if (repDay) s.push({
+      id:'rep', icon:Flag, pal:P.india, special:true,
+      tag:{mr:'राष्ट्रीय सण',hi:'राष्ट्रीय पर्व',en:'National Festival'},
+      title:{mr:'🇮🇳 प्रजासत्ताक दिन शुभेच्छा',hi:'🇮🇳 गणतंत्र दिवस की शुभकामनाएं',en:'🇮🇳 Happy Republic Day'},
+      sub:{mr:'भारताच्या 77व्या प्रजासत्ताक दिनाच्या हार्दिक शुभेच्छा',hi:'भारत के 77वें गणतंत्र दिवस की हार्दिक शुभकामनाएं',en:'Celebrating 77 years of Indian Democracy & Unity'},
+      cta:{mr:'शेअर करा',hi:'शेयर करें',en:'Share'},
+      badges:[
+        {label:{mr:'77वा',hi:'77वां',en:'77th'},bg:'from-orange-500 to-amber-400',icon:Star},
+        {label:{mr:'26 जानेवारी',hi:'26 जनवरी',en:'Jan 26'},bg:'from-green-600 to-emerald-500',icon:Flag},
+      ],
+    });
 
-        bgBase: `
-          radial-gradient(ellipse 140% 110% at 25% 35%, rgba(255,153,51,1) 0%, rgba(255,120,20,0.85) 18%, rgba(0,0,0,1) 42%),
-          radial-gradient(ellipse 130% 100% at 75% 65%, rgba(19,136,8,0.95) 0%, rgba(15,100,6,0.75) 20%, rgba(0,0,0,1) 45%),
-          radial-gradient(ellipse 100% 100% at 50% 50%, rgba(0,0,0,1) 0%, rgba(5,8,15,1) 100%)
-        `,
-        bgOverlay: `
-          linear-gradient(135deg, rgba(255,153,51,0.15) 0%, rgba(0,0,0,0.85) 40%, rgba(19,136,8,0.15) 100%),
-          linear-gradient(45deg, rgba(255,255,255,0.08) 0%, transparent 50%)
-        `,
-        accentGlow: 'rgba(255, 153, 51, 0.95)',
-        secondaryGlow: 'rgba(19, 136, 8, 0.90)',
-        particleColors: ['#FF9933', '#FFFFFF', '#138808', '#FFD700', '#FF6B00'],
-        icon: Flag,
-        badges: [
-          { text: { mr: '77वा', hi: '77वां', en: '77th' }, color: 'bg-gradient-to-r from-orange-600 to-orange-500', glow: 'shadow-[0_0_30px_rgba(255,153,51,0.8)]' },
-          { text: { mr: '26 जानेवारी', hi: '26 जनवरी', en: 'Jan 26' }, color: 'bg-gradient-to-r from-green-700 to-green-600', glow: 'shadow-[0_0_30px_rgba(19,136,8,0.75)]' }
-        ],
-        isSpecial: true
-      });
-    }
+    if (stormy||(rainy&&hiWind)) s.push({
+      id:'storm', icon:AlertTriangle, pal:P.storm,
+      tag:{mr:'⚠️ हवामान इशारा',hi:'⚠️ मौसम चेतावनी',en:'⚠️ Weather Alert'},
+      title:{mr:stormy?'वादळी पावसाची शक्यता!':'जोरदार पाऊस अपेक्षित',hi:stormy?'तूफानी बारिश संभावित!':'तेज बारिश की संभावना',en:stormy?'Storm Alert!':'Heavy Rain Expected'},
+      sub:{mr:`वेग: ${wind} किमी/तास • पिकांची काळजी घ्या`,hi:`गति: ${wind} किमी/घंटा • फसल सुरक्षा करें`,en:`Wind: ${wind} km/h • Secure your crops`},
+      cta:{mr:'सल्ला पहा',hi:'सलाह देखें',en:'View Tips'},
+      badges:[
+        {label:{mr:'तातडीचे',hi:'अत्यावश्यक',en:'Urgent'},bg:'from-red-600 to-rose-500',icon:AlertTriangle},
+        {label:{mr:`${wind}km/h`,hi:`${wind}km/h`,en:`${wind}km/h`},bg:'from-blue-500 to-cyan-500'},
+      ],
+    });
 
-    // 2) Severe Weather Alert - ELECTRIC STORM
-    if (isStormy || (isRainy && isHighWind)) {
-      list.push({
-        id: 'weather-alert',
-        category: { mr: '⚠️ हवामान इशारा', hi: '⚠️ मौसम चेतावनी', en: '⚠️ Weather Alert' },
-        title: {
-          mr: isStormy ? 'वादळी पावसाची शक्यता!' : 'जोरदार पाऊस अपेक्षित',
-          hi: isStormy ? 'तूफानी बारिश संभावित!' : 'तेज बारिश की संभावना',
-          en: isStormy ? 'Storm Alert!' : 'Heavy Rain Expected'
-        },
-        subtitle: {
-          mr: `वेग: ${windSpeed} किमी/तास • पिकांची काळजी घ्या`,
-          hi: `गति: ${windSpeed} किमी/घंटा • फसल सुरक्षा करें`,
-          en: `Wind: ${windSpeed} km/h • Secure your crops now`
-        },
-        cta: { mr: 'सल्ला पहा', hi: 'सलाह देखें', en: 'View Tips' },
-
-        bgBase: `
-          radial-gradient(ellipse 130% 100% at 20% 20%, rgba(59,130,246,1) 0%, rgba(37,99,235,0.9) 15%, rgba(0,0,0,1) 40%),
-          radial-gradient(ellipse 120% 110% at 80% 75%, rgba(109,40,217,0.85) 0%, rgba(79,70,229,0.7) 18%, rgba(0,0,0,1) 42%),
-          radial-gradient(ellipse 100% 100% at 50% 50%, rgba(0,0,0,1) 0%, rgba(3,7,18,1) 100%)
-        `,
-        bgOverlay: `
-          linear-gradient(135deg, rgba(59,130,246,0.2) 0%, rgba(0,0,0,0.9) 45%, rgba(109,40,217,0.15) 100%),
-          radial-gradient(circle at 30% 30%, rgba(139,92,246,0.25) 0%, transparent 50%)
-        `,
-        accentGlow: 'rgba(59, 130, 246, 0.95)',
-        secondaryGlow: 'rgba(139, 92, 246, 0.85)',
-        particleColors: ['#3b82f6', '#8b5cf6', '#6366f1', '#a78bfa', '#60a5fa'],
-        icon: AlertTriangle,
-        badges: [
-          { text: { mr: 'तातडीचे', hi: 'अत्यावश्यक', en: 'Urgent' }, color: 'bg-gradient-to-r from-red-600 to-red-500', glow: 'shadow-[0_0_35px_rgba(239,68,68,0.75)]' },
-          { text: { mr: `${windSpeed} किमी`, hi: `${windSpeed} किमी`, en: `${windSpeed} km/h` }, color: 'bg-white/15 border border-white/30', glow: 'shadow-[0_0_25px_rgba(255,255,255,0.4)]' }
+    live.slice(0,3).forEach((u,i)=>{
+      const sc = u.type==='scheme';
+      s.push({
+        id:`ai${i}`, icon:sc?Crown:TrendingUp, pal:sc?P.jade:P.orchid,
+        tag:sc?{mr:'🎯 सरकारी योजना',hi:'🎯 सरकारी योजना',en:'🎯 Govt Scheme'}:{mr:'📊 बाजार अपडेट',hi:'📊 बाजार अपडेट',en:'📊 Market Update'},
+        title:{mr:u.title,hi:u.title,en:u.title},
+        sub:{mr:u.subtitle,hi:u.subtitle,en:u.subtitle},
+        cta:{mr:'तपशील',hi:'विवरण',en:'Details'},
+        badges:[
+          {label:{mr:u.badge||'नवीन',hi:u.badge||'नया',en:u.badge||'New'},bg:sc?'from-emerald-500 to-teal-500':'from-purple-500 to-pink-500'},
+          {label:{mr:'AI',hi:'AI',en:'AI'},bg:'from-cyan-400 to-blue-500',icon:Sparkles},
         ],
       });
-    }
+    });
 
-    // 3) AI Updates - SCHEME (Emerald) / MARKET (Purple-Pink)
-    if (liveUpdates.length > 0) {
-      liveUpdates.slice(0, 4).forEach((update, idx) => {
-        const isScheme = update.type === 'scheme';
-        list.push({
-          id: `ai-update-${idx}`,
-          category: isScheme
-            ? { mr: '🎯 सरकारी योजना', hi: '🎯 सरकारी योजना', en: '🎯 Govt Scheme' }
-            : { mr: '📊 बाजार अपडेट', hi: '📊 बाजार अपडेट', en: '📊 Market Update' },
-          title: { mr: update.title, hi: update.title, en: update.title },
-          subtitle: { mr: update.subtitle, hi: update.subtitle, en: update.subtitle },
-          cta: { mr: 'तपशील', hi: 'विवरण', en: 'Details' },
+    if(s.length<2) s.push({
+      id:'cal', icon:CalendarIcon, pal:P.orchid,
+      tag:{mr:'📅 आजचा दिवस',hi:'📅 आज का दिन',en:'📅 Today'},
+      title:{mr:`${dy}, ${dt} ${mo}`,hi:`${dy}, ${dt} ${mo}`,en:`${dy}, ${mo} ${dt}`},
+      sub:{mr:`${yr} • ${tm} • पिकांची काळजी घ्या`,hi:`${yr} • ${tm} • फसल की देखभाल करें`,en:`${yr} • ${tm} • Perfect day for farming`},
+      cta:{mr:'कॅलेंडर',hi:'कैलेंडर',en:'Calendar'},
+      badges:[
+        {label:{mr:dy,hi:dy,en:dy},bg:'from-purple-500 to-pink-500'},
+        {label:{mr:`${dt}`,hi:`${dt}`,en:`${dt}`},bg:'from-pink-500 to-rose-500'},
+      ],
+    });
 
-          bgBase: isScheme
-            ? `
-              radial-gradient(ellipse 135% 105% at 25% 30%, rgba(16,185,129,1) 0%, rgba(5,150,105,0.9) 16%, rgba(0,0,0,1) 40%),
-              radial-gradient(ellipse 125% 100% at 75% 70%, rgba(20,184,166,0.85) 0%, rgba(13,148,136,0.7) 18%, rgba(0,0,0,1) 42%),
-              radial-gradient(ellipse 100% 100% at 50% 50%, rgba(0,0,0,1) 0%, rgba(2,6,23,1) 100%)
-            `
-            : `
-              radial-gradient(ellipse 130% 100% at 70% 25%, rgba(168,85,247,1) 0%, rgba(147,51,234,0.9) 15%, rgba(0,0,0,1) 38%),
-              radial-gradient(ellipse 125% 110% at 30% 75%, rgba(236,72,153,0.9) 0%, rgba(219,39,119,0.75) 18%, rgba(0,0,0,1) 42%),
-              radial-gradient(ellipse 100% 100% at 50% 50%, rgba(0,0,0,1) 0%, rgba(2,6,23,1) 100%)
-            `,
-          bgOverlay: isScheme
-            ? `
-              linear-gradient(135deg, rgba(16,185,129,0.18) 0%, rgba(0,0,0,0.88) 45%, rgba(20,184,166,0.12) 100%),
-              radial-gradient(circle at 25% 25%, rgba(52,211,153,0.2) 0%, transparent 50%)
-            `
-            : `
-              linear-gradient(135deg, rgba(168,85,247,0.18) 0%, rgba(0,0,0,0.88) 45%, rgba(236,72,153,0.15) 100%),
-              radial-gradient(circle at 70% 30%, rgba(192,132,252,0.2) 0%, transparent 50%)
-            `,
-          accentGlow: isScheme ? 'rgba(16, 185, 129, 0.95)' : 'rgba(168, 85, 247, 0.95)',
-          secondaryGlow: isScheme ? 'rgba(20, 184, 166, 0.85)' : 'rgba(236, 72, 153, 0.85)',
-          particleColors: isScheme
-            ? ['#10b981', '#14b8a6', '#34d399', '#2dd4bf', '#5eead4']
-            : ['#a855f7', '#ec4899', '#c084fc', '#f472b6', '#d946ef'],
-          icon: isScheme ? Crown : TrendingUp,
-          badges: [
-            {
-              text: { mr: update.badge || 'नवीन', hi: update.badge || 'नया', en: update.badge || 'New' },
-              color: 'bg-white/15 border border-white/30',
-              glow: 'shadow-[0_0_25px_rgba(255,255,255,0.35)]'
-            },
-            {
-              text: { mr: 'AI', hi: 'AI', en: 'AI' },
-              color: 'bg-gradient-to-r from-cyan-500 to-blue-500',
-              glow: 'shadow-[0_0_28px_rgba(6,182,212,0.7)]'
-            }
-          ]
-        });
-      });
-    }
+    if(!stormy&&!hiWind&&s.length<3&&temp!=='--') s.push({
+      id:'wx', icon:rainy?CloudRain:isDay?Sun:Moon, pal:isDay?P.sun:P.night,
+      tag:{mr:'🌤️ हवामान',hi:'🌤️ मौसम',en:'🌤️ Weather'},
+      title:rainy?{mr:'पावसाची शक्यता',hi:'बारिश की संभावना',en:'Rain Expected'}:{mr:`${wDesc} • ${temp}°C`,hi:`${wDesc} • ${temp}°C`,en:`${wDesc} • ${temp}°C`},
+      sub:{mr:`तापमान ${temp}°C • शेतीसाठी ${isDay?'चांगले':'शांत'} हवामान`,hi:`तापमान ${temp}°C • खेती के लिए ${isDay?'अच्छा':'शांत'} मौसम`,en:`Temp ${temp}°C • ${isDay?'Good':'Calm'} for farming`},
+      cta:{mr:'तपशील',hi:'विवरण',en:'Forecast'},
+      badges:[
+        {label:{mr:`${temp}°C`,hi:`${temp}°C`,en:`${temp}°C`},bg:isDay?'from-amber-400 to-orange-500':'from-indigo-500 to-purple-600'},
+      ],
+    });
 
-    // 4) Calendar - ROYAL PURPLE-PINK
-    if (list.length < 2) {
-      list.push({
-        id: 'calendar',
-        category: { mr: '📅 आजचा दिवस', hi: '📅 आज का दिन', en: '📅 Today' },
-        title: {
-          mr: `${currentDay}, ${currentDate} ${currentMonth}`,
-          hi: `${currentDay}, ${currentDate} ${currentMonth}`,
-          en: `${currentDay}, ${currentMonth} ${currentDate}`
-        },
-        subtitle: {
-          mr: `${currentYear} • ${currentTime} • पिकांची काळजी घ्या`,
-          hi: `${currentYear} • ${currentTime} • फसल की देखभाल करें`,
-          en: `${currentYear} • ${currentTime} • Perfect day for farming`
-        },
-        cta: { mr: 'कॅलेंडर', hi: 'कैलेंडर', en: 'Calendar' },
+    if(s.length<4) s.push({
+      id:'mkt', icon:TrendingUp, pal:bull?P.bull:P.bear,
+      tag:{mr:'💹 बाजार',hi:'💹 मार्केट',en:'💹 Market'},
+      title:{mr:`${cropL}: ₹${mkt.price}`,hi:`${cropL}: ₹${mkt.price}`,en:`${cropL}: ₹${mkt.price}`},
+      sub:{mr:`आवक: ${mkt.arrival} • ${mkt.trend}`,hi:`आवक: ${mkt.arrival} • ${mkt.trend}`,en:`Arrival: ${mkt.arrival} • ${mkt.trend}`},
+      cta:{mr:'भाव',hi:'कीमत',en:'Rates'},
+      badges:[
+        {label:{mr:bull?'📈 तेजी':'📉 घसरण',hi:bull?'📈 बढ़त':'📉 गिरावट',en:bull?'📈 Bullish':'📉 Bearish'},bg:bull?'from-emerald-500 to-teal-500':'from-red-500 to-rose-500'},
+        {label:{mr:mkt.trend,hi:mkt.trend,en:mkt.trend},bg:bull?'from-cyan-400 to-teal-400':'from-orange-400 to-amber-400'},
+      ],
+    });
 
-        bgBase: `
-          radial-gradient(ellipse 130% 105% at 30% 25%, rgba(147,51,234,1) 0%, rgba(126,34,206,0.9) 15%, rgba(0,0,0,1) 38%),
-          radial-gradient(ellipse 125% 100% at 70% 70%, rgba(236,72,153,0.9) 0%, rgba(219,39,119,0.75) 18%, rgba(0,0,0,1) 42%),
-          radial-gradient(ellipse 100% 100% at 50% 50%, rgba(0,0,0,1) 0%, rgba(2,6,23,1) 100%)
-        `,
-        bgOverlay: `
-          linear-gradient(135deg, rgba(147,51,234,0.2) 0%, rgba(0,0,0,0.88) 45%, rgba(236,72,153,0.18) 100%),
-          radial-gradient(circle at 35% 30%, rgba(168,85,247,0.25) 0%, transparent 50%)
-        `,
-        accentGlow: 'rgba(168, 85, 247, 0.95)',
-        secondaryGlow: 'rgba(236, 72, 153, 0.90)',
-        particleColors: ['#a855f7', '#ec4899', '#d946ef', '#f472b6', '#c084fc'],
-        icon: CalendarIcon,
-        badges: [
-          { text: { mr: currentDay, hi: currentDay, en: currentDay }, color: 'bg-white/15 border border-white/30' },
-          { text: { mr: `${currentDate}`, hi: `${currentDate}`, en: `${currentDate}` }, color: 'bg-white/15 border border-white/30' }
-        ]
-      });
-    }
+    if(s.length<5) s.push({
+      id:'tip', icon:Lightbulb, pal:P.gold,
+      tag:{mr:'💡 स्मार्ट टीप',hi:'💡 स्मार्ट टिप',en:'💡 Smart Tip'},
+      title:isDay?{mr:'फवारणीसाठी योग्य वेळ',hi:'छिड़काव का सही समय',en:'Perfect Spray Time'}:{mr:'पिकांना थंडीपासून वाचवा',hi:'फसलों को ठंड से बचाएं',en:'Protect from Cold'},
+      sub:isDay?{mr:'वारा कमी • दुपारी ४ पर्यंत फवारणी करा',hi:'हवा कम • शाम 4 तक छिड़काव करें',en:'Low wind — spray before 4 PM'}:{mr:'रात्री तापमान कमी • पाणी द्या',hi:'रात तापमान गिरेगा • सिंचाई करें',en:'Temp drops tonight — irrigate'},
+      cta:{mr:'सल्ला',hi:'सलाह',en:'Read'},
+      badges:[
+        {label:{mr:'AI',hi:'AI',en:'AI'},bg:'from-amber-400 to-yellow-400',icon:Zap},
+        {label:{mr:'टीप',hi:'टिप',en:'Tip'},bg:'from-orange-400 to-amber-500'},
+      ],
+    });
 
-    // 5) Weather DAY - GOLDEN SUNRISE / NIGHT - DEEP INDIGO
-    if (!isStormy && !isHighWind && list.length < 3 && temp !== '--') {
-      list.push({
-        id: 'weather',
-        category: { mr: '🌤️ हवामान', hi: '🌤️ मौसम', en: '🌤️ Weather' },
-        title: isRainy
-          ? { mr: 'पावसाची शक्यता', hi: 'बारिश की संभावना', en: 'Rain Expected' }
-          : { mr: `${wDesc} • ${temp}°C`, hi: `${wDesc} • ${temp}°C`, en: `${wDesc} • ${temp}°C` },
-        subtitle: isRainy
-          ? {
-              mr: 'पुढील काही तासात पाऊस. पिकांची काळजी घ्या.',
-              hi: 'अगले कुछ घंटों में बारिश। फसल सुरक्षा करें।',
-              en: 'Rain in a few hours. Protect crops.'
-            }
-          : {
-              mr: `तापमान ${temp}°C • शेतीसाठी ${isDay ? 'चांगले' : 'शांत'} हवामान`,
-              hi: `तापमान ${temp}°C • खेती के लिए ${isDay ? 'अच्छा' : 'शांत'} मौसम`,
-              en: `Temp ${temp}°C • Weather is ${isDay ? 'good' : 'calm'} for farming`
-            },
-        cta: { mr: 'तपशील', hi: 'विवरण', en: 'Forecast' },
+    return s;
+  }, [repDay,stormy,rainy,hiWind,wind,temp,wDesc,isDay,dy,dt,mo,yr,tm,live,lang,cropL,mkt,bull]);
 
-        bgBase: isDay
-          ? `
-            radial-gradient(ellipse 135% 105% at 25% 20%, rgba(251,191,36,1) 0%, rgba(245,158,11,0.95) 15%, rgba(0,0,0,1) 38%),
-            radial-gradient(ellipse 125% 100% at 75% 70%, rgba(59,130,246,0.85) 0%, rgba(37,99,235,0.7) 18%, rgba(0,0,0,1) 42%),
-            radial-gradient(ellipse 100% 100% at 50% 50%, rgba(0,0,0,1) 0%, rgba(3,7,18,1) 100%)
-          `
-          : `
-            radial-gradient(ellipse 130% 100% at 70% 25%, rgba(99,102,241,1) 0%, rgba(79,70,229,0.9) 15%, rgba(0,0,0,1) 38%),
-            radial-gradient(ellipse 125% 110% at 30% 75%, rgba(139,92,246,0.85) 0%, rgba(124,58,237,0.7) 18%, rgba(0,0,0,1) 42%),
-            radial-gradient(ellipse 100% 100% at 50% 50%, rgba(0,0,0,1) 0%, rgba(3,7,18,1) 100%)
-          `,
-        bgOverlay: isDay
-          ? `
-            linear-gradient(135deg, rgba(251,191,36,0.2) 0%, rgba(0,0,0,0.88) 45%, rgba(59,130,246,0.15) 100%),
-            radial-gradient(circle at 25% 25%, rgba(250,204,21,0.25) 0%, transparent 50%)
-          `
-          : `
-            linear-gradient(135deg, rgba(99,102,241,0.18) 0%, rgba(0,0,0,0.88) 45%, rgba(139,92,246,0.15) 100%),
-            radial-gradient(circle at 70% 30%, rgba(167,139,250,0.2) 0%, transparent 50%)
-          `,
-        accentGlow: isDay ? 'rgba(251, 191, 36, 0.95)' : 'rgba(99, 102, 241, 0.95)',
-        secondaryGlow: isDay ? 'rgba(59, 130, 246, 0.85)' : 'rgba(139, 92, 246, 0.85)',
-        particleColors: isDay
-          ? ['#fbbf24', '#f59e0b', '#3b82f6', '#60a5fa', '#fcd34d']
-          : ['#6366f1', '#8b5cf6', '#a78bfa', '#7c3aed', '#c4b5fd'],
-        icon: isRainy ? CloudRain : isDay ? Sun : Moon,
-        badges: [
-          { text: { mr: isDay ? 'Day' : 'Night', hi: isDay ? 'Day' : 'Night', en: isDay ? 'Day' : 'Night' }, color: 'bg-white/15 border border-white/30' },
-          { text: { mr: `${temp}°C`, hi: `${temp}°C`, en: `${temp}°C` }, color: 'bg-white/15 border border-white/30' }
-        ],
-      });
-    }
+  /* ── nav ── */
+  const go = useCallback((n:number) => {
+    if(anim!=='idle'||slides.length<=1) return;
+    setAnim('out');
+    setTimeout(()=>{ setCi(((n%slides.length)+slides.length)%slides.length); setAnim('in');
+      setTimeout(()=>setAnim('idle'), SLIDE_DUR);
+    }, SLIDE_DUR);
+  },[anim,slides.length]);
+  const nxt = useCallback(()=>go(ci+1),[ci,go]);
+  const prv = useCallback(()=>go(ci-1),[ci,go]);
 
-    // 6) Market - VIBRANT GREEN (Bullish) / INTENSE RED (Bearish)
-    if (list.length < 4) {
-      list.push({
-        id: 'market',
-        category: { mr: '💹 बाजार', hi: '💹 मार्केट', en: '💹 Market' },
-        title: { mr: `${displayCropName}: ₹${marketData.price}`, hi: `${displayCropName}: ₹${marketData.price}`, en: `${displayCropName}: ₹${marketData.price}` },
-        subtitle: {
-          mr: `आवक: ${marketData.arrival} • ${marketData.trend} (${isPositiveTrend ? 'तेजी' : 'घसरण'})`,
-          hi: `आवक: ${marketData.arrival} • ${marketData.trend} (${isPositiveTrend ? 'बढ़त' : 'गिरावट'})`,
-          en: `Arrival: ${marketData.arrival} • Trend: ${marketData.trend}`
-        },
-        cta: { mr: 'भाव', hi: 'कीमत', en: 'Rates' },
+  /* ── auto ── */
+  useEffect(()=>{
+    if(slides.length<=1||noMo||paused||hover) return;
+    tmr.current=setInterval(nxt,AUTO_MS);
+    return()=>{if(tmr.current)clearInterval(tmr.current)};
+  },[slides.length,noMo,paused,hover,nxt]);
 
-        bgBase: isPositiveTrend
-          ? `
-            radial-gradient(ellipse 135% 105% at 30% 28%, rgba(16,185,129,1) 0%, rgba(5,150,105,0.95) 15%, rgba(0,0,0,1) 38%),
-            radial-gradient(ellipse 125% 100% at 70% 70%, rgba(6,182,212,0.9) 0%, rgba(8,145,178,0.75) 18%, rgba(0,0,0,1) 42%),
-            radial-gradient(ellipse 100% 100% at 50% 50%, rgba(0,0,0,1) 0%, rgba(2,6,23,1) 100%)
-          `
-          : `
-            radial-gradient(ellipse 135% 105% at 30% 28%, rgba(239,68,68,1) 0%, rgba(220,38,38,0.95) 15%, rgba(0,0,0,1) 38%),
-            radial-gradient(ellipse 125% 100% at 70% 70%, rgba(249,115,22,0.9) 0%, rgba(234,88,12,0.75) 18%, rgba(0,0,0,1) 42%),
-            radial-gradient(ellipse 100% 100% at 50% 50%, rgba(0,0,0,1) 0%, rgba(2,6,23,1) 100%)
-          `,
-        bgOverlay: isPositiveTrend
-          ? `
-            linear-gradient(135deg, rgba(16,185,129,0.2) 0%, rgba(0,0,0,0.88) 45%, rgba(6,182,212,0.18) 100%),
-            radial-gradient(circle at 30% 30%, rgba(52,211,153,0.25) 0%, transparent 50%)
-          `
-          : `
-            linear-gradient(135deg, rgba(239,68,68,0.2) 0%, rgba(0,0,0,0.88) 45%, rgba(249,115,22,0.18) 100%),
-            radial-gradient(circle at 30% 30%, rgba(248,113,113,0.25) 0%, transparent 50%)
-          `,
-        accentGlow: isPositiveTrend ? 'rgba(16, 185, 129, 0.95)' : 'rgba(239, 68, 68, 0.95)',
-        secondaryGlow: isPositiveTrend ? 'rgba(6, 182, 212, 0.90)' : 'rgba(249, 115, 22, 0.90)',
-        particleColors: isPositiveTrend
-          ? ['#10b981', '#06b6d4', '#34d399', '#22d3ee', '#14b8a6']
-          : ['#ef4444', '#f97316', '#fb7185', '#f87171', '#ff6b35'],
-        icon: TrendingUp,
-        badges: [
-          { text: { mr: isPositiveTrend ? 'Bullish' : 'Bearish', hi: isPositiveTrend ? 'Bullish' : 'Bearish', en: isPositiveTrend ? 'Bullish' : 'Bearish' }, color: 'bg-white/15 border border-white/30' },
-          { text: { mr: marketData.trend, hi: marketData.trend, en: marketData.trend }, color: 'bg-white/15 border border-white/30' }
-        ],
-      });
-    }
+  /* ── swipe ── */
+  const tsS=(e:React.TouchEvent)=>setSwX(e.touches[0].clientX);
+  const tsE=(e:React.TouchEvent)=>{if(swX===null)return;const d=e.changedTouches[0].clientX-swX;if(Math.abs(d)>50)d>0?prv():nxt();setSwX(null);};
 
-    // 7) Smart Tip - AMBER GOLD
-    if (list.length < 4) {
-      list.push({
-        id: 'tip',
-        category: { mr: '💡 स्मार्ट टीप', hi: '💡 स्मार्ट टिप', en: '💡 Smart Tip' },
-        title: isDay
-          ? { mr: 'फवारणीसाठी योग्य वेळ', hi: 'छिड़काव का सही समय', en: 'Good Time to Spray' }
-          : { mr: 'पिकांना थंडीपासून वाचवा', hi: 'फसलों को ठंड से बचाएं', en: 'Protect Crops from Cold' },
-        subtitle: isDay
-          ? { mr: 'वारा कमी आहे. फवारणी आता करा (दुपारी ४ पर्यंत)', hi: 'हवा कम है। छिड़काव अभी करें (शाम 4 तक)', en: 'Low wind. Spray now (Before 4 PM)' }
-          : { mr: 'रात्री तापमान कमी होऊ शकते. पाणी द्या', hi: 'रात में तापमान गिर सकता है। सिंचाई करें', en: 'Temp may drop tonight. Irrigate crops' },
-        cta: { mr: 'सल्ला', hi: 'सलाह', en: 'Read Tip' },
-
-        bgBase: `
-          radial-gradient(ellipse 135% 105% at 32% 28%, rgba(251,191,36,1) 0%, rgba(245,158,11,0.95) 15%, rgba(0,0,0,1) 38%),
-          radial-gradient(ellipse 125% 100% at 68% 70%, rgba(251,146,60,0.9) 0%, rgba(249,115,22,0.75) 18%, rgba(0,0,0,1) 42%),
-          radial-gradient(ellipse 100% 100% at 50% 50%, rgba(0,0,0,1) 0%, rgba(2,6,23,1) 100%)
-        `,
-        bgOverlay: `
-          linear-gradient(135deg, rgba(251,191,36,0.2) 0%, rgba(0,0,0,0.88) 45%, rgba(251,146,60,0.18) 100%),
-          radial-gradient(circle at 35% 30%, rgba(250,204,21,0.25) 0%, transparent 50%)
-        `,
-        accentGlow: 'rgba(251, 191, 36, 0.95)',
-        secondaryGlow: 'rgba(251, 146, 60, 0.90)',
-        particleColors: ['#fbbf24', '#f59e0b', '#fb923c', '#fcd34d', '#fde047'],
-        icon: Lightbulb,
-        badges: [
-          { text: { mr: 'AI', hi: 'AI', en: 'AI' }, color: 'bg-white/15 border border-white/30' },
-          { text: { mr: 'Tip', hi: 'Tip', en: 'Tip' }, color: 'bg-white/15 border border-white/30' }
-        ]
-      });
-    }
-
-    return list;
-  }, [
-    isRepublicDay,
-    isStormy,
-    isRainy,
-    isHighWind,
-    windSpeed,
-    temp,
-    wDesc,
-    isDay,
-    currentDay,
-    currentDate,
-    currentMonth,
-    currentYear,
-    currentTime,
-    liveUpdates,
-    lang,
-    displayCropName,
-    marketData.price,
-    marketData.arrival,
-    marketData.trend,
-    isPositiveTrend
-  ]);
-
-  // --- Rotation animation (paused + reduced motion aware) ---
-  useEffect(() => {
-    if (messages.length <= 1) return;
-    if (reduceMotion || isPaused) return;
-
-    const interval = setInterval(() => {
-      setIsAnimating(true);
-      const t = setTimeout(() => {
-        setCurrentIndex(prev => (prev + 1) % messages.length);
-        setIsAnimating(false);
-      }, 520);
-
-      return () => clearTimeout(t);
-    }, 8200);
-
-    return () => clearInterval(interval);
-  }, [messages.length, reduceMotion, isPaused]);
-
-  const safeIndex = currentIndex >= messages.length ? 0 : currentIndex;
-  const msg = messages[safeIndex];
-  const Icon = msg?.icon || Lightbulb;
-
-  if (!msg) return null;
-
-  const particleCount = msg.isSpecial ? 14 : 10;
+  /* ── resolve ── */
+  const si = ci>=slides.length?0:ci;
+  const sl = slides[si];
+  if(!sl) return null;
+  const {pal,icon:Ic} = sl;
+  const pc = sl.special?N_PARTICLES:16;
 
   return (
     <div
-      ref={rootRef}
+      ref={root}
       className={clsx(
-        "sb-root relative flex flex-1 lg:max-w-5xl lg:mx-auto min-h-[88px] lg:h-32 rounded-[28px] overflow-hidden",
-        "shadow-[0_24px_80px_rgba(0,0,0,0.55)]",
-        isPaused && "sb-paused",
-        className
+        'SB group relative flex flex-1 w-full lg:max-w-5xl lg:mx-auto',
+        'min-h-[110px] lg:min-h-[148px]',
+        'rounded-[26px] lg:rounded-[30px] overflow-hidden',
+        'select-none cursor-default',
+        paused&&'SB--paused',
+        className,
       )}
+      style={{
+        boxShadow: hover
+          ? `0 30px 90px -18px rgba(0,0,0,.6), 0 0 0 1px rgba(255,255,255,.06), 0 0 80px -20px ${pal.a}50`
+          : `0 22px 70px -16px rgba(0,0,0,.5), 0 0 0 1px rgba(255,255,255,.04)`,
+        transition: 'box-shadow .6s ease',
+      }}
+      onMouseEnter={()=>setHover(true)}
+      onMouseLeave={()=>setHover(false)}
+      onTouchStart={tsS} onTouchEnd={tsE}
+      onKeyDown={e=>{if(e.key==='ArrowRight')nxt();if(e.key==='ArrowLeft')prv();}}
+      tabIndex={0} role="region" aria-roledescription="carousel" aria-label="Smart Dashboard"
     >
+      {/* ═══ STYLES ═══ */}
       <style>{`
-        .sb-root{
-          --mx: 0;
-          --my: 0;
-          isolation: isolate;
-          contain: layout paint;
+        .SB{--mx:0;--my:0;isolation:isolate;contain:layout paint}
+        .SB--paused,.SB--paused *{animation-play-state:paused!important}
+        .SB:focus-visible{outline:2px solid rgba(255,255,255,.5);outline-offset:4px}
+
+        /* ── transitions ── */
+        @keyframes SB-in{
+          0%{opacity:0;transform:translate3d(0,10px,0) scale(.98)}
+          100%{opacity:1;transform:translate3d(0,0,0) scale(1)}
+        }
+        @keyframes SB-out{
+          0%{opacity:1;transform:translate3d(0,0,0) scale(1)}
+          100%{opacity:0;transform:translate3d(0,-10px,0) scale(.98)}
         }
 
-        .sb-paused, .sb-paused * { animation-play-state: paused !important; }
-
-        /* Use will-change only for big moving layers */
-        .sb-will { will-change: transform, opacity; }
-
-        @keyframes sb-slide-in {
-          0%   { transform: translate3d(-12px, 8px, 0) scale(0.985); opacity: 0; filter: blur(5px); }
-          100% { transform: translate3d(0, 0, 0) scale(1); opacity: 1; filter: blur(0); }
-        }
-        @keyframes sb-slide-out {
-          0%   { transform: translate3d(0, 0, 0) scale(1); opacity: 1; filter: blur(0); }
-          100% { transform: translate3d(12px, -8px, 0) scale(0.985); opacity: 0; filter: blur(5px); }
-        }
-        @keyframes sb-bg-flow {
-          0%,100% { background-position: 0% 45%; }
-          50% { background-position: 100% 55%; }
-        }
-        @keyframes sb-shine {
-          0% { transform: translate3d(-140%,0,0) skewX(-16deg); opacity: 0; }
-          40% { opacity: 0.7; }
-          100% { transform: translate3d(240%,0,0) skewX(-16deg); opacity: 0; }
-        }
-        @keyframes sb-float {
-          0%,100% { transform: translate3d(0,0,0) scale(1); opacity: var(--a); }
-          50% { transform: translate3d(var(--dx), var(--dy), 0) scale(0.86); opacity: calc(var(--a) * 0.6); }
-        }
-        @keyframes sb-badge {
-          0%,100% { transform: translate3d(0,0,0) scale(1); }
-          50% { transform: translate3d(0,-1px,0) scale(1.05); }
-        }
-        @keyframes sb-orb {
-          0%,100% { transform: translate3d(calc(var(--mx) * 10px), calc(var(--my) * 10px), 0); opacity: .55; }
-          50% { transform: translate3d(calc(var(--mx) * -12px), calc(var(--my) * -12px), 0); opacity: .75; }
+        /* ── background aurora ── */
+        @keyframes SB-aurora{
+          0%,100%{transform:translate3d(calc(var(--mx)*14px),calc(var(--my)*14px),0) rotate(0deg) scale(1);opacity:.55}
+          33%{transform:translate3d(calc(var(--mx)*-10px + 6px),calc(var(--my)*-10px),0) rotate(60deg) scale(1.15);opacity:.7}
+          66%{transform:translate3d(calc(var(--mx)*8px - 4px),calc(var(--my)*12px),0) rotate(120deg) scale(.95);opacity:.6}
         }
 
-        .sb-grain{
-          background-image:
-            radial-gradient(circle at 20% 15%, rgba(255,255,255,.05) 0 1px, transparent 2px),
-            radial-gradient(circle at 65% 35%, rgba(255,255,255,.04) 0 1px, transparent 2px),
-            radial-gradient(circle at 35% 70%, rgba(255,255,255,.03) 0 1px, transparent 2px),
-            radial-gradient(circle at 85% 80%, rgba(255,255,255,.035) 0 1px, transparent 2px);
-          background-size: 120px 120px, 140px 140px, 160px 160px, 180px 180px;
-          mix-blend-mode: overlay;
-          opacity: .28;
+        /* ── mesh drift ── */
+        @keyframes SB-mesh{
+          0%,100%{background-position:0% 50%}
+          50%{background-position:100% 50%}
         }
 
-        .sb-vignette{
-          background:
-            radial-gradient(120% 100% at 50% 10%, rgba(255,255,255,.08) 0%, transparent 55%),
-            radial-gradient(120% 120% at 50% 90%, rgba(0,0,0,.55) 0%, transparent 55%),
-            linear-gradient(180deg, rgba(0,0,0,.10) 0%, rgba(0,0,0,.25) 100%);
-          opacity: .95;
+        /* ── particles ── */
+        @keyframes SB-float{
+          0%,100%{transform:translate3d(0,0,0) scale(1);opacity:var(--a)}
+          30%{transform:translate3d(calc(var(--dx)*.4),calc(var(--dy)*.3),0) scale(.85);opacity:calc(var(--a)*.7)}
+          60%{transform:translate3d(var(--dx),var(--dy),0) scale(.65);opacity:calc(var(--a)*.35)}
+          85%{transform:translate3d(calc(var(--dx)*.6),calc(var(--dy)*.8),0) scale(.9);opacity:calc(var(--a)*.55)}
         }
 
-        .sb-borderGlow{
-          box-shadow:
-            inset 0 1px 0 rgba(255,255,255,.18),
-            inset 0 -1px 0 rgba(0,0,0,.35),
-            0 30px 90px rgba(0,0,0,.55);
+        /* ── shine ── */
+        @keyframes SB-shine{
+          0%{transform:translateX(-200%) skewX(-16deg);opacity:0}
+          20%{opacity:.4}
+          80%{opacity:.4}
+          100%{transform:translateX(300%) skewX(-16deg);opacity:0}
         }
 
-        @media (prefers-reduced-motion: reduce) {
-          .sb-anim, .sb-anim * { animation: none !important; transition: none !important; }
+        /* ── icon glow ── */
+        @keyframes SB-iglow{
+          0%,100%{box-shadow:0 0 24px var(--g1),0 0 60px var(--g2)}
+          50%{box-shadow:0 0 40px var(--g1),0 0 90px var(--g2),0 0 120px var(--g3)}
+        }
+
+        /* ── badge breathe ── */
+        @keyframes SB-badge{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
+
+        /* ── live ping ── */
+        @keyframes SB-ping{
+          0%{transform:scale(1);opacity:1}
+          80%{transform:scale(2.8);opacity:0}
+          100%{transform:scale(2.8);opacity:0}
+        }
+
+        /* ── progress ── */
+        @keyframes SB-prog{0%{transform:scaleX(0)}100%{transform:scaleX(1)}}
+
+        /* ── cta shimmer ── */
+        @keyframes SB-cta{
+          0%{background-position:-200% center}
+          100%{background-position:200% center}
+        }
+
+        /* ── title gradient scroll ── */
+        @keyframes SB-title{
+          0%{background-position:0% 50%}
+          50%{background-position:100% 50%}
+          100%{background-position:0% 50%}
+        }
+
+        @media(prefers-reduced-motion:reduce){
+          .SB .SBa,.SB .SBa *{animation:none!important;transition:none!important}
         }
       `}</style>
 
-      {/* Base background */}
-      <div
-        className="absolute inset-0 sb-anim sb-will"
-        style={{
-          background: msg.bgBase,
-          backgroundSize: '220% 220%',
-          animation: 'sb-bg-flow 18s ease-in-out infinite',
-          transform: 'translate3d(0,0,0)',
-        }}
-      />
+      {/* ═══ BG-1: DEEP BLACK BASE ═══ */}
+      <div className="absolute inset-0" style={{background:'#050508'}} />
 
-      {/* Ambient orb light (cinematic depth) */}
-      <div
-        className="absolute inset-0 pointer-events-none sb-will"
-        style={{
-          animation: 'sb-orb 7.5s ease-in-out infinite',
-          background: `
-            radial-gradient(520px 420px at 18% 28%,
-              ${msg.accentGlow} 0%,
-              rgba(255,255,255,0.08) 25%,
-              transparent 62%),
-            radial-gradient(520px 420px at 82% 72%,
-              ${msg.secondaryGlow} 0%,
-              rgba(255,255,255,0.06) 25%,
-              transparent 62%)
-          `,
-          opacity: 0.72,
-          mixBlendMode: 'screen',
-          transform: 'translate3d(calc(var(--mx) * 6px), calc(var(--my) * 6px), 0)',
-        }}
-      />
+      {/* ═══ BG-2: DUAL COLOR BLEED (rich color on black) ═══ */}
+      <div className="absolute inset-0" style={{
+        background:`
+          radial-gradient(ellipse 70% 80% at 0% 30%, ${pal.a}45 0%, transparent 60%),
+          radial-gradient(ellipse 70% 80% at 100% 70%, ${pal.b}40 0%, transparent 60%)
+        `,
+      }} />
 
-      {/* Overlay tone + border depth */}
-      <div
-        className="absolute inset-0 pointer-events-none sb-borderGlow"
-        style={{ background: msg.bgOverlay }}
-      />
+      {/* ═══ BG-3: AURORA BLOBS (animated, pointer-reactive) ═══ */}
+      <div className="absolute inset-0 pointer-events-none SBa" style={{
+        animation:'SB-aurora 10s ease-in-out infinite',
+        background:`
+          radial-gradient(500px 420px at 22% 35%, ${pal.a}55 0%, ${pal.a}12 35%, transparent 65%),
+          radial-gradient(480px 400px at 78% 65%, ${pal.b}48 0%, ${pal.b}10 35%, transparent 65%),
+          radial-gradient(350px 350px at 50% 50%, ${pal.c}20 0%, transparent 55%)
+        `,
+        mixBlendMode:'screen',
+      }} />
 
-      {/* Vignette + grain */}
-      <div className="absolute inset-0 pointer-events-none sb-vignette" />
-      <div className="absolute inset-0 pointer-events-none sb-grain" />
+      {/* ═══ BG-4: MESH GRADIENT (shifting) ═══ */}
+      <div className="absolute inset-0 pointer-events-none SBa" style={{
+        background:`linear-gradient(135deg, ${pal.a}18 0%, transparent 30%, ${pal.c}12 50%, transparent 70%, ${pal.b}15 100%)`,
+        backgroundSize:'300% 300%',
+        animation:'SB-mesh 14s ease-in-out infinite',
+        mixBlendMode:'screen',
+        opacity:.6,
+      }} />
 
-      {/* Particles */}
-      <div className="absolute inset-0 pointer-events-none">
-        {particleSeeds.slice(0, particleCount).map((p) => {
-          const color = msg.particleColors[p.id % msg.particleColors.length];
-          return (
-            <span
-              key={p.id}
-              className="absolute rounded-full sb-anim"
-              style={{
-                top: `${p.top}%`,
-                left: `${p.left}%`,
-                width: `${p.size}px`,
-                height: `${p.size}px`,
-                background: color,
-                opacity: p.alpha,
-                boxShadow: `0 0 18px ${color}70, 0 0 42px ${color}20`,
-                '--dx': `${p.driftX}px`,
-                '--dy': `${p.driftY}px`,
-                '--a': `${p.alpha}`,
-                animation: `sb-float ${p.dur}s ease-in-out ${p.delay}s infinite`,
-                transform: 'translate3d(calc(var(--mx) * 2px), calc(var(--my) * 2px), 0)',
-              } as React.CSSProperties}
-            />
+      {/* ═══ BG-5: TOP SPECULAR HIGHLIGHT ═══ */}
+      <div className="absolute inset-0 pointer-events-none" style={{
+        background:'radial-gradient(120% 50% at 50% -10%, rgba(255,255,255,.08) 0%, transparent 55%)',
+      }} />
+
+      {/* ═══ BG-6: BOTTOM DEPTH SHADOW ═══ */}
+      <div className="absolute inset-0 pointer-events-none" style={{
+        background:'linear-gradient(180deg, transparent 50%, rgba(0,0,0,.45) 100%)',
+      }} />
+
+      {/* ═══ BG-7: NOISE GRAIN ═══ */}
+      <div className="absolute inset-0 pointer-events-none opacity-[.18]" style={{
+        backgroundImage:`url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.06'/%3E%3C/svg%3E")`,
+        backgroundSize:'128px 128px',
+        mixBlendMode:'overlay',
+      }} />
+
+      {/* ═══ BG-8: PARTICLES ═══ */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+        {seeds.slice(0,pc).map(p=>{
+          const c=pal.spark[p.i%pal.spark.length];
+          return(
+            <span key={p.i} className="absolute rounded-full SBa" style={{
+              top:`${p.y}%`,left:`${p.x}%`,
+              width:p.s,height:p.s,
+              background:`radial-gradient(circle,${c} 0%,${c}00 70%)`,
+              boxShadow:`0 0 ${p.s*4}px ${c}60, 0 0 ${p.s*8}px ${c}25`,
+              filter:p.blur?'blur(1px)':undefined,
+              '--dx':`${p.dx}px`,'--dy':`${p.dy}px`,'--a':`${p.a}`,
+              animation:`SB-float ${p.dur}s ease-in-out ${p.del}s infinite`,
+            } as React.CSSProperties} />
           );
         })}
       </div>
 
-      {/* Shine */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-45">
-        <div
-          className="absolute inset-0 w-1/3 bg-gradient-to-r from-transparent via-white/55 to-transparent sb-will"
-          style={{
-            animation: 'sb-shine 9s ease-in-out infinite',
-            transform: 'translate3d(calc(var(--mx) * 10px), calc(var(--my) * 6px), 0)',
-          }}
-        />
+      {/* ═══ BG-9: SHINE SWEEP ═══ */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute inset-y-0 w-[45%] SBa" style={{
+          background:'linear-gradient(90deg,transparent 0%,rgba(255,255,255,.04) 30%,rgba(255,255,255,.14) 50%,rgba(255,255,255,.04) 70%,transparent 100%)',
+          animation:'SB-shine 9s ease-in-out 1.5s infinite',
+        }} />
       </div>
 
-      {/* Accent line */}
-      <div
-        className="absolute bottom-0 left-0 right-0 h-[2.5px]"
-        style={{
-          background: `linear-gradient(90deg, ${msg.accentGlow}, ${msg.secondaryGlow})`,
-          boxShadow: `0 0 28px ${msg.accentGlow}, 0 0 42px ${msg.secondaryGlow}`,
-        }}
-      />
+      {/* ═══ BG-10: TOP EDGE LIGHT ═══ */}
+      <div className="absolute top-0 left-6 right-6 h-px pointer-events-none" style={{
+        background:`linear-gradient(90deg, transparent 0%, ${pal.a}35 20%, rgba(255,255,255,.2) 50%, ${pal.b}35 80%, transparent 100%)`,
+      }} />
 
-      {/* Content */}
+      {/* ═══ BG-11: BOTTOM ACCENT BAR ═══ */}
+      <div className="absolute bottom-0 inset-x-0 h-[2.5px] pointer-events-none overflow-hidden">
+        <div className="h-full" style={{
+          background:`linear-gradient(90deg, transparent 0%, ${pal.a} 15%, ${pal.c} 40%, ${pal.b} 65%, ${pal.a} 85%, transparent 100%)`,
+          backgroundSize:'200% 100%',
+          animation: noMo?undefined:'SB-mesh 5s linear infinite',
+          boxShadow:`0 0 20px ${pal.a}80, 0 0 40px ${pal.b}50, 0 -4px 16px ${pal.c}30`,
+        }} />
+        {slides.length>1&&!noMo&&!paused&&!hover&&(
+          <div className="absolute bottom-0 left-0 h-full origin-left" style={{
+            background:'rgba(255,255,255,.55)',
+            animation:`SB-prog ${AUTO_MS}ms linear infinite`,
+          }} />
+        )}
+      </div>
+
+      {/* ═══ CONTENT ═══ */}
       <div
         className={clsx(
-          "relative z-10 w-full h-full flex flex-col lg:flex-row items-start lg:items-center justify-between",
-          "p-6 lg:px-8 gap-4 lg:gap-6",
-          isAnimating
-            ? "sb-will sb-anim animate-[sb-slide-out_0.52s_ease-out_forwards]"
-            : "sb-will sb-anim animate-[sb-slide-in_0.55s_ease-out_forwards]"
+          'relative z-10 w-full h-full flex flex-col lg:flex-row',
+          'items-start lg:items-center justify-between',
+          'px-5 py-[18px] lg:px-8 lg:py-6 gap-3 lg:gap-6',
+          'SBa',
+          anim==='out'&&`animate-[SB-out_${SLIDE_DUR}ms_cubic-bezier(.4,0,.2,1)_forwards]`,
+          anim==='in'&&`animate-[SB-in_${SLIDE_DUR}ms_cubic-bezier(0,0,.2,1)_forwards]`,
         )}
-        style={{
-          transform: 'translate3d(calc(var(--mx) * 2px), calc(var(--my) * 2px), 0)',
-        }}
+        style={{transform:'translate3d(calc(var(--mx)*2px),calc(var(--my)*2px),0)'}}
       >
-        {/* Left */}
-        <div className="flex items-start lg:items-center gap-4 lg:gap-6 flex-1 min-w-0 w-full">
-          {/* Icon */}
-          <div className="relative shrink-0">
+        {/* ── LEFT ── */}
+        <div className="flex items-start lg:items-center gap-4 lg:gap-5 flex-1 min-w-0 w-full">
+
+          {/* ── ICON ── */}
+          <div className="relative shrink-0 group/icon">
+            {/* Outer aurora glow */}
+            <div className="absolute -inset-4 rounded-3xl pointer-events-none SBa" style={{
+              background:`
+                radial-gradient(circle at 35% 35%, ${pal.a}60 0%, transparent 55%),
+                radial-gradient(circle at 65% 65%, ${pal.b}50 0%, transparent 55%)
+              `,
+              filter:'blur(14px)',
+              animation:'SB-iglow 4s ease-in-out infinite',
+              '--g1':`${pal.a}35`,'--g2':`${pal.b}25`,'--g3':`${pal.c}15`,
+            } as React.CSSProperties} />
+
+            {/* Icon card */}
             <div
-              className="absolute -inset-4 rounded-2xl opacity-60 pointer-events-none"
+              className="relative w-[52px] h-[52px] lg:w-[62px] lg:h-[62px] rounded-[18px] lg:rounded-[20px] overflow-hidden"
               style={{
-                background: `radial-gradient(circle at 30% 30%, ${msg.accentGlow} 0%, transparent 65%),
-                             radial-gradient(circle at 70% 70%, ${msg.secondaryGlow} 0%, transparent 65%)`
-              }}
-            />
-            <div
-              className="relative w-14 h-14 lg:w-[72px] lg:h-[72px] rounded-[18px] overflow-hidden border border-white/30 bg-white/15 backdrop-blur-xl shadow-[0_24px_80px_rgba(0,0,0,0.7)]"
-              style={{
-                transform: 'translate3d(calc(var(--mx) * 5px), calc(var(--my) * 5px), 0)',
+                background:`linear-gradient(145deg,rgba(255,255,255,.14) 0%,rgba(255,255,255,.04) 50%,rgba(0,0,0,.1) 100%)`,
+                backdropFilter:'blur(20px) saturate(1.8)',
+                WebkitBackdropFilter:'blur(20px) saturate(1.8)',
+                border:'1px solid rgba(255,255,255,.12)',
+                boxShadow:`
+                  inset 0 1px 0 rgba(255,255,255,.2),
+                  inset 0 -1px 0 rgba(0,0,0,.25),
+                  0 16px 48px -8px rgba(0,0,0,.7),
+                  0 0 0 1px rgba(255,255,255,.06)
+                `,
+                transform:'translate3d(calc(var(--mx)*5px),calc(var(--my)*5px),0)',
               }}
             >
-              <div className="absolute inset-0 bg-gradient-to-br from-white/30 via-white/10 to-transparent" />
-              <div className="absolute top-0.5 inset-x-4 h-[2.5px] bg-gradient-to-r from-transparent via-white/90 to-transparent blur-sm" />
+              {/* Color wash inside card */}
+              <div className="absolute inset-0" style={{
+                background:`linear-gradient(145deg, ${pal.a}30 0%, transparent 45%, ${pal.b}22 100%)`,
+              }} />
+              {/* Specular top */}
+              <div className="absolute top-0 left-2 right-2 h-[1.5px]"
+                style={{background:`linear-gradient(90deg,transparent,${pal.c}50,rgba(255,255,255,.5),${pal.c}50,transparent)`}}
+              />
+              {/* Centered icon */}
               <div className="absolute inset-0 flex items-center justify-center">
-                <Icon size={32} className="text-white drop-shadow-[0_10px_25px_rgba(0,0,0,0.8)]" strokeWidth={2.8} />
+                <Ic size={26} strokeWidth={2.2} className="text-white relative z-10"
+                  style={{filter:`drop-shadow(0 0 10px ${pal.a}90) drop-shadow(0 4px 8px rgba(0,0,0,.5))`}}
+                />
               </div>
             </div>
+
+            {/* Special star */}
+            {sl.special&&(
+              <div className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full flex items-center justify-center SBa"
+                style={{
+                  background:`linear-gradient(135deg,${pal.c},${pal.a})`,
+                  boxShadow:`0 0 12px ${pal.c}80, 0 2px 8px rgba(0,0,0,.4)`,
+                  animation:'SB-badge 2s ease-in-out infinite',
+                }}>
+                <Star size={10} fill="currentColor" className="text-white" />
+              </div>
+            )}
           </div>
 
-          {/* Text */}
-          <div className="flex flex-col gap-2 flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-[10px] lg:text-[11px] font-extrabold uppercase tracking-[0.15em] text-white/90 bg-black/35 border border-white/20 backdrop-blur-lg px-3.5 py-1.5 rounded-[10px] shadow-lg">
-                {msg.category[lang] || msg.category.en}
+          {/* ── TEXT ── */}
+          <div className="flex flex-col gap-[5px] lg:gap-[7px] flex-1 min-w-0">
+            {/* Tag + Badges */}
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {/* Category */}
+              <span className="inline-flex items-center text-[9px] lg:text-[10px] font-bold uppercase tracking-[.13em] text-white/80 bg-white/[.06] border border-white/[.1] backdrop-blur-sm px-2.5 py-[3px] rounded-full">
+                {sl.tag[lang]||sl.tag.en}
               </span>
-
-              <div className="flex items-center gap-2 flex-wrap">
-                {msg.badges?.slice(0, 2).map((b, idx) => (
-                  <div
-                    key={idx}
-                    className={clsx(
-                      "px-3 py-1 rounded-[10px] text-[10px] font-black uppercase tracking-wide text-white border border-white/25 backdrop-blur-xl",
-                      b.color,
-                      b.glow
-                    )}
-                    style={{ animation: reduceMotion ? undefined : 'sb-badge 3.2s ease-in-out infinite' }}
-                  >
-                    {b.text[lang] || b.text.en}
-                  </div>
-                ))}
-              </div>
+              {/* Badges */}
+              {sl.badges.slice(0,2).map((b,i)=>(
+                <span key={i} className={clsx(
+                  'inline-flex items-center gap-[3px] px-2.5 py-[3px] rounded-full',
+                  'text-[9px] lg:text-[10px] font-extrabold uppercase tracking-wide text-white',
+                  `bg-gradient-to-r ${b.bg}`,
+                  'border border-white/20',
+                  'SBa',
+                )} style={{
+                  boxShadow:`0 2px 12px rgba(0,0,0,.3), 0 0 16px ${pal.a}18`,
+                  animation:noMo?undefined:`SB-badge ${2.6+i*.3}s ease-in-out infinite`,
+                }}>
+                  {b.icon&&<b.icon size={9} strokeWidth={3}/>}
+                  {b.label[lang]||b.label.en}
+                </span>
+              ))}
             </div>
 
-            <h2 className="text-[22px] lg:text-[28px] font-black leading-[1.15] tracking-[-0.02em] text-white drop-shadow-[0_12px_30px_rgba(0,0,0,0.8)] line-clamp-1">
-              {msg.title[lang] || msg.title.en}
+            {/* Title — gradient animated text */}
+            <h2 className="text-[19px] lg:text-[24px] font-black leading-[1.15] tracking-tight line-clamp-1"
+              style={{
+                background:`linear-gradient(90deg, #fff 0%, ${pal.c} 30%, #fff 50%, ${pal.c} 70%, #fff 100%)`,
+                backgroundSize:'300% 100%',
+                WebkitBackgroundClip:'text',
+                WebkitTextFillColor:'transparent',
+                backgroundClip:'text',
+                animation: noMo?undefined:'SB-title 6s ease-in-out infinite',
+                filter:`drop-shadow(0 2px 8px rgba(0,0,0,.5))`,
+              }}>
+              {sl.title[lang]||sl.title.en}
             </h2>
 
-            <p className="text-[13px] lg:text-[15px] font-semibold leading-snug text-white/94 drop-shadow-[0_10px_24px_rgba(0,0,0,0.7)] line-clamp-1">
-              {msg.subtitle[lang] || msg.subtitle.en}
+            {/* Subtitle */}
+            <p className="text-[11px] lg:text-[13px] font-semibold leading-snug text-white/65 line-clamp-1 tracking-wide"
+              style={{textShadow:'0 1px 8px rgba(0,0,0,.5)'}}>
+              {sl.sub[lang]||sl.sub.en}
             </p>
           </div>
         </div>
 
-        {/* Right */}
-        <div className="flex items-center justify-between w-full lg:w-auto lg:gap-6 shrink-0">
-          <div className="hidden lg:block h-20 w-px bg-white/25 shadow-[0_0_10px_rgba(255,255,255,0.2)]" />
+        {/* ── RIGHT ── */}
+        <div className="flex items-center justify-between w-full lg:w-auto lg:gap-4 shrink-0">
 
+          {/* Divider (lg) */}
+          <div className="hidden lg:block h-16 w-px" style={{
+            background:`linear-gradient(180deg, transparent 0%, ${pal.a}30 25%, rgba(255,255,255,.12) 50%, ${pal.b}30 75%, transparent 100%)`,
+          }} />
+
+          {/* CTA — premium shimmer button */}
           <button
-            className="group/cta relative px-7 py-3.5 rounded-[18px] bg-white/15 hover:bg-white/22 border border-white/30 backdrop-blur-xl transition-all duration-300 hover:scale-105 hover:shadow-[0_24px_70px_rgba(255,255,255,0.2)] active:scale-100"
-            aria-label={`${msg.cta[lang] || msg.cta.en} - ${msg.title[lang] || msg.title.en}`}
-            role="button"
-            tabIndex={0}
-            style={{
-              transform: 'translate3d(calc(var(--mx) * -3px), calc(var(--my) * -3px), 0)',
-            }}
-          >
-            <div className="absolute inset-0 bg-gradient-to-b from-white/25 via-white/8 to-black/25 rounded-[18px]" />
-            <div className="absolute top-0 inset-x-6 h-[2.5px] bg-gradient-to-r from-transparent via-white/90 to-transparent blur-sm" />
-
-            <div className="relative flex items-center gap-3">
-              <span className="text-[13px] lg:text-[15px] font-black text-white tracking-wide">
-                {msg.cta[lang] || msg.cta.en}
-              </span>
-              <ArrowRight
-                size={18}
-                className="text-white group-hover/cta:translate-x-1.5 transition-transform duration-300"
-                strokeWidth={3.2}
-              />
-            </div>
-
-            {msg.isSpecial && (
-              <>
-                <Heart
-                  size={13}
-                  className="absolute -top-1.5 -right-1.5 text-red-400 drop-shadow-[0_0_10px_rgba(248,113,113,0.9)]"
-                  fill="currentColor"
-                  style={{ animation: reduceMotion ? undefined : 'sb-badge 2.2s ease-in-out infinite' }}
-                />
-                <Sparkles
-                  size={11}
-                  className="absolute -bottom-1 -left-1 text-yellow-300 drop-shadow-[0_0_10px_rgba(253,224,71,0.9)]"
-                  style={{ animation: reduceMotion ? undefined : 'sb-badge 2.6s ease-in-out infinite' }}
-                />
-              </>
+            className={clsx(
+              'group/c relative overflow-hidden',
+              'px-5 py-2.5 lg:px-6 lg:py-3',
+              'rounded-[14px] lg:rounded-[16px]',
+              'border border-white/15',
+              'transition-all duration-300',
+              'hover:scale-[1.04] hover:border-white/30',
+              'active:scale-[.97]',
+              'focus-visible:outline-2 focus-visible:outline-white/40 focus-visible:outline-offset-2',
             )}
+            style={{
+              background:`linear-gradient(145deg,rgba(255,255,255,.1) 0%,rgba(255,255,255,.03) 100%)`,
+              backdropFilter:'blur(16px)',
+              WebkitBackdropFilter:'blur(16px)',
+              boxShadow:`0 10px 36px -8px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.12)`,
+              transform:'translate3d(calc(var(--mx)*-3px),calc(var(--my)*-3px),0)',
+            }}
+            aria-label={`${sl.cta[lang]||sl.cta.en} — ${sl.title[lang]||sl.title.en}`}
+          >
+            {/* Shimmer */}
+            <div className="absolute inset-0 opacity-0 group-hover/c:opacity-100 transition-opacity duration-500" style={{
+              background:`linear-gradient(90deg, transparent 20%, ${pal.a}15 40%, ${pal.c}20 50%, ${pal.b}15 60%, transparent 80%)`,
+              backgroundSize:'200% 100%',
+              animation:'SB-cta 2s linear infinite',
+            }} />
+            {/* Hover color fill */}
+            <div className="absolute inset-0 opacity-0 group-hover/c:opacity-100 transition-opacity duration-300" style={{
+              background:`linear-gradient(135deg, ${pal.a}15, ${pal.b}12)`,
+            }} />
+            {/* Top specular */}
+            <div className="absolute top-0 left-3 right-3 h-px bg-gradient-to-r from-transparent via-white/35 to-transparent" />
+            {/* Label */}
+            <span className="relative flex items-center gap-2">
+              <span className="text-[11px] lg:text-[13px] font-bold text-white tracking-wide">{sl.cta[lang]||sl.cta.en}</span>
+              <ArrowRight size={14} strokeWidth={2.5}
+                className="text-white/70 group-hover/c:text-white group-hover/c:translate-x-0.5 transition-all duration-300"
+              />
+            </span>
           </button>
 
-          <div className="flex flex-col items-end gap-2.5">
-            <div className="flex items-center gap-2.5 px-4 py-2.5 rounded-[12px] bg-black/30 border border-white/25 backdrop-blur-xl shadow-lg">
-              <Activity size={13} className="text-emerald-300" strokeWidth={3.2} />
-              <span className="text-[10px] font-black text-white uppercase tracking-[0.12em]">
-                {isLoadingAI ? 'Loading' : 'Live'}
+          {/* Status + Dots */}
+          <div className="flex flex-col items-end gap-2 ml-3 lg:ml-0">
+            {/* Live pill */}
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full" style={{
+              background:'rgba(0,0,0,.3)',
+              border:'1px solid rgba(255,255,255,.08)',
+              backdropFilter:'blur(12px)',
+            }}>
+              <Activity size={10} strokeWidth={3} className="text-emerald-400" />
+              <span className="text-[8px] font-bold text-white/80 uppercase tracking-[.08em]">
+                {aiSync?'Sync':'Live'}
               </span>
-              <span
-                className="relative w-2 h-2 rounded-full bg-emerald-400"
-                style={{
-                  boxShadow: '0 0 14px rgba(52,211,153,1), 0 0 28px rgba(52,211,153,0.6)',
-                }}
-              />
+              <span className="relative flex h-[6px] w-[6px]">
+                {!aiSync&&(
+                  <span className="absolute inset-0 rounded-full bg-emerald-400 SBa"
+                    style={{animation:'SB-ping 1.6s ease-out infinite'}}
+                  />
+                )}
+                <span className={clsx('relative rounded-full h-[6px] w-[6px]',aiSync?'bg-amber-400':'bg-emerald-400')}
+                  style={{boxShadow:aiSync?'0 0 6px rgba(251,191,36,.8)':'0 0 8px rgba(52,211,153,.9), 0 0 20px rgba(52,211,153,.35)'}}
+                />
+              </span>
             </div>
 
-            <div className="flex gap-2">
-              {messages.map((m, idx) => (
-                <span
-                  key={m.id}
-                  className={clsx(
-                    "h-1.5 rounded-full transition-all duration-500",
-                    idx === safeIndex ? "w-10" : "w-1.5 bg-white/35"
-                  )}
-                  style={idx === safeIndex ? {
-                    background: `linear-gradient(90deg, ${msg.accentGlow}, ${msg.secondaryGlow})`,
-                    boxShadow: `0 0 18px ${msg.accentGlow}, 0 0 10px ${msg.secondaryGlow}`
-                  } : undefined}
-                />
-              ))}
-            </div>
+            {/* Dots */}
+            {slides.length>1&&(
+              <div className="flex items-center gap-[5px]" role="tablist">
+                {slides.map((_,i)=>(
+                  <button key={i} role="tab" aria-selected={i===si}
+                    aria-label={`Slide ${i+1}`} onClick={()=>go(i)}
+                    className={clsx(
+                      'rounded-full transition-all duration-400',
+                      'focus-visible:outline-1 focus-visible:outline-white/40',
+                      i===si?'h-[6px] w-8':'h-[5px] w-[5px] bg-white/20 hover:bg-white/40',
+                    )}
+                    style={i===si?{
+                      background:`linear-gradient(90deg,${pal.a},${pal.c},${pal.b})`,
+                      boxShadow:`0 0 14px ${pal.a}60, 0 0 6px ${pal.b}40`,
+                    }:undefined}
+                  />
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Corner dots */}
-      <div className="absolute top-5 left-7 flex gap-2 opacity-65 pointer-events-none">
-        <span className="w-2.5 h-2.5 rounded-full bg-white/90 shadow-[0_0_10px_rgba(255,255,255,0.6)]" />
-        <span className="w-2.5 h-2.5 rounded-full bg-white/60 shadow-[0_0_8px_rgba(255,255,255,0.5)]" />
-        <span className="w-2.5 h-2.5 rounded-full bg-white/40 shadow-[0_0_6px_rgba(255,255,255,0.4)]" />
+      {/* ═══ CORNER JEWELS ═══ */}
+      <div className="absolute top-[14px] left-[18px] flex gap-[5px] opacity-50 pointer-events-none">
+        {[pal.a,pal.c,pal.b].map((c,i)=>(
+          <span key={i} className="w-[6px] h-[6px] rounded-full"
+            style={{background:c, boxShadow:`0 0 8px ${c}70`}}
+          />
+        ))}
       </div>
 
-      {/* Special decorations */}
-      {msg.isSpecial && (
+      {/* ═══ SPECIAL DECORATIONS ═══ */}
+      {sl.special&&(
         <>
-          <Sparkles
-            size={20}
-            className="absolute top-5 right-7 text-yellow-300 pointer-events-none drop-shadow-[0_0_20px_rgba(253,224,71,0.85)]"
-            strokeWidth={3}
+          <Sparkles size={18} strokeWidth={2.5}
+            className="absolute top-[14px] right-[18px] pointer-events-none SBa"
+            style={{color:pal.c,filter:`drop-shadow(0 0 14px ${pal.c})`,animation:'SB-badge 2.5s ease-in-out infinite'}}
           />
-          <Zap
-            size={16}
-            className="absolute bottom-5 right-7 text-green-300 pointer-events-none drop-shadow-[0_0_20px_rgba(134,239,172,0.85)]"
-            fill="currentColor"
+          <Heart size={12} fill="currentColor"
+            className="absolute bottom-[14px] right-[18px] pointer-events-none SBa"
+            style={{color:'#f87171',filter:'drop-shadow(0 0 10px rgba(248,113,113,.8))',animation:'SB-badge 2s ease-in-out .3s infinite'}}
+          />
+          <Zap size={14} fill="currentColor"
+            className="absolute bottom-[14px] left-[18px] pointer-events-none SBa"
+            style={{color:pal.c,filter:`drop-shadow(0 0 10px ${pal.c}90)`,animation:'SB-badge 2.8s ease-in-out .6s infinite'}}
           />
         </>
       )}

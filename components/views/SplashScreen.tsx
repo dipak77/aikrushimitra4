@@ -1,400 +1,704 @@
-import React, { useEffect, useRef, useState } from "react";
-import { Tractor, Wheat, Sparkles, Leaf, TrendingUp, Droplets } from "lucide-react";
+import React, { useEffect, useRef, useState, useMemo } from "react";
+import { Sprout, Wheat, Leaf, TrendingUp, Droplets, Sun, CloudRain, Zap } from "lucide-react";
 
-const DURATION = 3500;
+/* ═══════════════════════════════════════════════════════════════
+   CONFIG
+   ═══════════════════════════════════════════════════════════════ */
+
+const DURATION = 4200;
+const EXIT_MS = 800;
+
 const easeOutExpo = (x: number) => (x === 1 ? 1 : 1 - Math.pow(2, -10 * x));
 
+/* ── Colors ── */
+const C = {
+  bg: '#020807',
+  emerald: { h: 152, s: 76, l: 46 },
+  teal:    { h: 168, s: 80, l: 40 },
+  gold:    { h: 43,  s: 96, l: 56 },
+  cyan:    { h: 185, s: 90, l: 48 },
+};
+
+const h = (c: { h: number; s: number; l: number }, a = 1) =>
+  `hsla(${c.h},${c.s}%,${c.l}%,${a})`;
+
+/* ── Phases ── */
+const PHASES = [
+  { text: 'Initializing sensors', icon: '◉', color: h(C.emerald) },
+  { text: 'Analyzing field data', icon: '◎', color: h(C.teal) },
+  { text: 'Building crop models', icon: '◈', color: h(C.gold) },
+  { text: 'System ready', icon: '✦', color: '#fff' },
+];
+
+/* ═══════════════════════════════════════════════════════════════
+   COMPONENT
+   ═══════════════════════════════════════════════════════════════ */
+
 export default function SplashScreen({ onComplete }: { onComplete: () => void }) {
-  const [progress, setProgress] = useState(0);
+  const [p, setP] = useState(0);         // progress 0-100
+  const [ph, setPh] = useState(0);       // phase index
   const [exit, setExit] = useState(false);
-  const raf = useRef<number>(0);
-  const start = useRef<number>(0);
-  const completedRef = useRef(false);
+  const [on, setOn] = useState(false);   // mounted
+
+  const raf = useRef(0);
+  const t0 = useRef(0);
+  const done = useRef(false);
+
+  /* stable seeds */
+  const dots = useMemo(() => Array.from({ length: 30 }, (_, i) => ({
+    i, x: Math.random() * 100, y: Math.random() * 100,
+    s: 1.5 + Math.random() * 3.5,
+    dx: -15 + Math.random() * 30, dy: -20 - Math.random() * 15,
+    dur: 5 + Math.random() * 5, del: Math.random() * 5,
+    a: .1 + Math.random() * .35,
+    hue: C.emerald.h + (Math.random() - .5) * 40,
+  })), []);
+
+  const rings = useMemo(() => Array.from({ length: 3 }, (_, i) => ({
+    i, size: 140 + i * 48, dur: 8 + i * 3, del: i * .8,
+    opacity: .12 - i * .03,
+  })), []);
+
+  const stalks = useMemo(() => Array.from({ length: 11 }, (_, i) => ({
+    i, h: 24 + (i * 7) % 22, golden: i % 4 === 0,
+    trigger: (i / 11) * 65 + 8,
+  })), []);
 
   useEffect(() => {
+    setOn(true);
     const finish = () => {
-      if (completedRef.current) return;
-      completedRef.current = true;
+      if (done.current) return;
+      done.current = true;
+      setPh(3);
       setExit(true);
-      setTimeout(onComplete, 600);
+      setTimeout(onComplete, EXIT_MS);
     };
-
-    const animate = (t: number) => {
-      if (!start.current) start.current = t;
-      const elapsed = t - start.current;
-      const p = Math.min(elapsed / DURATION, 1);
-      setProgress(Math.round(easeOutExpo(p) * 100));
-      if (p < 1) raf.current = requestAnimationFrame(animate);
-      else setTimeout(finish, 160);
+    const tick = (t: number) => {
+      if (!t0.current) t0.current = t;
+      const raw = Math.min((t - t0.current) / DURATION, 1);
+      const val = Math.round(easeOutExpo(raw) * 100);
+      setP(val);
+      if (val < 25) setPh(0);
+      else if (val < 55) setPh(1);
+      else if (val < 85) setPh(2);
+      else setPh(3);
+      if (raw < 1) raf.current = requestAnimationFrame(tick);
+      else setTimeout(finish, 400);
     };
-
-    raf.current = requestAnimationFrame(animate);
-    const safetyTimer = setTimeout(finish, DURATION + 1500);
-
-    return () => {
-      if (raf.current) cancelAnimationFrame(raf.current);
-      clearTimeout(safetyTimer);
-    };
+    raf.current = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf.current);
   }, [onComplete]);
 
-  const status =
-    progress < 22 ? "INITIALIZING" :
-    progress < 48 ? "LOADING MODELS" :
-    progress < 74 ? "SYNCING DATA" :
-    progress < 94 ? "OPTIMIZING" : "READY";
+  const phase = PHASES[ph];
+  const circumference = 2 * Math.PI * 44;
+  const dashOffset = circumference * (1 - p / 100);
 
   return (
     <div
-      className={[
-        "fixed inset-0 z-[9999] overflow-hidden",
-        "flex items-center justify-center",
-        "transition-[opacity,transform,filter] duration-600 ease-out",
-        exit ? "opacity-0 scale-[1.02] blur-[1px]" : "opacity-100 scale-100 blur-0",
-      ].join(" ")}
-      style={{
-        background:
-          "radial-gradient(1100px 520px at 50% 18%, rgba(16,185,129,0.18), transparent 60%)," +
-          "radial-gradient(900px 520px at 78% 35%, rgba(34,211,238,0.12), transparent 58%)," +
-          "linear-gradient(180deg, #061513 0%, #020617 78%)",
-      }}
-      aria-label="Loading AI Krushi Mitra"
+      className={`SP ${on ? 'SP--on' : ''} ${exit ? 'SP--exit' : ''}`}
+      role="status"
+      aria-label="Loading"
     >
-      {/* DJ LASER RIG (lightweight) */}
-      <div className="absolute inset-0 pointer-events-none laser-rig">
-        <div className="laser-beam beam-a" />
-        <div className="laser-beam beam-b" />
-        <div className="laser-beam beam-c" />
-        <div className="laser-beam beam-d" />
-        <div className="laser-scanline" />
+      <style>{`
+/* ═══════════════════════════════════════════════════
+   ROOT
+   ═══════════════════════════════════════════════════ */
+.SP {
+  position: fixed; inset: 0; z-index: 9999;
+  display: flex; align-items: center; justify-content: center;
+  overflow: hidden; background: ${C.bg};
+  opacity: 0;
+  transition: opacity ${EXIT_MS}ms cubic-bezier(.4,0,.2,1),
+              transform ${EXIT_MS}ms cubic-bezier(.4,0,.2,1);
+  color-scheme: dark;
+}
+.SP--on { opacity: 1; }
+.SP--exit { opacity: 0; transform: scale(1.04); pointer-events: none; }
+
+/* ═══════════════════════════════════════════════════
+   BACKGROUND LAYERS
+   ═══════════════════════════════════════════════════ */
+
+/* 1 — Deep radial color wash */
+.SP-bg1 {
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(ellipse 90% 70% at 50% 25%, ${h(C.emerald, .1)} 0%, transparent 55%),
+    radial-gradient(ellipse 70% 80% at 20% 80%, ${h(C.teal, .06)} 0%, transparent 50%),
+    radial-gradient(ellipse 60% 60% at 85% 70%, ${h(C.gold, .04)} 0%, transparent 50%);
+}
+
+/* 2 — Aurora blobs */
+.SP-aurora {
+  position: absolute; inset: -20%;
+  animation: SP-aurora-drift 16s ease-in-out infinite;
+  mix-blend-mode: screen;
+}
+.SP-aurora-a, .SP-aurora-b, .SP-aurora-c {
+  position: absolute; border-radius: 50%; filter: blur(80px);
+}
+.SP-aurora-a {
+  width: 420px; height: 420px; top: 8%; left: 15%;
+  background: ${h(C.emerald, .18)};
+  animation: SP-blob-a 12s ease-in-out infinite;
+}
+.SP-aurora-b {
+  width: 350px; height: 350px; bottom: 15%; right: 10%;
+  background: ${h(C.teal, .14)};
+  animation: SP-blob-b 14s ease-in-out infinite;
+}
+.SP-aurora-c {
+  width: 280px; height: 280px; top: 40%; left: 50%;
+  background: ${h(C.gold, .08)};
+  animation: SP-blob-c 10s ease-in-out infinite;
+}
+
+/* 3 — Moving grid floor */
+.SP-grid-wrap {
+  position: absolute; inset: 0;
+  perspective: 550px; overflow: hidden;
+  mask-image: linear-gradient(to bottom, transparent 15%, black 55%, black 80%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 15%, black 55%, black 80%, transparent 100%);
+  opacity: .14;
+}
+.SP-grid {
+  position: absolute; bottom: -55%; left: -20%; width: 140%; height: 110%;
+  background-image:
+    linear-gradient(${h(C.emerald, .3)} 1px, transparent 1px),
+    linear-gradient(90deg, ${h(C.emerald, .3)} 1px, transparent 1px);
+  background-size: 48px 48px;
+  transform: rotateX(68deg);
+  animation: SP-grid-move 22s linear infinite;
+}
+
+/* 4 — Scan line */
+.SP-scanline {
+  position: absolute; left: 0; right: 0; height: 2px;
+  background: linear-gradient(90deg, transparent, ${h(C.emerald, .25)}, ${h(C.cyan, .3)}, ${h(C.emerald, .25)}, transparent);
+  box-shadow: 0 0 20px ${h(C.emerald, .15)};
+  animation: SP-scan 4s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* 5 — Film grain */
+.SP-grain {
+  position: absolute; inset: 0; pointer-events: none;
+  opacity: .025; mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 128px;
+}
+
+/* 6 — Vignette */
+.SP-vig {
+  position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(ellipse 65% 55% at 50% 45%, transparent 0%, ${C.bg} 100%);
+}
+
+/* ═══════════════════════════════════════════════════
+   PARTICLES
+   ═══════════════════════════════════════════════════ */
+.SP-dot {
+  position: absolute; border-radius: 50%; pointer-events: none;
+  animation: SP-float var(--d) ease-in-out var(--dl) infinite;
+}
+
+/* ═══════════════════════════════════════════════════
+   CONTENT STAGE
+   ═══════════════════════════════════════════════════ */
+.SP-stage {
+  position: relative; z-index: 10;
+  width: 100%; max-width: 440px;
+  padding: 0 24px;
+  display: flex; flex-direction: column; align-items: center;
+}
+
+/* ═══════════════════════════════════════════════════
+   LOGO ORB — concentric rings + icon
+   ═══════════════════════════════════════════════════ */
+.SP-orb-wrap {
+  position: relative;
+  width: 140px; height: 140px;
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; transform: scale(.7) translateY(16px);
+  transition: all 1s cubic-bezier(.16,1,.3,1) .1s;
+}
+.SP--on .SP-orb-wrap {
+  opacity: 1; transform: scale(1) translateY(0);
+}
+
+/* Ambient glow behind orb */
+.SP-orb-ambient {
+  position: absolute; inset: -40px; border-radius: 50%;
+  background: radial-gradient(circle, ${h(C.emerald, .2)} 0%, transparent 65%);
+  animation: SP-breathe 4s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* Concentric rings */
+.SP-ring {
+  position: absolute; border-radius: 50%;
+  border: 1.5px solid;
+  pointer-events: none;
+}
+
+/* Glass icon card */
+.SP-icon-card {
+  position: relative;
+  width: 76px; height: 76px;
+  border-radius: 22px;
+  display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(145deg, rgba(255,255,255,.1), rgba(255,255,255,.03));
+  backdrop-filter: blur(20px) saturate(1.5);
+  -webkit-backdrop-filter: blur(20px) saturate(1.5);
+  border: 1px solid ${h(C.emerald, .15)};
+  box-shadow:
+    0 0 50px ${h(C.emerald, .12)},
+    0 0 100px ${h(C.emerald, .05)},
+    inset 0 1px 0 rgba(255,255,255,.15),
+    inset 0 -1px 0 rgba(0,0,0,.2);
+  overflow: hidden;
+}
+.SP-icon-card::before {
+  content: '';
+  position: absolute; top: 0; left: 15%; right: 15%; height: 1px;
+  background: linear-gradient(90deg, transparent, ${h(C.emerald, .35)}, rgba(255,255,255,.3), ${h(C.emerald, .35)}, transparent);
+}
+.SP-icon-wash {
+  position: absolute; inset: 0;
+  background: linear-gradient(145deg, ${h(C.emerald, .15)} 0%, transparent 50%, ${h(C.teal, .1)} 100%);
+}
+
+/* ═══════════════════════════════════════════════════
+   CIRCULAR PROGRESS (SVG ring around orb)
+   ═══════════════════════════════════════════════════ */
+.SP-cprog {
+  position: absolute; inset: -12px;
+}
+.SP-cprog-track {
+  fill: none;
+  stroke: ${h(C.emerald, .06)};
+  stroke-width: 2;
+}
+.SP-cprog-fill {
+  fill: none;
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  transition: stroke-dashoffset .2s linear;
+  filter: drop-shadow(0 0 6px ${h(C.emerald, .5)});
+}
+.SP-cprog-glow {
+  fill: none;
+  stroke-width: 6;
+  stroke-linecap: round;
+  transition: stroke-dashoffset .2s linear;
+  opacity: .25;
+  filter: blur(4px);
+}
+
+/* ═══════════════════════════════════════════════════
+   TITLE
+   ═══════════════════════════════════════════════════ */
+.SP-title {
+  margin-top: 32px;
+  font-size: 36px; font-weight: 900;
+  letter-spacing: -.03em; line-height: 1.1;
+  text-align: center;
+  background: linear-gradient(135deg,
+    #fff 0%, ${h(C.emerald, .95)} 25%, #fff 50%, ${h(C.gold, .9)} 75%, #fff 100%);
+  background-size: 300% 100%;
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: SP-title-shine 5s ease-in-out infinite;
+  opacity: 0; transform: translateY(14px);
+  transition: all .9s cubic-bezier(.16,1,.3,1) .2s;
+}
+.SP--on .SP-title { opacity: 1; transform: translateY(0); }
+
+/* ═══════════════════════════════════════════════════
+   SUBTITLE
+   ═══════════════════════════════════════════════════ */
+.SP-sub {
+  margin-top: 10px;
+  display: flex; align-items: center; gap: 12px;
+  opacity: 0; transform: translateY(10px);
+  transition: all .8s ease .35s;
+}
+.SP--on .SP-sub { opacity: 1; transform: translateY(0); }
+.SP-sub-line {
+  height: 1px; width: 32px;
+  background: linear-gradient(90deg, transparent, ${h(C.emerald, .35)});
+}
+.SP-sub-text {
+  font-size: 10px; font-weight: 700;
+  letter-spacing: .22em; text-transform: uppercase;
+  color: ${h(C.emerald, .45)};
+}
+
+/* ═══════════════════════════════════════════════════
+   FEATURE PILLS
+   ═══════════════════════════════════════════════════ */
+.SP-pills {
+  display: flex; gap: 8px; margin-top: 22px;
+  flex-wrap: wrap; justify-content: center;
+}
+.SP-pill {
+  display: flex; align-items: center; gap: 5px;
+  padding: 5px 14px; border-radius: 100px;
+  font-size: 10px; font-weight: 700;
+  color: ${h(C.emerald, .65)};
+  background: ${h(C.emerald, .04)};
+  border: 1px solid ${h(C.emerald, .08)};
+  backdrop-filter: blur(8px);
+  opacity: 0; transform: translateY(10px) scale(.92);
+  transition: all .6s cubic-bezier(.16,1,.3,1);
+}
+.SP--on .SP-pill { opacity: 1; transform: translateY(0) scale(1); }
+
+/* ═══════════════════════════════════════════════════
+   WHEAT FIELD SCENE
+   ═══════════════════════════════════════════════════ */
+.SP-field {
+  position: relative; width: 100%; height: 90px;
+  margin-top: 28px; display: flex;
+  align-items: flex-end; justify-content: center;
+  overflow: hidden;
+}
+.SP-field-gnd {
+  position: absolute; bottom: 0; left: 8%; right: 8%; height: 1.5px;
+  background: linear-gradient(90deg,
+    transparent, ${h(C.emerald, .25)}, ${h(C.gold, .2)}, ${h(C.emerald, .25)}, transparent);
+  box-shadow: 0 0 10px ${h(C.emerald, .08)};
+}
+.SP-field-glow {
+  position: absolute; bottom: -16px; left: 15%; right: 15%; height: 32px;
+  background: radial-gradient(ellipse at 50% 0%, ${h(C.emerald, .06)} 0%, transparent 70%);
+  pointer-events: none;
+}
+.SP-stalks {
+  display: flex; align-items: flex-end;
+  justify-content: center; gap: 5px;
+  padding: 0 16px; position: relative; z-index: 2;
+}
+.SP-stalk {
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: flex-end;
+  transform-origin: bottom center;
+  transition: all .6s cubic-bezier(.34,1.56,.64,1);
+}
+
+/* Beam scanner */
+.SP-beam {
+  position: absolute; top: 0; bottom: 0; width: 2px;
+  background: linear-gradient(to bottom, transparent, ${h(C.cyan, .7)}, transparent);
+  box-shadow: 0 0 10px ${h(C.cyan, .3)}, 3px 0 16px ${h(C.cyan, .12)};
+  animation: SP-beam-scan 3.2s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+
+/* ═══════════════════════════════════════════════════
+   HUD STATUS
+   ═══════════════════════════════════════════════════ */
+.SP-hud {
+  width: 100%; max-width: 300px;
+  margin-top: 24px;
+  opacity: 0; transform: translateY(8px);
+  transition: all .6s ease .45s;
+}
+.SP--on .SP-hud { opacity: 1; transform: translateY(0); }
+
+.SP-hud-row {
+  display: flex; align-items: center;
+  justify-content: space-between; margin-bottom: 6px;
+}
+.SP-hud-label {
+  display: flex; align-items: center; gap: 7px;
+  font-size: 9px; font-weight: 800;
+  letter-spacing: .14em; text-transform: uppercase;
+  transition: color .3s;
+}
+.SP-hud-pct {
+  font-size: 10px; font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  font-family: ui-monospace, 'SF Mono', monospace;
+  color: rgba(255,255,255,.3);
+}
+
+/* Linear progress bar */
+.SP-bar {
+  height: 3px; width: 100%; border-radius: 100px;
+  background: ${h(C.emerald, .06)};
+  border: 1px solid ${h(C.emerald, .06)};
+  overflow: hidden; position: relative;
+}
+.SP-bar-fill {
+  height: 100%; border-radius: 100px;
+  background: linear-gradient(90deg, ${h(C.teal, .7)}, ${h(C.emerald, .9)}, ${h(C.gold, .8)});
+  position: relative; transition: width .15s linear;
+}
+.SP-bar-tip {
+  position: absolute; right: 0; top: -1px; bottom: -1px; width: 24px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.55));
+  border-radius: 0 100px 100px 0; filter: blur(1px);
+}
+.SP-bar-ref {
+  margin-top: 3px; height: 1.5px; border-radius: 100px;
+  opacity: .1; filter: blur(2px);
+  background: linear-gradient(90deg, transparent, ${h(C.emerald, .5)}, transparent);
+  transition: width .15s linear;
+}
+
+/* ═══════════════════════════════════════════════════
+   KEYFRAMES
+   ═══════════════════════════════════════════════════ */
+@keyframes SP-aurora-drift {
+  0%,100% { transform: translate(0,0) rotate(0deg); }
+  33% { transform: translate(3%,-2%) rotate(3deg); }
+  66% { transform: translate(-2%,3%) rotate(-2deg); }
+}
+@keyframes SP-blob-a {
+  0%,100% { transform: translate(0,0) scale(1); opacity: .18; }
+  50% { transform: translate(8%,5%) scale(1.15); opacity: .25; }
+}
+@keyframes SP-blob-b {
+  0%,100% { transform: translate(0,0) scale(1); opacity: .14; }
+  50% { transform: translate(-6%,-4%) scale(1.1); opacity: .2; }
+}
+@keyframes SP-blob-c {
+  0%,100% { transform: translate(0,0) scale(1); opacity: .08; }
+  50% { transform: translate(5%,-6%) scale(1.2); opacity: .14; }
+}
+@keyframes SP-grid-move {
+  0% { transform: rotateX(68deg) translateY(0); }
+  100% { transform: rotateX(68deg) translateY(48px); }
+}
+@keyframes SP-scan {
+  0% { top: 15%; opacity: 0; }
+  10% { opacity: .5; }
+  90% { opacity: .5; }
+  100% { top: 85%; opacity: 0; }
+}
+@keyframes SP-float {
+  0%,100% { transform: translate(0,0) scale(1); opacity: var(--a); }
+  30% { transform: translate(calc(var(--dx)*.4), calc(var(--dy)*.3)) scale(.82); opacity: calc(var(--a)*.6); }
+  60% { transform: translate(var(--dx), var(--dy)) scale(.6); opacity: calc(var(--a)*.3); }
+  85% { transform: translate(calc(var(--dx)*.6), calc(var(--dy)*.8)) scale(.88); opacity: calc(var(--a)*.55); }
+}
+@keyframes SP-breathe {
+  0%,100% { opacity: .45; transform: scale(1); }
+  50% { opacity: .75; transform: scale(1.1); }
+}
+@keyframes SP-ring-spin {
+  from { transform: translate(-50%,-50%) rotate(0deg); }
+  to { transform: translate(-50%,-50%) rotate(360deg); }
+}
+@keyframes SP-title-shine {
+  0% { background-position: 300% 50%; }
+  100% { background-position: -300% 50%; }
+}
+@keyframes SP-beam-scan {
+  0% { left: 8%; opacity: 0; }
+  12% { opacity: .6; }
+  88% { opacity: .6; }
+  100% { left: 92%; opacity: 0; }
+}
+
+@media (min-width: 768px) {
+  .SP-title { font-size: 48px; }
+  .SP-orb-wrap { width: 160px; height: 160px; }
+  .SP-icon-card { width: 88px; height: 88px; border-radius: 26px; }
+  .SP-stage { max-width: 520px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .SP, .SP * {
+    animation-duration: 0s !important;
+    animation-delay: 0s !important;
+    transition-duration: 0s !important;
+  }
+}
+      `}</style>
+
+      {/* ═══ BG-1: Color wash ═══ */}
+      <div className="SP-bg1" />
+
+      {/* ═══ BG-2: Aurora blobs ═══ */}
+      <div className="SP-aurora">
+        <div className="SP-aurora-a" />
+        <div className="SP-aurora-b" />
+        <div className="SP-aurora-c" />
       </div>
 
-      {/* Premium subtle texture + vignette */}
-      <div
-        className="absolute inset-0 pointer-events-none opacity-[0.10]"
-        style={{
-          backgroundImage:
-            "linear-gradient(rgba(148,163,184,0.16) 1px, transparent 1px), linear-gradient(90deg, rgba(148,163,184,0.16) 1px, transparent 1px)",
-          backgroundSize: "72px 72px",
-          maskImage: "radial-gradient(55% 55% at 50% 42%, black 42%, transparent 75%)",
-          WebkitMaskImage: "radial-gradient(55% 55% at 50% 42%, black 42%, transparent 75%)",
-        }}
-      />
-      <div
-        className="absolute inset-0 pointer-events-none"
-        style={{
-          background:
-            "radial-gradient(closest-side at 50% 45%, transparent 0%, rgba(0,0,0,0.60) 100%)",
-        }}
-      />
+      {/* ═══ BG-3: Perspective grid ═══ */}
+      <div className="SP-grid-wrap"><div className="SP-grid" /></div>
 
-      {/* MAIN */}
-      <div className="relative w-full max-w-[820px] px-6">
-        {/* BRAND */}
-        <div className="flex flex-col items-center text-center">
-          {/* badges row (reference-like) */}
-          <div
-            className="relative mb-8 flex items-center gap-5"
-            style={{
-              opacity: progress > 10 ? 1 : 0,
-              transform: progress > 10 ? "translateY(0)" : "translateY(-10px)",
-              transition: "all 900ms cubic-bezier(.2,.8,.2,1)",
-            }}
-          >
-            <div
-              className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 h-px w-[260px] opacity-60"
-              style={{
-                background:
-                  "linear-gradient(90deg, transparent, rgba(16,185,129,0.50), rgba(34,211,238,0.42), transparent)",
-              }}
+      {/* ═══ BG-4: Horizontal scan line ═══ */}
+      <div className="SP-scanline" />
+
+      {/* ═══ BG-5: Particles ═══ */}
+      <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none' }}>
+        {dots.map(d => {
+          const c = `hsla(${d.hue},75%,58%,${d.a})`;
+          return (
+            <span key={d.i} className="SP-dot" style={{
+              top: `${d.y}%`, left: `${d.x}%`,
+              width: d.s, height: d.s,
+              background: `radial-gradient(circle,${c} 0%,transparent 70%)`,
+              boxShadow: `0 0 ${d.s * 4}px ${c}`,
+              '--d': `${d.dur}s`, '--dl': `${d.del}s`,
+              '--a': `${d.a}`, '--dx': `${d.dx}px`, '--dy': `${d.dy}px`,
+            } as React.CSSProperties} />
+          );
+        })}
+      </div>
+
+      {/* ═══ BG-6: Grain ═══ */}
+      <div className="SP-grain" />
+
+      {/* ═══ BG-7: Vignette ═══ */}
+      <div className="SP-vig" />
+
+      {/* ═══ CONTENT ═══ */}
+      <div className="SP-stage">
+
+        {/* ── Orb (logo + circular progress) ── */}
+        <div className="SP-orb-wrap">
+          {/* Ambient glow */}
+          <div className="SP-orb-ambient" />
+
+          {/* Concentric rings */}
+          {rings.map(r => (
+            <div key={r.i} className="SP-ring" style={{
+              width: r.size, height: r.size,
+              top: '50%', left: '50%',
+              borderColor: h(C.emerald, r.opacity),
+              animation: `SP-ring-spin ${r.dur}s linear ${r.del}s infinite`,
+              borderStyle: r.i === 1 ? 'dashed' : 'solid',
+            }} />
+          ))}
+
+          {/* Circular progress SVG */}
+          <svg className="SP-cprog" viewBox="0 0 100 100">
+            <circle className="SP-cprog-track" cx="50" cy="50" r="44" />
+            <circle className="SP-cprog-glow" cx="50" cy="50" r="44"
+              stroke={`url(#sp-grad)`}
+              strokeDasharray={circumference}
+              strokeDashoffset={dashOffset}
+              transform="rotate(-90 50 50)"
             />
-            <IconBadge tone="emerald" icon={<Leaf size={26} strokeWidth={2.2} />} />
-            <IconBadge tone="amber" icon={<TrendingUp size={26} strokeWidth={2.2} />} />
-            <IconBadge tone="cyan" icon={<Droplets size={26} strokeWidth={2.2} />} />
-          </div>
+            <circle className="SP-cprog-fill" cx="50" cy="50" r="44"
+              stroke={`url(#sp-grad)`}
+              strokeDasharray={circumference}
+              strokeDashoffset={dashOffset}
+              transform="rotate(-90 50 50)"
+            />
+            <defs>
+              <linearGradient id="sp-grad" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stopColor={h(C.teal)} />
+                <stop offset="50%" stopColor={h(C.emerald)} />
+                <stop offset="100%" stopColor={h(C.gold)} />
+              </linearGradient>
+            </defs>
+          </svg>
 
-          {/* Title */}
-          <h1
-            className="text-5xl sm:text-6xl md:text-7xl font-black tracking-tight leading-[1.02]"
-            style={{
-              background:
-                "linear-gradient(135deg, #fff7cc 0%, #fbbf24 30%, #f59e0b 52%, #fbbf24 74%, #fff7cc 100%)",
-              backgroundSize: "220% 100%",
-              WebkitBackgroundClip: "text",
-              WebkitTextFillColor: "transparent",
-              backgroundClip: "text",
-              filter: "drop-shadow(0 12px 30px rgba(251,191,36,0.16))",
-              opacity: progress > 5 ? 1 : 0,
-              transform: progress > 5 ? "scale(1)" : "scale(0.97)",
-              transition: "all 1000ms cubic-bezier(.2,.8,.2,1)",
-              animation: progress > 5 ? "titleShimmer 7s ease-in-out infinite" : "none",
-            }}
-          >
-            AI Krushi Mitra
-          </h1>
-
-          {/* Subtitle */}
-          <div
-            className="mt-3 flex items-center gap-3"
-            style={{
-              opacity: progress > 18 ? 1 : 0,
-              transform: progress > 18 ? "translateY(0)" : "translateY(6px)",
-              transition: "all 850ms ease",
-            }}
-          >
-            <div className="h-px w-10 bg-gradient-to-r from-transparent via-slate-500/70 to-transparent" />
-            <p className="text-xs sm:text-sm tracking-[0.38em] font-semibold uppercase text-slate-300/90">
-              AI Powered Platform
-            </p>
-            <div className="h-px w-10 bg-gradient-to-r from-transparent via-slate-500/70 to-transparent" />
+          {/* Glass icon card */}
+          <div className="SP-icon-card">
+            <div className="SP-icon-wash" />
+            <Sprout size={34} strokeWidth={1.8} style={{
+              color: h(C.emerald, .9),
+              filter: `drop-shadow(0 0 10px ${h(C.emerald, .45)})`,
+              position: 'relative', zIndex: 2,
+            }} />
           </div>
         </div>
 
-        {/* SCENE */}
-        <div className="relative mt-10 h-[170px]">
-          <div
-            className="absolute left-1/2 bottom-[66px] -translate-x-1/2 h-[80px] w-[92%] opacity-60"
-            style={{
-              background:
-                "radial-gradient(closest-side at 50% 100%, rgba(16,185,129,0.18), transparent 72%)",
-            }}
-          />
-          <div
-            className="absolute left-0 right-0 bottom-[64px] h-px"
-            style={{
-              background:
-                "linear-gradient(90deg, transparent, rgba(16,185,129,0.20) 20%, rgba(34,211,238,0.16) 50%, rgba(16,185,129,0.20) 80%, transparent)",
-            }}
-          />
+        {/* ── Title ── */}
+        <h1 className="SP-title">AI Krushi Mitra</h1>
 
-          <div className="absolute left-0 right-0 bottom-[70px] flex justify-around px-6">
-            {Array.from({ length: 12 }).map((_, i) => (
-              <Wheat
-                key={i}
-                size={30}
-                strokeWidth={1.5}
-                className="text-emerald-500/80"
-                style={{
-                  opacity: progress > i * 6 ? 1 : 0,
-                  transform: progress > i * 6 ? "scaleY(1)" : "scaleY(0)",
-                  transformOrigin: "bottom",
-                  transition: `all 520ms cubic-bezier(.17,.89,.32,1.3) ${i * 35}ms`,
-                  filter: "drop-shadow(0 2px 6px rgba(16,185,129,0.16))",
-                  animation: progress > 35 ? `wheatSway 3.8s ease-in-out ${i * 120}ms infinite` : "none",
-                }}
-              />
+        {/* ── Subtitle ── */}
+        <div className="SP-sub">
+          <div className="SP-sub-line" />
+          <span className="SP-sub-text">Smart Agriculture Platform</span>
+          <div className="SP-sub-line" style={{ transform: 'scaleX(-1)' }} />
+        </div>
+
+        {/* ── Pills ── */}
+        <div className="SP-pills">
+          {[
+            { icon: Sun, label: 'Weather', del: 380 },
+            { icon: TrendingUp, label: 'Market', del: 480 },
+            { icon: Droplets, label: 'Irrigation', del: 580 },
+            { icon: Zap, label: 'AI Advisory', del: 680 },
+          ].map((f, i) => (
+            <div key={i} className="SP-pill" style={{
+              transitionDelay: `${f.del}ms`,
+            }}>
+              <f.icon size={13} strokeWidth={2.2} />
+              <span>{f.label}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* ── Wheat field ── */}
+        <div className="SP-field">
+          {/* Scanner beam */}
+          <div style={{
+            position: 'absolute', inset: 0, overflow: 'hidden',
+            pointerEvents: 'none',
+            opacity: p > 10 ? .45 : 0,
+            transition: 'opacity .5s',
+          }}>
+            <div className="SP-beam" />
+          </div>
+
+          <div className="SP-stalks">
+            {stalks.map(s => (
+              <div key={s.i} className="SP-stalk" style={{
+                height: s.h,
+                transform: p > s.trigger ? 'scaleY(1)' : 'scaleY(0) translateY(6px)',
+                opacity: p > s.trigger ? (.45 + p / 200) : 0,
+                transitionDelay: `${s.i * 35}ms`,
+              }}>
+                <Wheat
+                  size={s.h > 38 ? 22 : 16}
+                  strokeWidth={1.5}
+                  style={{
+                    color: s.golden ? h(C.gold, .75) : h(C.emerald, .65),
+                    filter: s.golden
+                      ? `drop-shadow(0 0 5px ${h(C.gold, .35)})`
+                      : `drop-shadow(0 0 4px ${h(C.emerald, .25)})`,
+                  }}
+                />
+              </div>
             ))}
           </div>
 
-          <div
-            className="absolute bottom-[44px]"
-            style={{
-              left: `${Math.min(progress * 0.86, 86)}%`,
-              transform: "translateX(-50%)",
-              transition: "left 140ms linear",
-              willChange: "left",
-              filter: "drop-shadow(0 10px 18px rgba(0,0,0,0.45))",
-            }}
-          >
-            <div style={{ animation: progress > 10 ? "tractorFloat 1.25s ease-in-out infinite" : "none" }}>
-              <Tractor
-                size={70}
-                strokeWidth={1.6}
-                className="text-cyan-300"
-                style={{ filter: "drop-shadow(0 0 14px rgba(34,211,238,0.26))" }}
-              />
-            </div>
-          </div>
+          <div className="SP-field-gnd" />
+          <div className="SP-field-glow" />
         </div>
 
-        {/* HUD */}
-        <div className="mt-2 flex flex-col items-center gap-4">
-          <div
-            className="flex items-center gap-2.5 px-5 py-2 rounded-full backdrop-blur-sm hud"
-            aria-live="polite"
-          >
-            <Sparkles size={14} className={`text-emerald-300 ${progress > 90 ? "animate-spin" : "animate-pulse"}`} />
-            <span className="text-xs tracking-[0.30em] font-bold uppercase text-emerald-200/90">
-              {status}
-            </span>
+        {/* ── HUD ── */}
+        <div className="SP-hud">
+          <div className="SP-hud-row">
+            <div className="SP-hud-label" style={{ color: phase.color }}>
+              <span style={{
+                display: 'inline-flex', fontSize: 10,
+                animation: ph < 3 ? 'SP-ring-spin 2s linear infinite' : 'none',
+              }}>
+                {phase.icon}
+              </span>
+              <span>{phase.text}</span>
+            </div>
+            <span className="SP-hud-pct">{p}%</span>
           </div>
 
-          <div className="w-full max-w-sm">
-            <div className="relative h-2 rounded-full overflow-hidden barShell">
-              <div className="absolute inset-y-0 left-0 barFill" style={{ width: `${progress}%` }}>
-                <div className="absolute inset-0 sheen" />
-              </div>
-            </div>
-
-            <div className="mt-2.5 text-center text-sm font-bold tabular-nums pct">
-              {progress}%
+          <div className="SP-bar">
+            <div className="SP-bar-fill" style={{ width: `${p}%` }}>
+              <div className="SP-bar-tip" />
             </div>
           </div>
+          <div className="SP-bar-ref" style={{ width: `${p}%` }} />
         </div>
       </div>
-
-      {/* CSS */}
-      <style>{`
-        /* LASER RIG */
-        .laser-rig{
-          /* keep lasers focused toward center (mask = cheap + clean) */
-          mask-image: radial-gradient(58% 55% at 50% 35%, black 45%, transparent 76%);
-          -webkit-mask-image: radial-gradient(58% 55% at 50% 35%, black 45%, transparent 76%);
-        }
-
-        .laser-beam{
-          position:absolute;
-          left:50%;
-          top:38%;
-          width:140vmax;
-          height:4px;
-          transform: translate(-50%,-50%) rotate(var(--a, 25deg));
-          transform-origin: 50% 50%;
-          opacity: 0.55;
-          border-radius: 999px;
-          /* bright center, soft edges */
-          background: linear-gradient(90deg,
-            transparent 0%,
-            rgba(255,255,255,0.04) 18%,
-            var(--c, rgba(34,211,238,0.85)) 50%,
-            rgba(255,255,255,0.04) 82%,
-            transparent 100%
-          );
-          /* glow without heavy blur */
-          box-shadow:
-            0 0 18px rgba(255,255,255,0.06),
-            0 0 26px var(--g, rgba(34,211,238,0.22));
-          mix-blend-mode: screen;
-          will-change: transform, opacity;
-          animation: beamSweep var(--t, 4.6s) ease-in-out infinite;
-        }
-
-        .beam-a{ --a: 18deg;  --c: rgba(34,211,238,0.90); --g: rgba(34,211,238,0.24); --t: 4.8s; }
-        .beam-b{ --a: -12deg; --c: rgba(16,185,129,0.86); --g: rgba(16,185,129,0.22); --t: 5.6s; animation-delay: .35s; }
-        .beam-c{ --a: 42deg;  --c: rgba(245,158,11,0.72); --g: rgba(245,158,11,0.18); --t: 6.4s; animation-delay: .7s; height: 3px; opacity: .45;}
-        .beam-d{ --a: -34deg; --c: rgba(217,70,239,0.62); --g: rgba(217,70,239,0.16); --t: 5.2s; animation-delay: 1.05s; height: 3px; opacity: .40;}
-
-        @keyframes beamSweep{
-          0%,100%{ transform: translate(-50%,-50%) rotate(var(--a)) translateX(-2.5vmax); opacity: .30; }
-          40%{ opacity: .62; }
-          50%{ transform: translate(-50%,-50%) rotate(calc(var(--a) + 10deg)) translateX(2.5vmax); opacity: .70; }
-          60%{ opacity: .55; }
-        }
-
-        .laser-scanline{
-          position:absolute;
-          left:50%;
-          top:18%;
-          width:120vmax;
-          height:2px;
-          transform: translateX(-50%) rotate(-6deg);
-          background: linear-gradient(90deg, transparent, rgba(34,211,238,0.45), transparent);
-          opacity: .22;
-          mix-blend-mode: screen;
-          animation: scanMove 3.8s ease-in-out infinite;
-          will-change: transform, opacity;
-        }
-        @keyframes scanMove{
-          0%,100%{ transform: translateX(-50%) translateY(-8px) rotate(-6deg); opacity: .14; }
-          50%{ transform: translateX(-50%) translateY(18px) rotate(-6deg); opacity: .28; }
-        }
-
-        /* HUD */
-        .hud{
-          background: linear-gradient(135deg, rgba(16,185,129,0.12), rgba(34,211,238,0.08));
-          border: 1px solid rgba(52,211,153,0.22);
-          box-shadow: 0 6px 20px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.07);
-        }
-
-        .barShell{
-          background: rgba(15,23,42,0.55);
-          border: 1px solid rgba(16,185,129,0.18);
-          box-shadow: inset 0 1px 5px rgba(0,0,0,0.35);
-        }
-        .barFill{
-          background: linear-gradient(90deg, #10b981, #34d399, #22d3ee);
-          background-size: 200% 100%;
-          transition: width 140ms linear;
-          animation: barFlow 3.2s ease-in-out infinite;
-          box-shadow: 0 0 16px rgba(52,211,153,0.34);
-          will-change: width;
-        }
-        .sheen{
-          opacity: .30;
-          background: linear-gradient(90deg, transparent, rgba(255,255,255,0.65), transparent);
-          animation: barSheen 1.9s ease-in-out infinite;
-        }
-        .pct{
-          background: linear-gradient(135deg, #34d399, #22d3ee);
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-          background-clip: text;
-          filter: drop-shadow(0 1px 8px rgba(52,211,153,0.20));
-        }
-
-        @keyframes titleShimmer{
-          0%,100%{ background-position: 0% 50%; }
-          50%{ background-position: 100% 50%; }
-        }
-        @keyframes barFlow{
-          0%,100%{ background-position: 0% 50%; }
-          50%{ background-position: 100% 50%; }
-        }
-        @keyframes barSheen{
-          0%{ transform: translateX(-120%); }
-          100%{ transform: translateX(220%); }
-        }
-        @keyframes wheatSway{
-          0%,100%{ transform: rotate(0deg); }
-          50%{ transform: rotate(3deg); }
-        }
-        @keyframes tractorFloat{
-          0%,100%{ transform: translateY(0); }
-          50%{ transform: translateY(-2px); }
-        }
-
-        /* Accessibility: reduce motion when requested */
-        @media (prefers-reduced-motion: reduce){
-          .laser-beam, .laser-scanline{ animation: none !important; opacity: .18 !important; }
-          *{ animation: none !important; transition-duration: 1ms !important; }
-        }
-      `}</style>
-    </div>
-  );
-}
-
-function IconBadge({
-  tone,
-  icon,
-}: {
-  tone: "emerald" | "amber" | "cyan";
-  icon: React.ReactNode;
-}) {
-  const palette =
-    tone === "emerald"
-      ? { bg: "linear-gradient(135deg, #064e3b, #10b981)", glow: "rgba(16,185,129,0.34)", fg: "text-emerald-100" }
-      : tone === "amber"
-      ? { bg: "linear-gradient(135deg, #b45309, #f59e0b)", glow: "rgba(245,158,11,0.30)", fg: "text-amber-50" }
-      : { bg: "linear-gradient(135deg, #0e7490, #22d3ee)", glow: "rgba(34,211,238,0.30)", fg: "text-cyan-50" };
-
-  return (
-    <div className="relative" style={{ animation: "badgeBob 3.2s ease-in-out infinite" }}>
-      <div
-        className="w-[66px] h-[66px] rounded-full grid place-items-center relative overflow-hidden"
-        style={{
-          background: palette.bg,
-          boxShadow: `0 10px 26px ${palette.glow}, inset 0 1px 0 rgba(255,255,255,0.16)`,
-        }}
-      >
-        <div className={`relative z-10 ${palette.fg}`}>{icon}</div>
-        <div className="absolute inset-0 bg-gradient-to-br from-white/25 via-transparent to-transparent" />
-      </div>
-
-      <style>{`
-        @keyframes badgeBob{
-          0%,100%{ transform: translateY(0); }
-          50%{ transform: translateY(-3px); }
-        }
-      `}</style>
     </div>
   );
 }
