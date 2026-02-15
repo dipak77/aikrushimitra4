@@ -6,6 +6,7 @@ import { ArrowLeft, Mic, MicOff, RefreshCw, Video, VideoOff } from 'lucide-react
 import { decode, decodeAudioData } from '../../utils/audio';
 import { triggerHaptic } from '../../utils/common';
 import { GoogleGenAI, LiveServerMessage, Modality } from '@google/genai';
+import { getGenAIKey } from '../../services/geminiService';
 import clsx from 'clsx';
 import EmotionAwareOrb from '../EmotionAwareOrb';
 
@@ -230,7 +231,9 @@ const VoiceAssistant = ({
       worklet.connect(mute).connect(inCtx.destination);
 
       // 3. Initialize Gemini
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
+      // Use helper to support both build-time and runtime (Cloud Run) env vars
+      const apiKey = getGenAIKey();
+      const ai = new GoogleGenAI({ apiKey });
       
       // Context from previous chats (optional)
       const history = transcripts.slice(-4);
@@ -309,6 +312,7 @@ const VoiceAssistant = ({
       };
 
     } catch (e: any) {
+      console.error(e);
       setErrorMessage(e?.message || 'Failed to connect');
       setStatus('error');
     }
