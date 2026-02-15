@@ -1,8 +1,7 @@
-
 import React, { useState, useEffect } from 'react';
 import { UserProfile, Language, ViewState } from '../../types';
 import { TRANSLATIONS } from '../../constants';
-import { ScanLine, FlaskConical, Map as MapIcon, Landmark, TrendingUp, Languages, Leaf, Shield, ShoppingCart } from 'lucide-react';
+import { ScanLine, FlaskConical, Map as MapIcon, Landmark, Languages, Leaf, Shield, ShoppingCart, BookOpen } from 'lucide-react';
 import { triggerHaptic } from '../../utils/common';
 
 // Segregated Components
@@ -129,79 +128,84 @@ const Dashboard = ({ lang, setLang, user, onNavigate }: { lang: Language, setLan
             {/* 1. NEWS TICKER (Top) */}
             <NewsTicker lang={lang} />
             
-            {/* 2. HEADER */}
-            <div className="pt-4 px-6 pb-2 flex items-center justify-between z-50 gap-4">
-                 {/* LEFT: CSS BRANDING LOGO */}
+            {/* 2. HEADER (Slim & Sticky) */}
+            <div className="pt-4 px-4 md:px-6 pb-3 flex items-center justify-between z-50 gap-4 sticky top-0 bg-[#020617]/90 backdrop-blur-xl border-b border-white/5 transition-all">
+                 {/* LEFT: Branding */}
                  <AppHeaderLogo />
 
-                 {/* CENTER: SMART BANNER (Desktop Only - In Header) */}
-                 <SmartBanner lang={lang} className="hidden lg:flex" weather={weather} user={user} />
-
-                 {/* RIGHT: ACTIONS */}
+                 {/* RIGHT: Actions */}
                  <div className="flex items-center gap-3">
                      <button onClick={toggleLang} className="h-9 px-3 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 active:scale-95 transition-all flex items-center gap-2 backdrop-blur-md">
-                         <Languages size={14} className="text-slate-300"/>
-                         <span className="text-[10px] font-bold uppercase text-white tracking-wide">{lang === 'mr' ? 'मराठी' : lang === 'hi' ? 'हिंदी' : 'ENG'}</span>
+                         <Languages size={16} className="text-slate-300"/>
+                         <span className="hidden md:block text-[10px] font-bold uppercase text-white tracking-wide">{lang === 'mr' ? 'मराठी' : lang === 'hi' ? 'हिंदी' : 'ENG'}</span>
                      </button>
 
-                     {/* Analytics / Admin Button */}
+                     {/* Analytics / Admin */}
                      <button 
                         onClick={() => onNavigate('ADMIN')} 
-                        className="w-9 h-9 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 active:scale-95 transition-all flex items-center justify-center backdrop-blur-md group"
+                        className="hidden sm:flex w-9 h-9 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 active:scale-95 transition-all items-center justify-center backdrop-blur-md group"
                         title="Analytics"
                      >
                          <Shield size={16} className="text-slate-300 group-hover:text-emerald-400 transition-colors"/>
                      </button>
                      
-                     {/* Profile Icon (Moved to Right) */}
-                     <div onClick={() => onNavigate('PROFILE')} className="relative cursor-pointer group">
-                         <div className="w-10 h-10 rounded-full bg-gradient-to-br from-yellow-400 to-amber-600 p-[1.5px] shadow-[0_0_15px_rgba(251,191,36,0.2)] group-hover:shadow-[0_0_20px_rgba(251,191,36,0.4)] transition-all">
+                     {/* User Profile */}
+                     <div onClick={() => onNavigate('PROFILE')} className="relative cursor-pointer group shrink-0 ml-1">
+                         <div className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-gradient-to-br from-yellow-400 to-amber-600 p-[1.5px] shadow-[0_0_15px_rgba(251,191,36,0.2)] group-hover:shadow-[0_0_20px_rgba(251,191,36,0.4)] transition-all">
                               <div className="w-full h-full rounded-full bg-[#051108] flex items-center justify-center overflow-hidden">
-                                  {/* Initials or Avatar */}
-                                  <span className="text-sm font-black text-white">{user.name.charAt(0)}</span>
+                                  {user.picture ? (
+                                      <img src={user.picture} alt="Profile" className="w-full h-full object-cover" />
+                                  ) : (
+                                      <span className="text-sm font-black text-white">{user.name?.charAt(0) || 'U'}</span>
+                                  )}
                               </div>
                          </div>
                      </div>
                  </div>
             </div>
 
-            {/* 2.1 GREETING SUB-HEADER */}
-            <div className="px-6 py-2">
-                <DynamicGreeting user={user} lang={lang} />
+            {/* 3. HERO SECTION (Greeting & Smart Banner Side-by-Side on Desktop) */}
+            <div className="px-4 md:px-6 py-6 max-w-7xl mx-auto w-full">
+                <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6">
+                    {/* Left: Greeting */}
+                    <div className="flex-1 min-w-0">
+                        <DynamicGreeting user={user} lang={lang} />
+                    </div>
+                    
+                    {/* Right: Smart Banner (Adjusted for Hero context) */}
+                    <div className="w-full lg:w-[60%] xl:w-[50%] animate-[fadeInUp_0.5s_ease-out_0.2s_both]">
+                         <SmartBanner lang={lang} className="w-full !max-w-none !mx-0 shadow-2xl" weather={weather} user={user} />
+                    </div>
+                </div>
             </div>
 
-            {/* 2.2 SMART BANNER (Mobile Only - Above Weather) */}
-            <div className="px-4 mb-4 lg:hidden">
-                <SmartBanner lang={lang} className="mx-0 w-full" weather={weather} user={user} />
-            </div>
-
-            {/* 3. BENTO GRID */}
-            <div className="px-6 grid grid-cols-1 md:grid-cols-12 gap-5 pb-32 max-w-7xl mx-auto w-full">
+            {/* 4. BENTO GRID */}
+            <div className="px-4 md:px-6 grid grid-cols-1 md:grid-cols-12 gap-5 pb-32 max-w-7xl mx-auto w-full">
                 
-                {/* Weather (MD: Col 1-4) - Immersive Scene */}
+                {/* Weather (MD: Col 1-4) */}
                 <div className="col-span-1 md:col-span-4 h-64">
                     <WeatherWidget weather={weather} loading={loadingWeather} location={liveLocation} lang={lang} onNavigate={onNavigate} />
                 </div>
 
-                {/* Market Trends (MD: Col 5-8) - Trading Cards */}
+                {/* Market Trends (MD: Col 5-8) */}
                 <div className="col-span-1 md:col-span-4 h-64">
                     <MarketWidget onNavigate={onNavigate} lang={lang} />
                 </div>
 
-                {/* Crop Calendar (MD: Col 9-12) - Timeline */}
+                {/* Crop Calendar (MD: Col 9-12) */}
                 <div className="col-span-1 md:col-span-4 h-64">
                     <CalendarWidget lang={lang} onNavigate={onNavigate} />
                 </div>
 
                 {/* --- Row 2 --- */}
 
-                {/* Voice Widget (Desktop Only) - Glowing Orb */}
+                {/* Voice Widget (Desktop Only) */}
                 <div className="hidden md:block col-span-1 md:col-span-3 h-44">
                     <VoiceWidget onNavigate={onNavigate} lang={lang} />
                 </div>
 
-                {/* Quick Actions Grid - Glass Tiles */}
-                <div className="col-span-1 md:col-span-9 grid grid-cols-2 md:grid-cols-4 gap-4">
+                {/* Quick Actions Grid */}
+                <div className="col-span-1 md:col-span-9 grid grid-cols-2 md:grid-cols-5 gap-4">
                     <FeatureCard 
                         icon={ShoppingCart} 
                         title={t.quick_action_mandi}
@@ -230,9 +234,16 @@ const Dashboard = ({ lang, setLang, user, onNavigate }: { lang: Language, setLan
                         onClick={() => onNavigate('AREA_CALCULATOR')} 
                         delay={250}
                     />
+                    <FeatureCard 
+                        icon={BookOpen} 
+                        title={t.menu_knowledge} 
+                        variant="yield"
+                        onClick={() => onNavigate('AGRI_KNOWLEDGE')} 
+                        delay={275}
+                    />
                 </div>
                 
-                {/* Government Schemes (Wide Banner) - Wealth Theme */}
+                {/* Government Schemes */}
                 <div className="col-span-1 md:col-span-6 animate-enter" style={{animationDelay: '300ms'}}>
                      <IllustrativeBanner 
                         title={t.govt_schemes}
@@ -244,7 +255,7 @@ const Dashboard = ({ lang, setLang, user, onNavigate }: { lang: Language, setLan
                      />
                 </div>
 
-                {/* Agri-Doctor Promo (Wide Banner) - Tech Theme */}
+                {/* Agri-Doctor Promo */}
                 <div className="col-span-1 md:col-span-6 animate-enter" style={{animationDelay: '350ms'}}>
                      <IllustrativeBanner 
                         title={txt.crop_doctor_title}

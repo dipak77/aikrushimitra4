@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { ViewState, Language, UserProfile } from './types';
 import { logActivity } from './services/analyticsService';
@@ -26,6 +25,8 @@ import AdminDashboard from './components/views/AdminDashboard';
 import SplashScreen from './components/views/SplashScreen';
 import SabjiMandiView from './components/views/SabjiMandiView';
 import LoginView from './components/views/LoginView';
+import AgriKnowledgeView from './components/views/AgriKnowledgeView';
+import KnowledgeDetailView from './components/views/KnowledgeDetailView';
 
 const App = () => {
   const [view, setView] = useState<ViewState>('SPLASH');
@@ -35,6 +36,7 @@ const App = () => {
   const [user, setUser] = useState<UserProfile | null>(null);
   
   const [selectedScheme, setSelectedScheme] = useState<any>(null);
+  const [selectedKnowledgeItem, setSelectedKnowledgeItem] = useState<any>(null);
 
   // --- GOOGLE CLIENT ID ---
   const GOOGLE_CLIENT_ID = process.env.VITE_GOOGLE_CLIENT_ID || "";
@@ -80,7 +82,7 @@ const App = () => {
        case 'SPLASH': return <SplashScreen onComplete={handleSplashComplete} />;
        case 'LOGIN': return <LoginView onLoginSuccess={handleLoginSuccess} lang={lang} />;
        case 'DASHBOARD': return user ? <Dashboard lang={lang} setLang={setLang} user={user} onNavigate={setView} /> : null;
-       case 'VOICE_ASSISTANT': return user ? <VoiceAssistant lang={lang} user={user} onUserUpdate={setUser} onBack={() => setView('DASHBOARD')} /> : null;
+       case 'VOICE_ASSISTANT': return user ? <VoiceAssistant lang={lang} user={user} onBack={() => setView('DASHBOARD')} /> : null;
        case 'DISEASE_DETECTOR': return <DiseaseDetector lang={lang} onBack={() => setView('DASHBOARD')} />;
        case 'SOIL': return <SoilAnalysis lang={lang} onBack={() => setView('DASHBOARD')} />;
        case 'YIELD': return <YieldPredictor lang={lang} onBack={() => setView('DASHBOARD')} />;
@@ -93,6 +95,11 @@ const App = () => {
              return <SchemeDetailView scheme={selectedScheme} lang={lang} onBack={() => setSelectedScheme(null)} />;
           }
           return <SchemesView lang={lang} onBack={() => setView('DASHBOARD')} onSelect={(s) => setSelectedScheme(s)} />;
+       case 'AGRI_KNOWLEDGE':
+          if (selectedKnowledgeItem) {
+             return <KnowledgeDetailView item={selectedKnowledgeItem} lang={lang} onBack={() => setSelectedKnowledgeItem(null)} />;
+          }
+          return <AgriKnowledgeView lang={lang} onBack={() => setView('DASHBOARD')} onSelect={(item) => setSelectedKnowledgeItem(item)} />;
        case 'MARKET': 
          return <MarketView lang={lang} onBack={() => setView('DASHBOARD')} />;
        case 'WEATHER':

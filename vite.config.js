@@ -15,6 +15,9 @@ export default defineConfig(({ mode }) => {
 
   return {
     plugins: [react()],
+    resolve: {
+      dedupe: ['react', 'react-dom'],
+    },
     define: {
       // Prevents "process is not defined" in browser
       'process.env': {},
