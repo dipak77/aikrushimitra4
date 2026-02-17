@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { UserProfile, Language } from '../../types';
 import { TRANSLATIONS } from '../../constants';
-import { ArrowLeft, Mic, MicOff, RefreshCw, Video, VideoOff, Eye, EyeOff, Scan, AlertTriangle, CheckCircle2 } from 'lucide-react';
-import { decode, decodeAudioData } from '../../utils/audio';
+import { ArrowLeft, Mic, MicOff, RefreshCw, Video, VideoOff, Eye, EyeOff, Scan } from 'lucide-react';
+import { decode, decodeAudioData, createPCMChunkBase64 } from '../../utils/audio';
 import { triggerHaptic } from '../../utils/common';
 import { GoogleGenAI, LiveServerMessage, Modality, Type } from '@google/genai';
 import { getGenAIKey } from '../../services/geminiService';
@@ -68,9 +68,7 @@ function getWorkletUrl() {
       process(inputs) {
         const ch = inputs?.[0]?.[0];
         if (ch?.length) {
-          const copy = new Float32Array(ch.length);
-          copy.set(ch);
-          this.port.postMessage(copy, [copy.buffer]);
+          this.port.postMessage(ch);
         }
         return true;
       }
@@ -81,18 +79,6 @@ function getWorkletUrl() {
   return workletUrlCache;
 }
 
-function float32ToBase64(f32: Float32Array): string {
-  const int16 = new Int16Array(f32.length);
-  for (let i = 0; i < f32.length; i++) {
-    const s = Math.max(-1, Math.min(1, f32[i]));
-    int16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
-  }
-  const bytes = new Uint8Array(int16.buffer);
-  let binary = '';
-  for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
-  return btoa(binary);
-}
-
 // ═══════════════════════════════════════════════════════════════
 // HELPER: Video Frame Capture
 // ═══════════════════════════════════════════════════════════════
@@ -100,12 +86,12 @@ function float32ToBase64(f32: Float32Array): string {
 async function captureFrame(video: HTMLVideoElement): Promise<string | null> {
   if (!video.videoWidth) return null;
   const canvas = document.createElement('canvas');
-  canvas.width = 640; // Higher res for better disease detection
-  canvas.height = 480;
+  canvas.width = 480; // Optimized size for bandwidth
+  canvas.height = 360;
   const ctx = canvas.getContext('2d');
   if (!ctx) return null;
   ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-  return canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
+  return canvas.toDataURL('image/jpeg', 0.7).split(',')[1];
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -333,10 +319,12 @@ const VoiceAssistant = ({
       // ── 2. Audio Context Setup ──
       const ACClass = window.AudioContext || (window as any).webkitAudioContext;
 
+      // Input Context - Prefer 16kHz for Gemini
       const inCtx = new ACClass({ sampleRate: 16000 });
       await inCtx.resume();
       inputCtxRef.current = inCtx;
 
+      // Output Context - Higher Quality
       const outCtx = new ACClass({ sampleRate: 24000 });
       await outCtx.resume();
       outputCtxRef.current = outCtx;
@@ -361,37 +349,32 @@ const VoiceAssistant = ({
       mute.gain.value = 0;
       muteGainRef.current = mute;
 
+      // Chain: Source -> Analyser -> Worklet -> Mute -> Dest
       source.connect(inAnalyser);
       source.connect(worklet);
       worklet.connect(mute).connect(inCtx.destination);
 
       // ── 3. Initialize Gemini Live ──
       const apiKey = getGenAIKey();
+      if (!apiKey) throw new Error("API Key missing");
+      
       const ai = new GoogleGenAI({ apiKey });
 
-      // Build System Prompt
       const systemPrompt = `
-      You are KRUSHI MITRA AI, an experienced field agriculture supervisor and botanist.
+      You are KRUSHI MITRA AI, an experienced field agriculture supervisor and robotic assistant.
       
-      ROLE:
-      - You act as a "Doctor for Plants".
-      - You can SEE the video feed. If the user points the camera at a plant, soil, or bug, ANALYZE IT.
-      - If the image is blurry, ask the user to hold steady or move closer.
+      ROLE & PERSONA:
+      - You act as a highly advanced "Field Robot" helping the farmer.
+      - Voice: Helpful, authoritative but friendly, like a seasoned expert.
+      - Capabilities: Visual analysis, crop diagnosis, market data, weather advice.
       
-      VISUAL ANALYSIS PROTOCOL:
-      1. OBSERVE: Identify crop, stage, leaf color, spots, holes, or insects.
-      2. DIAGNOSE: Is it fungal (spots), bacterial (blight), pest (holes/sucking), or nutrient deficiency (yellowing pattern)?
-      3. ADVISE: Give immediate, practical remedies (organic first, chemical if severe).
+      VISUAL ANALYSIS:
+      - If video is active, analyze crops/pests visible.
+      - If image is blurry, ask the farmer to hold steady.
       
-      CONVERSATION STYLE:
+      CONVERSATION:
       - Speak simple ${lang === 'mr' ? 'Marathi' : lang === 'hi' ? 'Hindi' : 'English'}.
-      - Use rural terms like 'Shetkari Dada', 'Wavar'.
-      - Keep responses short (2-3 sentences max) unless explaining a complex step.
-      - Be encouraging and respectful.
-
-      SAFETY:
-      - Do not guess if unsure. Say "Please show me closer."
-      - Always mention dosage per pump/liter for medicines.
+      - Keep responses concise (spoken word style).
       `;
 
       const session = await ai.live.connect({
@@ -412,10 +395,9 @@ const VoiceAssistant = ({
             setStatus('connected');
             triggerHaptic('medium');
             
-            // Start Video Loop if camera enabled
+            // Video Loop
             if (cameraEnabled && hiddenVideoRef.current) {
                if (videoIntervalRef.current) clearInterval(videoIntervalRef.current);
-               // Send frame every 1.5 seconds for better real-time feel
                videoIntervalRef.current = setInterval(async () => {
                   if (!setupDone.current || !sessionRef.current || !hiddenVideoRef.current) return;
                   const base64Data = await captureFrame(hiddenVideoRef.current);
@@ -424,11 +406,10 @@ const VoiceAssistant = ({
                         media: { mimeType: 'image/jpeg', data: base64Data }
                      });
                   }
-               }, 1500);
+               }, 2000); // 2s interval for frames
             }
           },
           onmessage: async (message: LiveServerMessage) => {
-            // Handle Tool Calls
             if (message.toolCall) {
                 const responses = await handleToolCall(message.toolCall.functionCalls);
                 if (responses.length > 0 && sessionRef.current) {
@@ -436,10 +417,10 @@ const VoiceAssistant = ({
                 }
             }
 
-            // Audio Output
             const audioData = message.serverContent?.modelTurn?.parts?.[0]?.inlineData?.data;
             if (audioData && outputCtxRef.current && compressorRef.current) {
               const ctx = outputCtxRef.current;
+              // Decode audio
               const buffer = await decodeAudioData(decode(audioData as string), ctx, 24000, 1);
               const src = ctx.createBufferSource();
               src.buffer = buffer;
@@ -453,20 +434,16 @@ const VoiceAssistant = ({
               setIsSpeaking(true);
               if (speakingTimeoutRef.current) clearTimeout(speakingTimeoutRef.current);
               src.onended = () => {
+                // Approximate "speaking" end
                 speakingTimeoutRef.current = setTimeout(() => setIsSpeaking(false), 200);
               };
             }
 
-            // Transcripts
             const userText = message.serverContent?.inputTranscription?.text;
-            if (userText?.trim()) {
-              setTranscripts(p => [...p, { role: 'user', text: userText.trim(), id: uid() }]);
-            }
+            if (userText?.trim()) setTranscripts(p => [...p, { role: 'user', text: userText.trim(), id: uid() }]);
 
             const modelText = message.serverContent?.outputTranscription?.text;
-            if (modelText?.trim()) {
-              setTranscripts(p => [...p, { role: 'model', text: modelText.trim(), id: uid() }]);
-            }
+            if (modelText?.trim()) setTranscripts(p => [...p, { role: 'model', text: modelText.trim(), id: uid() }]);
           },
           onclose: () => {
             setupDone.current = false;
@@ -476,8 +453,8 @@ const VoiceAssistant = ({
           },
           onerror: (e: any) => {
             console.error('Session Error:', e);
-            setErrorMessage('Connection error');
             setStatus('error');
+            setErrorMessage('Connection failed.');
           },
         },
       });
@@ -489,10 +466,12 @@ const VoiceAssistant = ({
         const chunk = evt.data as Float32Array;
         if (!chunk || !setupDone.current || !sessionRef.current) return;
         try {
+          // IMPORTANT: Must specify rate=16000 for Gemini Live
+          const b64 = createPCMChunkBase64(chunk, inputCtxRef.current?.sampleRate || 16000);
           session.sendRealtimeInput({
-            media: { mimeType: 'audio/pcm', data: float32ToBase64(chunk) },
+            media: { mimeType: 'audio/pcm;rate=16000', data: b64 },
           });
-        } catch { /* ignore */ }
+        } catch (e) { console.error(e); }
       };
     } catch (e: any) {
       setErrorMessage(e?.message || 'Failed to connect');
@@ -521,6 +500,7 @@ const VoiceAssistant = ({
   const toggleCamera = useCallback(() => {
     setCameraEnabled(prev => {
       const next = !prev;
+      // Reconnect to update stream tracks if needed, or just handle logic
       if (status === 'connected' || status === 'connecting') {
         cleanup(false);
         setTimeout(() => connect(false), 200);
