@@ -1,6 +1,4 @@
 
-
-
 export type Language = 'mr' | 'hi' | 'en';
 
 export type ViewState = 
@@ -97,5 +95,15 @@ declare global {
 
   interface ImportMeta {
     readonly env: ImportMetaEnv;
+  }
+
+  // Augment global JSX namespace for custom elements (e.g. from R3F)
+  namespace JSX {
+    interface IntrinsicElements {
+      [elemName: string]: any;
+    }
+    interface IntrinsicAttributes {
+      key?: any;
+    }
   }
 }

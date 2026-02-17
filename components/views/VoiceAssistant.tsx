@@ -1,13 +1,14 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { UserProfile, Language } from '../../types';
 import { TRANSLATIONS } from '../../constants';
-import { ArrowLeft, Mic, MicOff, RefreshCw, Video, VideoOff, Eye, EyeOff } from 'lucide-react';
+import { ArrowLeft, Mic, MicOff, RefreshCw, Video, VideoOff, Eye, EyeOff, Scan, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { decode, decodeAudioData } from '../../utils/audio';
 import { triggerHaptic } from '../../utils/common';
-import { GoogleGenAI, LiveServerMessage, Modality } from '@google/genai';
+import { GoogleGenAI, LiveServerMessage, Modality, Type } from '@google/genai';
 import { getGenAIKey } from '../../services/geminiService';
 import clsx from 'clsx';
 import EmotionAwareOrb from '../EmotionAwareOrb';
+import { MOCK_MARKET } from '../../data/mock';
 
 // ═══════════════════════════════════════════════════════════════
 // TYPES
@@ -24,6 +25,36 @@ type OrbMode = 'cinematic' | 'minimal';
 const MAX_RETRIES = 5;
 const RECONNECT_BASE_DELAY = 1000;
 const uid = () => crypto.randomUUID().slice(0, 8);
+
+// Tools Definition
+const TOOLS = [
+  {
+    functionDeclarations: [
+      {
+        name: "get_weather_forecast",
+        description: "Get current weather and forecast for the farm location.",
+        parameters: {
+          type: Type.OBJECT,
+          properties: {
+            location: { type: Type.STRING, description: "Village or city name" }
+          },
+          required: ["location"]
+        }
+      },
+      {
+        name: "get_mandi_price",
+        description: "Get live market prices (bajar bhav) for crops.",
+        parameters: {
+          type: Type.OBJECT,
+          properties: {
+            crop: { type: Type.STRING, description: "Crop name (e.g. Soyabean, Cotton)" }
+          },
+          required: ["crop"]
+        }
+      }
+    ]
+  }
+];
 
 // ═══════════════════════════════════════════════════════════════
 // AUDIO WORKLET
@@ -63,6 +94,21 @@ function float32ToBase64(f32: Float32Array): string {
 }
 
 // ═══════════════════════════════════════════════════════════════
+// HELPER: Video Frame Capture
+// ═══════════════════════════════════════════════════════════════
+
+async function captureFrame(video: HTMLVideoElement): Promise<string | null> {
+  if (!video.videoWidth) return null;
+  const canvas = document.createElement('canvas');
+  canvas.width = 640; // Higher res for better disease detection
+  canvas.height = 480;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return null;
+  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+  return canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
+}
+
+// ═══════════════════════════════════════════════════════════════
 // MAIN COMPONENT
 // ═══════════════════════════════════════════════════════════════
 
@@ -85,6 +131,9 @@ const VoiceAssistant = ({
   const [cameraEnabled, setCameraEnabled] = useState(true);
   const [orbMode, setOrbMode] = useState<OrbMode>('cinematic');
   const [showTranscripts, setShowTranscripts] = useState(true);
+  
+  // Tool State Visualization
+  const [activeTool, setActiveTool] = useState<{name: string, result: string} | null>(null);
 
   // ─── Refs ───
   const shouldStayRef = useRef(false);
@@ -97,6 +146,9 @@ const VoiceAssistant = ({
   // Audio/Video Refs
   const streamRef = useRef<MediaStream | null>(null);
   const [videoStream, setVideoStream] = useState<MediaStream | null>(null);
+  const hiddenVideoRef = useRef<HTMLVideoElement | null>(null);
+  const videoIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
   const inputAnalyserRef = useRef<AnalyserNode | null>(null);
   const [analyserState, setAnalyserState] = useState<AnalyserNode | null>(null);
 
@@ -122,6 +174,7 @@ const VoiceAssistant = ({
   const cleanup = useCallback((fullyStop = false) => {
     if (reconnectTimer.current) clearTimeout(reconnectTimer.current);
     if (speakingTimeoutRef.current) clearTimeout(speakingTimeoutRef.current);
+    if (videoIntervalRef.current) clearInterval(videoIntervalRef.current);
 
     if (sessionRef.current) {
       try { sessionRef.current.close(); } catch { /* ignore */ }
@@ -157,6 +210,7 @@ const VoiceAssistant = ({
       shouldStayRef.current = false;
       setStatus('idle');
       setIsSpeaking(false);
+      setActiveTool(null);
     }
   }, []);
 
@@ -183,6 +237,54 @@ const VoiceAssistant = ({
   }, [lang]);
 
   // ═══════════════════════════════════════════════════════════════
+  // TOOL IMPLEMENTATIONS
+  // ═══════════════════════════════════════════════════════════════
+
+  const handleToolCall = async (functionCalls: any[]) => {
+    if (!functionCalls?.length) return [];
+    
+    const responses = [];
+    
+    for (const call of functionCalls) {
+      console.log("🛠️ Tool Called:", call.name, call.args);
+      let result = {};
+      let displayText = "";
+
+      if (call.name === "get_weather_forecast") {
+        result = { 
+          condition: "Partly Cloudy",
+          temp: "28°C",
+          humidity: "65%",
+          forecast: "Chance of light rain in evening.",
+          advisory: "Good time for spraying before 4 PM."
+        };
+        displayText = "🌤️ Weather Check";
+      } 
+      else if (call.name === "get_mandi_price") {
+        const crop = call.args.crop;
+        const m = MOCK_MARKET.find(x => x.name.toLowerCase().includes(crop.toLowerCase()));
+        if (m) {
+          result = { price: m.price, trend: m.trend, arrival: m.arrival };
+        } else {
+          result = { price: "4500", trend: "Stable", arrival: "Medium" }; 
+        }
+        displayText = `💰 Market Rate: ${crop}`;
+      }
+
+      setActiveTool({ name: displayText, result: JSON.stringify(result) });
+      setTimeout(() => setActiveTool(null), 4000);
+
+      responses.push({
+        id: call.id,
+        name: call.name,
+        response: { result }
+      });
+    }
+    
+    return responses;
+  };
+
+  // ═══════════════════════════════════════════════════════════════
   // CONNECT (Gemini + Audio + Video)
   // ═══════════════════════════════════════════════════════════════
 
@@ -201,7 +303,7 @@ const VoiceAssistant = ({
       // ── 1. Get User Media ──
       const constraints: MediaStreamConstraints = {
         audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
-        video: cameraEnabled ? { width: 320, height: 240, facingMode: 'user' } : false,
+        video: cameraEnabled ? { width: 640, height: 480, facingMode: 'environment' } : false,
       };
 
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
@@ -213,11 +315,18 @@ const VoiceAssistant = ({
 
       streamRef.current = stream;
 
-      // Separate video stream for face tracking
+      // Video Stream Logic
       if (cameraEnabled) {
         const videoTrack = stream.getVideoTracks()[0];
         if (videoTrack) {
-          setVideoStream(new MediaStream([videoTrack]));
+          const videoStreamOnly = new MediaStream([videoTrack]);
+          setVideoStream(videoStreamOnly);
+          
+          // Setup hidden video for frame capture
+          if (hiddenVideoRef.current) {
+            hiddenVideoRef.current.srcObject = videoStreamOnly;
+            hiddenVideoRef.current.play().catch(e => console.error("Video play err", e));
+          }
         }
       }
 
@@ -233,19 +342,16 @@ const VoiceAssistant = ({
       outputCtxRef.current = outCtx;
       nextPlayTime.current = outCtx.currentTime;
 
-      // Input Analyser (shared with Orb)
       const inAnalyser = inCtx.createAnalyser();
       inAnalyser.fftSize = 256;
       inAnalyser.smoothingTimeConstant = 0.8;
       inputAnalyserRef.current = inAnalyser;
       setAnalyserState(inAnalyser);
 
-      // Output Compressor
       const comp = outCtx.createDynamicsCompressor();
       comp.connect(outCtx.destination);
       compressorRef.current = comp;
 
-      // Microphone Source → Analyser → Worklet
       const source = inCtx.createMediaStreamSource(stream);
       await inCtx.audioWorklet.addModule(getWorkletUrl());
       const worklet = new AudioWorkletNode(inCtx, 'pcm-forwarder');
@@ -263,15 +369,30 @@ const VoiceAssistant = ({
       const apiKey = getGenAIKey();
       const ai = new GoogleGenAI({ apiKey });
 
-      const history = transcripts.slice(-4);
-      let contextStr = '';
-      if (history.length > 0) {
-        contextStr = '\n[CONTEXT]: ' + history.map(h => `${h.role}: ${h.text}`).join('; ');
-      }
+      // Build System Prompt
+      const systemPrompt = `
+      You are KRUSHI MITRA AI, an experienced field agriculture supervisor and botanist.
+      
+      ROLE:
+      - You act as a "Doctor for Plants".
+      - You can SEE the video feed. If the user points the camera at a plant, soil, or bug, ANALYZE IT.
+      - If the image is blurry, ask the user to hold steady or move closer.
+      
+      VISUAL ANALYSIS PROTOCOL:
+      1. OBSERVE: Identify crop, stage, leaf color, spots, holes, or insects.
+      2. DIAGNOSE: Is it fungal (spots), bacterial (blight), pest (holes/sucking), or nutrient deficiency (yellowing pattern)?
+      3. ADVISE: Give immediate, practical remedies (organic first, chemical if severe).
+      
+      CONVERSATION STYLE:
+      - Speak simple ${lang === 'mr' ? 'Marathi' : lang === 'hi' ? 'Hindi' : 'English'}.
+      - Use rural terms like 'Shetkari Dada', 'Wavar'.
+      - Keep responses short (2-3 sentences max) unless explaining a complex step.
+      - Be encouraging and respectful.
 
-      const systemPrompt = `You are AI Krushi Mitra (कृषी मित्र), a friendly agricultural expert. Speak ${
-        lang === 'mr' ? 'Marathi' : lang === 'hi' ? 'Hindi' : 'English'
-      }. Keep answers concise and helpful for farmers. You can see the user's facial expressions and emotions through the camera - acknowledge their emotional state naturally and respond empathetically.${contextStr}`;
+      SAFETY:
+      - Do not guess if unsure. Say "Please show me closer."
+      - Always mention dosage per pump/liter for medicines.
+      `;
 
       const session = await ai.live.connect({
         model: 'gemini-2.5-flash-native-audio-preview-12-2025',
@@ -281,6 +402,7 @@ const VoiceAssistant = ({
             voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Puck' } },
           },
           systemInstruction: { parts: [{ text: systemPrompt }] },
+          tools: TOOLS,
           inputAudioTranscription: {},
         },
         callbacks: {
@@ -289,8 +411,31 @@ const VoiceAssistant = ({
             retryCount.current = 0;
             setStatus('connected');
             triggerHaptic('medium');
+            
+            // Start Video Loop if camera enabled
+            if (cameraEnabled && hiddenVideoRef.current) {
+               if (videoIntervalRef.current) clearInterval(videoIntervalRef.current);
+               // Send frame every 1.5 seconds for better real-time feel
+               videoIntervalRef.current = setInterval(async () => {
+                  if (!setupDone.current || !sessionRef.current || !hiddenVideoRef.current) return;
+                  const base64Data = await captureFrame(hiddenVideoRef.current);
+                  if (base64Data) {
+                     sessionRef.current.sendRealtimeInput({
+                        media: { mimeType: 'image/jpeg', data: base64Data }
+                     });
+                  }
+               }, 1500);
+            }
           },
           onmessage: async (message: LiveServerMessage) => {
+            // Handle Tool Calls
+            if (message.toolCall) {
+                const responses = await handleToolCall(message.toolCall.functionCalls);
+                if (responses.length > 0 && sessionRef.current) {
+                    sessionRef.current.sendToolResponse({ functionResponses: responses });
+                }
+            }
+
             // Audio Output
             const audioData = message.serverContent?.modelTurn?.parts?.[0]?.inlineData?.data;
             if (audioData && outputCtxRef.current && compressorRef.current) {
@@ -306,15 +451,9 @@ const VoiceAssistant = ({
               nextPlayTime.current += buffer.duration;
 
               setIsSpeaking(true);
-
-              // Clear any existing timeout
               if (speakingTimeoutRef.current) clearTimeout(speakingTimeoutRef.current);
-
               src.onended = () => {
-                // Delay setting isSpeaking to false to handle rapid successive audio chunks
-                speakingTimeoutRef.current = setTimeout(() => {
-                  setIsSpeaking(false);
-                }, 200);
+                speakingTimeoutRef.current = setTimeout(() => setIsSpeaking(false), 200);
               };
             }
 
@@ -331,6 +470,7 @@ const VoiceAssistant = ({
           },
           onclose: () => {
             setupDone.current = false;
+            if (videoIntervalRef.current) clearInterval(videoIntervalRef.current);
             if (shouldStayRef.current) handleReconnect();
             else setStatus('idle');
           },
@@ -352,15 +492,13 @@ const VoiceAssistant = ({
           session.sendRealtimeInput({
             media: { mimeType: 'audio/pcm', data: float32ToBase64(chunk) },
           });
-        } catch {
-          /* ignore send errors */
-        }
+        } catch { /* ignore */ }
       };
     } catch (e: any) {
       setErrorMessage(e?.message || 'Failed to connect');
       setStatus('error');
     }
-  }, [cleanup, handleReconnect, transcripts, lang, cameraEnabled]);
+  }, [cleanup, handleReconnect, transcripts, lang, cameraEnabled, user]);
 
   useEffect(() => {
     connectRef.current = connect;
@@ -396,22 +534,6 @@ const VoiceAssistant = ({
   }, []);
 
   // ═══════════════════════════════════════════════════════════════
-  // CALLBACK HANDLERS FOR ORB DATA
-  // ═══════════════════════════════════════════════════════════════
-
-  const handleFaceData = useCallback((data: any) => {
-    // Can be used for additional logic like auto-adjusting camera
-  }, []);
-
-  const handleEmotionData = useCallback((data: any) => {
-    // Can be used to send emotion context to Gemini
-  }, []);
-
-  const handleVoiceData = useCallback((data: any) => {
-    // Can be used for voice activity detection UI
-  }, []);
-
-  // ═══════════════════════════════════════════════════════════════
   // RENDER
   // ═══════════════════════════════════════════════════════════════
 
@@ -419,6 +541,9 @@ const VoiceAssistant = ({
     <div className="fixed inset-0 z-[200] flex flex-col h-[100dvh] w-full overflow-hidden bg-[#020617]">
       {/* Background */}
       <div className="absolute inset-0 bg-gradient-to-b from-indigo-950/20 via-[#020617] to-black pointer-events-none" />
+
+      {/* Hidden Video for Frame Capture */}
+      <video ref={hiddenVideoRef} className="hidden" muted playsInline autoPlay width={640} height={480} />
 
       {/* ═══════ Header ═══════ */}
       <header className="relative z-50 flex items-center justify-between px-4 pt-safe-top mt-4 pb-2">
@@ -481,7 +606,25 @@ const VoiceAssistant = ({
       </header>
 
       {/* ═══════ 3D Scene ═══════ */}
-      <div className="flex-1 relative z-10 w-full">
+      <div className="flex-1 relative z-10 w-full flex flex-col justify-center items-center">
+        
+        {/* HUD Overlay for Camera */}
+        {cameraEnabled && status === 'connected' && (
+            <div className="absolute inset-4 border-2 border-cyan-500/30 rounded-3xl pointer-events-none z-20 animate-pulse">
+                {/* Corners */}
+                <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-cyan-400 -mt-0.5 -ml-0.5 rounded-tl-lg"></div>
+                <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-cyan-400 -mt-0.5 -mr-0.5 rounded-tr-lg"></div>
+                <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-cyan-400 -mb-0.5 -ml-0.5 rounded-bl-lg"></div>
+                <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-cyan-400 -mb-0.5 -mr-0.5 rounded-br-lg"></div>
+                
+                {/* Scanning Text */}
+                <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-black/60 backdrop-blur px-4 py-1 rounded-full border border-cyan-500/50 flex items-center gap-2">
+                    <Scan size={14} className="text-cyan-400 animate-spin-slow"/>
+                    <span className="text-xs font-mono text-cyan-300 tracking-widest">LIVE ANALYSIS</span>
+                </div>
+            </div>
+        )}
+
         <EmotionAwareOrb
           stream={videoStream}
           analyser={analyserState}
@@ -489,9 +632,7 @@ const VoiceAssistant = ({
           isListening={status === 'connected'}
           status={status}
           mode={orbMode}
-          onFaceData={handleFaceData}
-          onEmotionData={handleEmotionData}
-          onVoiceData={handleVoiceData}
+          cameraEnabled={cameraEnabled}
         />
 
         {/* Start Button (idle state) */}
@@ -505,6 +646,18 @@ const VoiceAssistant = ({
               <span className="text-[10px] font-bold mt-1 tracking-wider">START</span>
             </button>
           </div>
+        )}
+
+        {/* Active Tool Visual */}
+        {activeTool && (
+            <div className="absolute top-32 left-1/2 -translate-x-1/2 z-50 pointer-events-none animate-enter">
+                <div className="bg-black/60 backdrop-blur-xl border border-white/20 px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3">
+                    <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                    <div>
+                        <p className="text-white text-sm font-bold">{activeTool.name}</p>
+                    </div>
+                </div>
+            </div>
         )}
 
         {/* Connecting Indicator */}
@@ -528,8 +681,9 @@ const VoiceAssistant = ({
 
           <div className="flex flex-col gap-3 pt-4">
             {transcripts.length === 0 && status === 'connected' && (
-              <div className="self-center text-white/30 text-xs font-mono py-8 animate-pulse">
-                🎤 Listening... Speak to begin
+              <div className="self-center text-white/30 text-xs font-mono py-8 animate-pulse text-center">
+                🌾 KRUSHI MITRA AI READY<br/>
+                Speak or show crops to camera
               </div>
             )}
 
@@ -551,12 +705,7 @@ const VoiceAssistant = ({
               <div className="self-center bg-red-500/20 text-red-200 px-4 py-2 rounded-lg text-xs border border-red-500/30 flex items-center gap-2">
                 <span>⚠️</span>
                 <span>{errorMessage}</span>
-                <button
-                  onClick={handleToggle}
-                  className="ml-2 px-2 py-0.5 bg-red-500/30 rounded text-red-200 hover:bg-red-500/40 transition-colors"
-                >
-                  Retry
-                </button>
+                <button onClick={handleToggle} className="ml-2 px-2 py-0.5 bg-red-500/30 rounded text-red-200">Retry</button>
               </div>
             )}
 
@@ -568,20 +717,16 @@ const VoiceAssistant = ({
       {/* ═══════ Bottom Controls ═══════ */}
       {status === 'connected' && (
         <div className="absolute bottom-safe-bottom mb-6 left-0 right-0 flex justify-center items-center gap-4 z-50 pointer-events-none">
-          {/* Toggle transcript visibility */}
           <button
             onClick={() => setShowTranscripts(!showTranscripts)}
             className={clsx(
               'pointer-events-auto w-12 h-12 rounded-full border backdrop-blur-md flex items-center justify-center transition-all active:scale-95',
-              showTranscripts
-                ? 'bg-white/10 border-white/20 text-white/60'
-                : 'bg-white/5 border-white/10 text-white/30'
+              showTranscripts ? 'bg-white/10 border-white/20 text-white/60' : 'bg-white/5 border-white/10 text-white/30'
             )}
           >
             <span className="text-lg">{showTranscripts ? '💬' : '🔇'}</span>
           </button>
 
-          {/* Stop Button */}
           <button
             onClick={handleToggle}
             className="pointer-events-auto w-16 h-16 rounded-full bg-red-500/20 border-2 border-red-500/40 backdrop-blur-md flex items-center justify-center text-red-400 hover:bg-red-500/30 transition-all active:scale-95 shadow-[0_0_30px_rgba(239,68,68,0.2)]"
@@ -589,18 +734,13 @@ const VoiceAssistant = ({
             <MicOff size={28} />
           </button>
 
-          {/* Speaking indicator */}
           <div
             className={clsx(
               'w-12 h-12 rounded-full border backdrop-blur-md flex items-center justify-center transition-all',
-              isSpeaking
-                ? 'bg-green-500/20 border-green-500/30 text-green-400'
-                : 'bg-white/5 border-white/10 text-white/20'
+              isSpeaking ? 'bg-green-500/20 border-green-500/30 text-green-400' : 'bg-white/5 border-white/10 text-white/20'
             )}
           >
-            <span className={clsx('text-lg', isSpeaking && 'animate-bounce')}>
-              {isSpeaking ? '🗣️' : '🤫'}
-            </span>
+            <span className={clsx('text-lg', isSpeaking && 'animate-bounce')}>{isSpeaking ? '🗣️' : '🤫'}</span>
           </div>
         </div>
       )}
