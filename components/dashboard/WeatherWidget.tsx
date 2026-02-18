@@ -1,5 +1,5 @@
 
-import React, { useCallback, useEffect, useMemo, useRef, useState, useId } from "react";
+import React, { useCallback, useMemo, useRef, useState, useId } from "react";
 import clsx from "clsx";
 import {
   MapPin,
@@ -13,6 +13,27 @@ import {
 } from "lucide-react";
 import { GlassTile } from './GlassTile';
 import { Language } from '../../types';
+
+type IconProps = {
+  size?: number;
+  animated?: boolean;
+  className?: string;
+};
+
+type Weather3DIconKind =
+  | "clearDay"
+  | "clearNight"
+  | "cloudy"
+  | "partlyCloudyDay"
+  | "partlyCloudyNight"
+  | "rain"
+  | "storm"
+  | "snow"
+  | "fog"
+  | "windyDay"
+  | "windyNight"
+  | "rainWind"
+  | "stormWind";
 
 /* ──────────────────────────────────────────────────────────────
    Text (minimal).
@@ -349,32 +370,6 @@ const WxStatusDot = React.memo(function WxStatusDot({
   );
 });
 
-/* ──────────────────────────────────────────────────────────────
-   ENHANCED: Clay-style 3D Weather Icons & Utils
-   ────────────────────────────────────────────────────────────── */
-
-export type Weather3DIconKind =
-  | "clearDay"
-  | "clearNight"
-  | "partlyCloudyDay"
-  | "partlyCloudyNight"
-  | "cloudy"
-  | "rain"
-  | "storm"
-  | "snow"
-  | "fog"
-  | "windyDay"
-  | "windyNight"
-  | "rainWind"
-  | "stormWind";
-
-type IconProps = {
-  size?: number;
-  animated?: boolean;
-  intensity?: number;
-  className?: string;
-};
-
 // ENHANCED: Clay Gradients & Shadows with more depth
 function ClayDefs({
   id,
@@ -418,8 +413,8 @@ function ClayDefs({
   );
 }
 
-// ENHANCED Sun with better rays and glow
-function SunClay({ size = 120, animated = true, className }: IconProps) {
+// ENHANCED Sun
+const SunClay = React.memo(function SunClay({ size = 120, animated = true, className }: IconProps) {
   const uid = useId();
   return (
     <svg
@@ -458,10 +453,10 @@ function SunClay({ size = 120, animated = true, className }: IconProps) {
       <ellipse cx="70" cy="128" rx="26" ry="7" fill="rgba(0,0,0,0.18)" style={{ filter: "blur(3px)" }} />
     </svg>
   );
-}
+});
 
-// ENHANCED Moon with better craters and glow
-function MoonClay({ size = 110, animated = true, className }: IconProps) {
+// ENHANCED Moon
+const MoonClay = React.memo(function MoonClay({ size = 110, animated = true, className }: IconProps) {
   const uid = useId();
   return (
     <svg width={size} height={size} viewBox="0 0 140 140" className={className} style={{ overflow: "visible" }}>
@@ -491,10 +486,10 @@ function MoonClay({ size = 110, animated = true, className }: IconProps) {
       ))}
     </svg>
   );
-}
+});
 
-// ENHANCED Cloud with better depth and volume
-function CloudClay({
+// ENHANCED Cloud
+const CloudClay = React.memo(function CloudClay({
   size = 160,
   shade = "light",
   animated = true,
@@ -525,10 +520,10 @@ function CloudClay({
       <ellipse cx="110" cy="144" rx="68" ry="8" fill="rgba(0,0,0,0.14)" style={{ filter: "blur(3px)" }} />
     </svg>
   );
-}
+});
 
-// ENHANCED Rain drops with better refraction
-function DropClay({ x, y, s, delay, dur, animated = true }: { x: number; y: number; s: number; delay: number; dur: number; animated?: boolean }) {
+// ENHANCED Rain drops
+const DropClay = React.memo(function DropClay({ x, y, s, delay, dur, animated = true }: { x: number; y: number; s: number; delay: number; dur: number; animated?: boolean }) {
   const uid = useId();
   return (
     <g style={{ transformOrigin: `${x}px ${y}px`, animation: animated ? `wx-rain ${dur}s ease-in ${delay}s infinite` : undefined }}>
@@ -543,10 +538,10 @@ function DropClay({ x, y, s, delay, dur, animated = true }: { x: number; y: numb
       <ellipse cx={x - 2.2 * s} cy={y + 11 * s} rx={2.2 * s} ry={5 * s} fill="rgba(255,255,255,0.55)" />
     </g>
   );
-}
+});
 
-// ENHANCED Lightning bolt with better intensity
-function BoltClay({ x, y, s, animated = true }: { x: number; y: number; s: number; animated?: boolean }) {
+// ENHANCED Lightning bolt
+const BoltClay = React.memo(function BoltClay({ x, y, s, animated = true }: { x: number; y: number; s: number; animated?: boolean }) {
   const uid = useId();
   return (
     <g style={{ animation: animated ? "wx-bolt 3.2s ease-in-out infinite" : undefined }}>
@@ -561,10 +556,10 @@ function BoltClay({ x, y, s, animated = true }: { x: number; y: number; s: numbe
       <path d={`M ${x + 6 * s} ${y + 6 * s} L ${x - 2 * s} ${y + 18 * s}`} stroke="rgba(255,255,255,0.6)" strokeWidth={2.8 * s} strokeLinecap="round" opacity={0.8} />
     </g>
   );
-}
+});
 
-// ENHANCED Wind strokes with better flow
-function WindStrokes({ x, y, w, animated = true, speed = 1 }: { x: number; y: number; w: number; animated?: boolean; speed?: number }) {
+// ENHANCED Wind strokes
+const WindStrokes = React.memo(function WindStrokes({ x, y, w, animated = true, speed = 1 }: { x: number; y: number; w: number; animated?: boolean; speed?: number }) {
   const dur = 3.4 / clamp(speed, 0.7, 1.6);
   return (
     <g style={{ animation: animated ? `wx-wind ${dur}s ease-in-out infinite` : undefined }}>
@@ -572,20 +567,19 @@ function WindStrokes({ x, y, w, animated = true, speed = 1 }: { x: number; y: nu
       <path d={`M ${x + 8} ${y + 18} C ${x + w * 0.24} ${y + 8}, ${x + w * 0.46} ${y + 8}, ${x + w * 0.66} ${y + 18} C ${x + w * 0.80} ${y + 26}, ${x + w * 0.90} ${y + 26}, ${x + w} ${y + 18}`} fill="none" stroke="rgba(255,255,255,0.50)" strokeWidth="6" strokeLinecap="round" />
     </g>
   );
-}
+});
 
-// ENHANCED: Main Weather Icon Component
-export function Weather3DIcon({
+export const Weather3DIcon = React.memo(function Weather3DIcon({
   kind,
   size = 180,
   animated = true,
   intensity = 1,
   className,
-}: IconProps & { kind: Weather3DIconKind }) {
+}: IconProps & { kind: Weather3DIconKind; intensity?: number }) {
   const k = kind;
 
   const rainParams = useMemo(() => {
-    const s = clamp(intensity, 0.7, 1.6);
+    const s = clamp(intensity || 1, 0.7, 1.6);
     return [
       { x: 86, y: 98, sc: 0.95, d: 0.00, dur: 0.62 / s },
       { x: 112, y: 102, sc: 1.05, d: 0.10, dur: 0.66 / s },
@@ -595,7 +589,7 @@ export function Weather3DIcon({
   }, [intensity]);
 
   const snowParams = useMemo(() => {
-    const s = clamp(intensity, 0.7, 1.6);
+    const s = clamp(intensity || 1, 0.7, 1.6);
     return [
       { x: 90, y: 106, r: 3.6, d: 0.00, dur: 1.25 / s },
       { x: 118, y: 110, r: 3.0, d: 0.18, dur: 1.32 / s },
@@ -619,7 +613,7 @@ export function Weather3DIcon({
 
   if (k === "rain") return svg(<><g transform="translate(22,72)"><CloudClay size={196} shade="mid" animated={animated} /></g><g>{rainParams.map((p, i) => <DropClay key={i} x={p.x} y={p.y} s={p.sc} delay={p.d} dur={p.dur} animated={animated} />)}</g></>);
   if (k === "storm") return svg(<><g transform="translate(18,68)"><CloudClay size={204} shade="dark" animated={animated} /></g><BoltClay x={138} y={98} s={1.05} animated={animated} /><g>{rainParams.slice(0, 3).map((p, i) => <DropClay key={i} x={p.x - 6} y={p.y + 2} s={p.sc * 0.9} delay={p.d} dur={p.dur * 0.9} animated={animated} />)}</g></>);
-  if (k === "snow") return svg(<><g transform="translate(22,72)"><CloudClay size={196} shade="light" animated={animated} /></g>{snowParams.map((s, i) => <circle key={i} cx={s.x} cy={s.y} r={s.r} fill="rgba(255,255,255,0.95)" style={{ filter: "drop-shadow(0 2px 5px rgba(0,0,0,0.14))", animation: animated ? `wx-snow ${s.dur}s ease-in-out ${s.d}s infinite` : undefined }} />)}</>);
+  if (k === "snow") return svg(<><g transform="translate(22,72)"><CloudClay size={196} shade="light" animated={animated} /></g><g>{snowParams.map((s, i) => <circle key={i} cx={s.x} cy={s.y} r={s.r} fill="rgba(255,255,255,0.95)" style={{ filter: "drop-shadow(0 2px 5px rgba(0,0,0,0.14))", animation: animated ? `wx-snow ${s.dur}s ease-in-out ${s.d}s infinite` : undefined }} />)}</g></>);
   if (k === "fog") return svg(<><g transform="translate(22,72)"><CloudClay size={196} shade="mid" animated={animated} /></g><g style={{ opacity: 0.95 }}>{Array.from({ length: 3 }, (_, i) => <rect key={i} x={34} y={140 + i * 18} width={172} height={14} rx={7} fill={`rgba(255,255,255,${0.22 - i * 0.04})`} style={{ filter: "blur(0.3px)", animation: animated ? `wx-fog ${7.2 + i * 1.1}s ease-in-out ${i * 0.4}s infinite` : undefined }} />)}</g></>);
 
   if (k === "windyDay") return svg(<><g transform="translate(44,20)"><SunClay size={108} animated={animated} /></g><g transform="translate(22,84)"><CloudClay size={196} shade="light" animated={animated} /></g><WindStrokes x={42} y={148} w={160} animated={animated} speed={intensity} /></>);
@@ -628,7 +622,7 @@ export function Weather3DIcon({
   if (k === "stormWind") return svg(<><g transform="translate(18,68)"><CloudClay size={204} shade="dark" animated={animated} /></g><WindStrokes x={44} y={142} w={160} animated={animated} speed={intensity} /><BoltClay x={138} y={98} s={1.05} animated={animated} /></>);
 
   return <div style={{ width: size, height: size, display: "grid", placeItems: "center" }}><CloudClay size={Math.round(size * 1.05)} shade="mid" animated={animated} /></div>;
-}
+});
 
 export function mapTo3DIconKind(opts: { code: number; isDay: boolean; windKmh?: number }): Weather3DIconKind {
   const { code, isDay, windKmh = 0 } = opts;
@@ -678,6 +672,41 @@ const WEATHER_3D_ICON_CSS = `
 @keyframes wx-wind { 0%,100%{ transform: translateX(-10px) } 50%{ transform: translateX(12px) } }
 @keyframes wx-fog { 0%,100%{ transform: translateX(-6px) } 50%{ transform: translateX(8px) } }
 @keyframes wx-twinkle { 0%,100%{ opacity: .35; transform: scale(.75) } 50%{ opacity: 1; transform: scale(1.25) } }
+`;
+
+// WIDGET ANIMATION CSS - using CSS variables to prevent re-generation
+const WIDGET_CSS = `
+@keyframes WW-orb-drift {
+  0%,100% { transform: translate(0,0) scale(1) rotate(0deg); opacity: .54; }
+  25% { transform: translate(7%,-6%) scale(1.12) rotate(5deg); opacity: .70; }
+  50% { transform: translate(-5%,7%) scale(.96) rotate(-4deg); opacity: .60; }
+  75% { transform: translate(4%,-4%) scale(1.06) rotate(3deg); opacity: .64; }
+}
+@keyframes WW-temp-pulse {
+  0%,100% { filter: drop-shadow(0 0 0 transparent); transform: scale(1); }
+  50% { filter: drop-shadow(0 4px 46px var(--ww-glow-20)); transform: scale(1.015); }
+}
+@keyframes WW-edge-breathe { 0%,100% { opacity: .22; } 50% { opacity: .60; } }
+@keyframes WW-bar-glow {
+  0%,100% { box-shadow: 0 0 10px var(--ww-glow); opacity: .74; }
+  50% { box-shadow: 0 0 24px var(--ww-glow), 0 0 50px var(--ww-glow); opacity: 1; }
+}
+@keyframes WW-shine { 0% { transform: translateX(-280%) skewX(-22deg); } 100% { transform: translateX(450%) skewX(-22deg); } }
+@keyframes WW-chip-shimmer { 0% { transform: translateX(-220%); } 100% { transform: translateX(220%); } }
+@keyframes WW-fade-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes WW-fade-in-scale { from { opacity: 0; transform: translateY(6px) scale(0.97); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@keyframes WW-float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+@keyframes WW-entrance { from { opacity: 0; transform: scale(0.96) translateY(12px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+
+.WW-chip { transition: all .45s cubic-bezier(.4,0,.15,1); }
+.WW-chip:hover {
+  background: rgba(255,255,255,.10) !important;
+  transform: translateY(-2.5px) scale(1.03);
+  box-shadow: 0 8px 20px rgba(0,0,0,.28), 0 0 0 0.5px rgba(255,255,255,.10) inset, 0 -1px 0 rgba(255,255,255,.12) inset !important;
+}
+.WW-chip:active { transform: translateY(-1px) scale(1.01); transition-duration: .15s; }
+
+@media (prefers-reduced-motion: reduce) { .WXa, .WWa { animation: none !important; } }
 `;
 
 const Chip = React.memo(function Chip({
@@ -794,12 +823,6 @@ export const WeatherWidget = ({
 }: WeatherWidgetProps) => {
   const tileRef = useRef<HTMLDivElement>(null);
   const [isHovered, setIsHovered] = useState(false);
-  const [isVisible, setIsVisible] = useState(false);
-
-  useEffect(() => {
-    const t = setTimeout(() => setIsVisible(true), 50);
-    return () => clearTimeout(t);
-  }, []);
 
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
     const el = tileRef.current;
@@ -840,6 +863,31 @@ export const WeatherWidget = ({
 
   const iconKind = mapTo3DIconKind({ code, isDay, windKmh: wind });
 
+  // CSS variables for static optimization
+  const cssVars = useMemo(() => ({
+    '--ww-sky-0': p.sky[0],
+    '--ww-sky-1': p.sky[1],
+    '--ww-sky-2': p.sky[2],
+    '--ww-orb-0': p.orb[0],
+    '--ww-orb-1': p.orb[1],
+    '--ww-accent': p.accent,
+    '--ww-glow': p.glow,
+    '--ww-glow-20': p.glow.replace(/[\d.]+\)$/, ".20)"),
+    '--ww-glow-14': p.glow.replace(/[\d.]+\)$/, ".14)"),
+    '--ww-glow-12': p.glow.replace(/[\d.]+\)$/, ".12)"),
+    '--ww-glow-10': p.glow.replace(/[\d.]+\)$/, ".10)"),
+    '--ww-text': p.text,
+    '--ww-chip': p.chip,
+    '--ww-chip-border': p.chipBorder,
+    '--ww-bar': p.bar,
+    '--ww-hover-glow': p.hoverGlow,
+    '--ww-shimmer': p.shimmer,
+    '--ww-highlight': p.highlight,
+    '--ww-aurora': p.aurora,
+    '--ww-depth': p.depth,
+    '--ww-ring': p.ring,
+  } as React.CSSProperties), [p]);
+
   return (
     <GlassTile
       onClick={() => onNavigate("WEATHER")}
@@ -858,49 +906,14 @@ export const WeatherWidget = ({
           transform: isHovered ? "perspective(900px) rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg))" : "none",
           transition: "transform 420ms cubic-bezier(.2,.8,.2,1)",
           transformStyle: "preserve-3d",
+          ...cssVars
         }}
-      />
-
-      <style>{`
-/* ═══ 3D icon animations ═══ */
-${WEATHER_3D_ICON_CSS}
-
-/* ═══ Widget animations ═══ */
-@keyframes WW-orb-drift {
-  0%,100% { transform: translate(0,0) scale(1) rotate(0deg); opacity: .54; }
-  25% { transform: translate(7%,-6%) scale(1.12) rotate(5deg); opacity: .70; }
-  50% { transform: translate(-5%,7%) scale(.96) rotate(-4deg); opacity: .60; }
-  75% { transform: translate(4%,-4%) scale(1.06) rotate(3deg); opacity: .64; }
-}
-@keyframes WW-temp-pulse {
-  0%,100% { filter: drop-shadow(0 0 0 transparent); transform: scale(1); }
-  50% { filter: drop-shadow(0 4px 46px ${p.glow.replace(/[\d.]+\)$/, ".20)")}); transform: scale(1.015); }
-}
-@keyframes WW-edge-breathe { 0%,100% { opacity: .22; } 50% { opacity: .60; } }
-@keyframes WW-bar-glow {
-  0%,100% { box-shadow: 0 0 10px ${p.glow}; opacity: .74; }
-  50% { box-shadow: 0 0 24px ${p.glow}, 0 0 50px ${p.glow}; opacity: 1; }
-}
-@keyframes WW-shine { 0% { transform: translateX(-280%) skewX(-22deg); } 100% { transform: translateX(450%) skewX(-22deg); } }
-@keyframes WW-chip-shimmer { 0% { transform: translateX(-220%); } 100% { transform: translateX(220%); } }
-@keyframes WW-fade-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-@keyframes WW-fade-in-scale { from { opacity: 0; transform: translateY(6px) scale(0.97); } to { opacity: 1; transform: translateY(0) scale(1); } }
-@keyframes WW-float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
-@keyframes WW-entrance { from { opacity: 0; transform: scale(0.96) translateY(12px); } to { opacity: 1; transform: scale(1) translateY(0); } }
-
-.WW-chip { transition: all .45s cubic-bezier(.4,0,.15,1); }
-.WW-chip:hover {
-  background: rgba(255,255,255,.10) !important;
-  transform: translateY(-2.5px) scale(1.03);
-  box-shadow: 0 8px 20px rgba(0,0,0,.28), 0 0 0 0.5px rgba(255,255,255,.10) inset, 0 -1px 0 rgba(255,255,255,.12) inset !important;
-}
-.WW-chip:active { transform: translateY(-1px) scale(1.01); transition-duration: .15s; }
-
-@media (prefers-reduced-motion: reduce) { .WXa, .WWa { animation: none !important; } }
-      `}</style>
+      >
+      <style>{WEATHER_3D_ICON_CSS}</style>
+      <style>{WIDGET_CSS}</style>
 
       {/* Background */}
-      <div className="absolute inset-0" style={{ background: `linear-gradient(162deg, ${p.sky[0]} 0%, ${p.sky[1]} 46%, ${p.sky[2]} 100%)` }} />
+      <div className="absolute inset-0" style={{ background: `linear-gradient(162deg, var(--ww-sky-0) 0%, var(--ww-sky-1) 46%, var(--ww-sky-2) 100%)` }} />
 
       {/* Orbs */}
       <div
@@ -911,7 +924,7 @@ ${WEATHER_3D_ICON_CSS}
           width: "105%",
           height: "105%",
           borderRadius: "50%",
-          background: `radial-gradient(circle, ${p.orb[0]} 0%, ${p.orb[1]} 40%, transparent 70%)`,
+          background: `radial-gradient(circle, var(--ww-orb-0) 0%, var(--ww-orb-1) 40%, transparent 70%)`,
           filter: "blur(65px)",
           animation: "WW-orb-drift 20s ease-in-out infinite",
         }}
@@ -924,7 +937,7 @@ ${WEATHER_3D_ICON_CSS}
           width: "72%",
           height: "72%",
           borderRadius: "50%",
-          background: `radial-gradient(circle, ${p.orb[1]} 0%, ${p.glow.replace(/[\d.]+\)$/, ".14)")} 48%, transparent 68%)`,
+          background: `radial-gradient(circle, var(--ww-orb-1) 0%, var(--ww-glow-14) 48%, transparent 68%)`,
           filter: "blur(58px)",
           opacity: 0.38,
           animation: "WW-orb-drift 15s ease-in-out 3s infinite",
@@ -938,7 +951,7 @@ ${WEATHER_3D_ICON_CSS}
           width: "52%",
           height: "52%",
           borderRadius: "50%",
-          background: `radial-gradient(circle, ${p.aurora} 0%, ${p.depth} 45%, transparent 62%)`,
+          background: `radial-gradient(circle, var(--ww-aurora) 0%, var(--ww-depth) 45%, transparent 62%)`,
           filter: "blur(48px)",
           animation: "WW-orb-drift 17s ease-in-out 3.5s infinite",
         }}
@@ -952,7 +965,7 @@ ${WEATHER_3D_ICON_CSS}
       <div
         className="absolute top-0 left-5 right-5 h-[0.5px] pointer-events-none WWa"
         style={{
-          background: `linear-gradient(90deg, transparent, ${p.accent}22, ${p.highlight} 50%, ${p.accent}22, transparent)`,
+          background: `linear-gradient(90deg, transparent, rgba(var(--ww-accent), 0.22), var(--ww-highlight) 50%, rgba(var(--ww-accent), 0.22), transparent)`,
           animation: "WW-edge-breathe 5.5s ease-in-out infinite",
         }}
       />
@@ -962,7 +975,7 @@ ${WEATHER_3D_ICON_CSS}
         <div
           className="h-full WWa"
           style={{
-            background: `linear-gradient(90deg, transparent 2%, ${p.bar}50 18%, ${p.accent} 50%, ${p.bar}50 82%, transparent 98%)`,
+            background: `linear-gradient(90deg, transparent 2%, var(--ww-bar) 50 18%, var(--ww-accent) 50%, var(--ww-bar) 50 82%, transparent 98%)`,
             animation: "WW-bar-glow 5s ease-in-out infinite",
           }}
         />
@@ -972,7 +985,7 @@ ${WEATHER_3D_ICON_CSS}
       <div
         className="absolute inset-0 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-800"
         style={{
-          background: `radial-gradient(520px circle at var(--wx, 50%) var(--wy, 50%), ${p.hoverGlow}, transparent 62%)`,
+          background: `radial-gradient(520px circle at var(--wx, 50%) var(--wy, 50%), var(--ww-hover-glow), transparent 62%)`,
         }}
       />
 
@@ -981,7 +994,7 @@ ${WEATHER_3D_ICON_CSS}
         <div
           className="absolute inset-y-0 w-[45%] WWa"
           style={{
-            background: `linear-gradient(98deg, transparent, ${p.shimmer}06 28%, ${p.shimmer} 46%, ${p.highlight} 50%, ${p.shimmer} 54%, transparent)`,
+            background: `linear-gradient(98deg, transparent, var(--ww-shimmer) 06 28%, var(--ww-shimmer) 46%, var(--ww-highlight) 50%, var(--ww-shimmer) 54%, transparent)`,
             animation: "WW-shine 4.5s ease-in-out forwards",
           }}
         />
@@ -990,7 +1003,7 @@ ${WEATHER_3D_ICON_CSS}
       {/* Content */}
       <div
         className="relative z-10 flex justify-between items-stretch h-full p-[18px] lg:p-[22px] gap-1"
-        style={{ animation: isVisible ? "WW-entrance 0.7s cubic-bezier(.4,0,.2,1) both" : "none" }}
+        style={{ animation: "WW-entrance 0.7s cubic-bezier(.4,0,.2,1) both" }}
       >
         {loading ? (
           <Skeleton />
@@ -1005,10 +1018,10 @@ ${WEATHER_3D_ICON_CSS}
                   style={{
                     background: p.chip,
                     border: `1px solid ${p.chipBorder}`,
-                    boxShadow: `0 0 16px ${p.glow.replace(/[\d.]+\)$/, ".10)")}, 0 2px 5px rgba(0,0,0,.12)`,
+                    boxShadow: `0 0 16px var(--ww-glow-10), 0 2px 5px rgba(0,0,0,.12)`,
                   }}
                 >
-                  <div className="absolute inset-0" style={{ background: `radial-gradient(circle, ${p.accent}14, transparent 72%)` }} />
+                  <div className="absolute inset-0" style={{ background: `radial-gradient(circle, var(--ww-accent) 14, transparent 72%)` }} />
                   <MapPin size={13} strokeWidth={2.5} style={{ color: p.accent, filter: `drop-shadow(0 0 4px ${p.accent}50)` }} className="relative z-10" />
                 </div>
                 <span
@@ -1035,7 +1048,7 @@ ${WEATHER_3D_ICON_CSS}
                   )}
                   style={{
                     animation: "WW-temp-pulse 5.5s ease-in-out infinite",
-                    filter: `drop-shadow(0 3px 10px ${p.glow.replace(/[\d.]+\)$/, ".12)")})`,
+                    filter: `drop-shadow(0 3px 10px var(--ww-glow-12))`,
                   }}
                 >
                   {temp != null ? `${Math.round(temp)}°` : "—"}
@@ -1062,7 +1075,7 @@ ${WEATHER_3D_ICON_CSS}
                   className="text-[14.5px] font-bold capitalize tracking-[0.02em] line-clamp-1"
                   style={{
                     color: p.text,
-                    textShadow: `0 0 30px ${p.glow.replace(/[\d.]+\)$/, ".24)")}, 0 2px 5px rgba(0,0,0,.32)`,
+                    textShadow: `0 0 30px var(--ww-glow-20), 0 2px 5px rgba(0,0,0,.32)`,
                   }}
                 >
                   {txt?.weather_desc?.[code] || txt?.weather_desc?.[0] || "Weather"}
@@ -1099,7 +1112,7 @@ ${WEATHER_3D_ICON_CSS}
               <div
                 className="absolute inset-0 rounded-full transition-all duration-600"
                 style={{
-                  background: `radial-gradient(circle, ${p.glow.replace(/[\d.]+\)$/, isHovered ? ".12)" : ".06)")}, transparent 60%)`,
+                  background: `radial-gradient(circle, ${isHovered ? 'var(--ww-glow-12)' : 'var(--ww-glow-10)'}, transparent 60%)`,
                   filter: "blur(28px)",
                   transform: isHovered ? "scale(1.12)" : "scale(1)",
                 }}
@@ -1132,7 +1145,7 @@ ${WEATHER_3D_ICON_CSS}
           <div
             className="absolute inset-0"
             style={{
-              background: `linear-gradient(110deg, transparent 22%, ${p.shimmer} 48%, ${p.highlight} 50%, ${p.shimmer} 52%, transparent 78%)`,
+              background: `linear-gradient(110deg, transparent 22%, var(--ww-shimmer) 48%, var(--ww-highlight) 50%, var(--ww-shimmer) 52%, transparent 78%)`,
               animation: "WW-chip-shimmer 2.8s ease-in-out infinite",
               opacity: 0.6,
             }}
@@ -1147,7 +1160,7 @@ ${WEATHER_3D_ICON_CSS}
       {/* Inner border glow */}
       <div
         className="absolute inset-0 rounded-[inherit] pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-700"
-        style={{ boxShadow: `inset 0 0 0 1px ${p.ring}, inset 0 0 30px ${p.aurora}` }}
+        style={{ boxShadow: `inset 0 0 0 1px var(--ww-ring), inset 0 0 30px var(--ww-aurora)` }}
       />
     </GlassTile>
   );

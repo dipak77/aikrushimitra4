@@ -30,13 +30,14 @@ export interface KnowledgeItem {
   marketInfo?: LocalizedText;
 }
 
+// Optimized Image URLs: width=800px (mobile friendly), format=webp, quality=70
 export const KNOWLEDGE_BASE: KnowledgeItem[] = [
   {
     id: 'soyabean',
     category: 'crop',
     title: { mr: 'सोयाबीन शेती तंत्र', hi: 'सोयाबीन की खेती', en: 'Soyabean Farming' },
     subtitle: { mr: 'संपूर्ण उत्पादन मार्गदर्शक', hi: 'पूर्ण उत्पादन गाइड', en: 'Complete Production Guide' },
-    image: 'https://images.unsplash.com/photo-1628277613967-6abca504d0ac?q=80&w=1200&auto=format&fit=crop',
+    image: 'https://images.unsplash.com/photo-1628277613967-6abca504d0ac?q=70&w=800&auto=format&fit=crop&fm=webp',
     tags: ['Kharif', 'Oilseed', 'Cash Crop'],
     bestVarieties: ['JS-335', 'JS-9560', 'MACS-1188', 'KDS-726', 'MAUS-71', 'Phule Kalyani'],
     expectedYield: {
@@ -51,7 +52,7 @@ export const KNOWLEDGE_BASE: KnowledgeItem[] = [
       { label: { mr: 'कालावधी', en: 'Duration' }, value: '90-110 Days', icon: 'clock' },
       { label: { mr: 'पाणी', en: 'Water' }, value: 'Medium', icon: 'droplet' },
       { label: { mr: 'हवामान', en: 'Temp' }, value: '25°-30°C', icon: 'sun' },
-      { label: { mr: 'बियाणे', en: 'Seed Rate' }, value: '70-80 kg/ha', icon: 'sprout' },
+      { label: { mr: 'बियाणे', en: 'Seed Rate' }, value: '70-80 kg/ha', icon: 'sprout' }
     ],
     sections: [
       {
@@ -117,7 +118,7 @@ export const KNOWLEDGE_BASE: KnowledgeItem[] = [
     category: 'crop',
     title: { mr: 'कापूस लागवड', hi: 'कपास की खेती', en: 'Cotton Farming' },
     subtitle: { mr: 'पांढरे सोने पिकवण्याचे तंत्र', hi: 'सफेद सोना उगाने की तकनीक', en: 'White Gold — Complete Cultivation Guide' },
-    image: 'https://images.unsplash.com/photo-1615470749906-f4a89f5b4d09?q=80&w=1200&auto=format&fit=crop',
+    image: 'https://images.unsplash.com/photo-1615470749906-f4a89f5b4d09?q=70&w=800&auto=format&fit=crop&fm=webp',
     tags: ['Kharif', 'Cash Crop', 'Fiber', 'Long Duration'],
     bestVarieties: ['Bt Cotton (BG-II)', 'Suraj', 'NH-615', 'Ankur-3028', 'Ajeet-199', 'Rashi-665'],
     expectedYield: {
@@ -132,7 +133,7 @@ export const KNOWLEDGE_BASE: KnowledgeItem[] = [
       { label: { mr: 'कालावधी', en: 'Duration' }, value: '150-180 Days', icon: 'clock' },
       { label: { mr: 'पाणी', en: 'Water' }, value: 'High', icon: 'droplet' },
       { label: { mr: 'हवामान', en: 'Temp' }, value: '21°-35°C', icon: 'sun' },
-      { label: { mr: 'बियाणे', en: 'Seed Rate' }, value: '2.5 kg/ha (Bt)', icon: 'sprout' },
+      { label: { mr: 'बियाणे', en: 'Seed Rate' }, value: '2.5 kg/ha (Bt)', icon: 'sprout' }
     ],
     sections: [
       {
@@ -152,7 +153,7 @@ export const KNOWLEDGE_BASE: KnowledgeItem[] = [
       {
         title: { mr: 'खत व्यवस्थापन', en: 'Fertilizer Management' },
         content: {
-          mr: 'बागायती कापसासाठी १२०:६०:६० (N:P₂O₅:K₂O) किलो/हेक्टर मात्रा द्यावी.\nनत्र (N) ३ हप्त्यात विभागून द्यावे: पेरणीवेळी (२५%), ३० दिवसांनी (५०%), ६० दिवसांनी (२५%).\nफुलोरा अवस्थेत MgSO₄ (१%) + KNO₃ (१%) फवारणी करावी.\nसूक्ष्म अन्नद्रव्ये: ZnSO₄ (२५ किलो/हेक्टर) + FeSO₄ (२५ किलो/हेक्टर) जमिनीत द्यावे.',
+          mr: 'बागायती कापसासाठी १२०:६०:६० (N:P₂O₅:K₂O) किलो/हेक्टर.\nनत्र (N) ३ हप्त्यात विभागून द्यावे: पेरणीवेळी (२५%), ३० दिवसांनी (५०%), ६० दिवसांनी (२५%).\nफुलोरा अवस्थेत MgSO₄ (१%) + KNO₃ (१%) फवारणी करावी.\nसूक्ष्म अन्नद्रव्ये: ZnSO₄ (२५ किलो/हेक्टर) + FeSO₄ (२५ किलो/हेक्टर) जमिनीत द्यावे.',
           en: 'For irrigated cotton, apply 120:60:60 (N:P₂O₅:K₂O) kg/ha.\nApply Nitrogen (N) in 3 splits: at sowing (25%), 30 days (50%), 60 days (25%).\nSpray MgSO₄ (1%) + KNO₃ (1%) at flowering stage.\nMicronutrients: Apply ZnSO₄ (25 kg/ha) + FeSO₄ (25 kg/ha) to soil.'
         }
       },
@@ -177,7 +178,7 @@ export const KNOWLEDGE_BASE: KnowledgeItem[] = [
     category: 'crop',
     title: { mr: 'कांदा उत्पादन', hi: 'प्याज की खेती', en: 'Onion Farming' },
     subtitle: { mr: 'अधिक उत्पन्नासाठी आधुनिक पद्धत', hi: 'अधिक उपज के लिए आधुनिक विधि', en: 'Modern Method for High Yield' },
-    image: 'https://images.unsplash.com/photo-1587049352846-4a222e784d38?q=80&w=1200&auto=format&fit=crop',
+    image: 'https://images.unsplash.com/photo-1587049352846-4a222e784d38?q=70&w=800&auto=format&fit=crop&fm=webp',
     tags: ['Rabi', 'Kharif', 'Vegetable', 'Cash Crop', 'Export'],
     bestVarieties: ['Baswant-780', 'N-2-4-1', 'Phule Samarth', 'AFDR', 'Bhima Shakti', 'Bhima Kiran'],
     expectedYield: {
@@ -192,7 +193,7 @@ export const KNOWLEDGE_BASE: KnowledgeItem[] = [
       { label: { mr: 'कालावधी', en: 'Duration' }, value: '100-120 Days', icon: 'clock' },
       { label: { mr: 'पाणी', en: 'Water' }, value: 'Regular', icon: 'droplet' },
       { label: { mr: 'हवामान', en: 'Temp' }, value: '15°-25°C', icon: 'sun' },
-      { label: { mr: 'बियाणे', en: 'Seed Rate' }, value: '8-10 kg/ha', icon: 'sprout' },
+      { label: { mr: 'बियाणे', en: 'Seed Rate' }, value: '8-10 kg/ha', icon: 'sprout' }
     ],
     sections: [
       {
@@ -244,7 +245,7 @@ export const KNOWLEDGE_BASE: KnowledgeItem[] = [
     category: 'crop',
     title: { mr: 'गहू लागवड', hi: 'गेहूं की खेती', en: 'Wheat Farming' },
     subtitle: { mr: 'रब्बी हंगामातील प्रमुख पीक', hi: 'रबी सीजन की प्रमुख फसल', en: 'Major Rabi Season Crop' },
-    image: 'https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?q=80&w=1200&auto=format&fit=crop',
+    image: 'https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?q=70&w=800&auto=format&fit=crop&fm=webp',
     tags: ['Rabi', 'Cereal', 'Staple Food'],
     bestVarieties: ['NIAW-301 (Trimbak)', 'LOK-1', 'HD-2967', 'GW-322', 'MACS-6222', 'Phule Samadhan'],
     expectedYield: {
@@ -259,7 +260,7 @@ export const KNOWLEDGE_BASE: KnowledgeItem[] = [
       { label: { mr: 'कालावधी', en: 'Duration' }, value: '110-130 Days', icon: 'clock' },
       { label: { mr: 'पाणी', en: 'Water' }, value: '4-6 Irrigations', icon: 'droplet' },
       { label: { mr: 'हवामान', en: 'Temp' }, value: '15°-25°C', icon: 'sun' },
-      { label: { mr: 'बियाणे', en: 'Seed Rate' }, value: '100-125 kg/ha', icon: 'sprout' },
+      { label: { mr: 'बियाणे', en: 'Seed Rate' }, value: '100-125 kg/ha', icon: 'sprout' }
     ],
     sections: [
       {
@@ -304,7 +305,7 @@ export const KNOWLEDGE_BASE: KnowledgeItem[] = [
     category: 'crop',
     title: { mr: 'ऊस लागवड', hi: 'गन्ना की खेती', en: 'Sugarcane Farming' },
     subtitle: { mr: 'साखर कारखान्यांचे मुख्य पीक', hi: 'चीनी मिल का मुख्य फसल', en: 'Primary Sugar Factory Crop' },
-    image: 'https://images.unsplash.com/photo-1599940778173-e5ae6719f0e6?q=80&w=1200&auto=format&fit=crop',
+    image: 'https://images.unsplash.com/photo-1599940778173-e5ae6719f0e6?q=70&w=800&auto=format&fit=crop&fm=webp',
     tags: ['Annual', 'Cash Crop', 'Sugar', 'Ethanol'],
     bestVarieties: ['Co-86032', 'CoM-0265', 'CoVSI-9805', 'Co-92005', 'Phule-265', 'CoC-671'],
     expectedYield: {
@@ -319,7 +320,7 @@ export const KNOWLEDGE_BASE: KnowledgeItem[] = [
       { label: { mr: 'कालावधी', en: 'Duration' }, value: '12-18 Months', icon: 'clock' },
       { label: { mr: 'पाणी', en: 'Water' }, value: 'Very High', icon: 'droplet' },
       { label: { mr: 'हवामान', en: 'Temp' }, value: '20°-35°C', icon: 'sun' },
-      { label: { mr: 'बेणे', en: 'Seed Sets' }, value: '30,000/ha', icon: 'sprout' },
+      { label: { mr: 'बेणे', en: 'Seed Sets' }, value: '30,000/ha', icon: 'sprout' }
     ],
     sections: [
       {
@@ -357,7 +358,7 @@ export const KNOWLEDGE_BASE: KnowledgeItem[] = [
     category: 'crop',
     title: { mr: 'हळद लागवड', hi: 'हल्दी की खेती', en: 'Turmeric Farming' },
     subtitle: { mr: 'सुवर्ण मसाला - उच्च उत्पन्नाचे पीक', hi: 'गोल्डन स्पाइस - उच्च आय', en: 'Golden Spice — High Income Crop' },
-    image: 'https://images.unsplash.com/photo-1615485500704-8e990f9900f7?q=80&w=1200&auto=format&fit=crop',
+    image: 'https://images.unsplash.com/photo-1615485500704-8e990f9900f7?q=70&w=800&auto=format&fit=crop&fm=webp',
     tags: ['Kharif', 'Spice', 'Medicinal', 'Export'],
     bestVarieties: ['Selam', 'Rajapuri', 'Krishna', 'Phule Swarupa', 'Salem Alleppey', 'Prabha'],
     expectedYield: {
@@ -372,7 +373,7 @@ export const KNOWLEDGE_BASE: KnowledgeItem[] = [
       { label: { mr: 'कालावधी', en: 'Duration' }, value: '8-9 Months', icon: 'clock' },
       { label: { mr: 'पाणी', en: 'Water' }, value: 'Regular', icon: 'droplet' },
       { label: { mr: 'हवामान', en: 'Temp' }, value: '20°-30°C', icon: 'sun' },
-      { label: { mr: 'बेणे', en: 'Seed Rhizome' }, value: '2500 kg/ha', icon: 'sprout' },
+      { label: { mr: 'बेणे', en: 'Seed Rhizome' }, value: '2500 kg/ha', icon: 'sprout' }
     ],
     sections: [
       {
@@ -403,7 +404,7 @@ export const KNOWLEDGE_BASE: KnowledgeItem[] = [
     category: 'crop',
     title: { mr: 'डाळिंब लागवड', hi: 'अनार की खेती', en: 'Pomegranate Farming' },
     subtitle: { mr: 'फळबाग शेतीतील नगदी पीक', hi: 'बागवानी का नकदी फसल', en: 'Horticulture Cash Crop' },
-    image: 'https://images.unsplash.com/photo-1615485290382-441e4d049cb5?q=80&w=1200&auto=format&fit=crop',
+    image: 'https://images.unsplash.com/photo-1615485290382-441e4d049cb5?q=70&w=800&auto=format&fit=crop&fm=webp',
     tags: ['Perennial', 'Fruit', 'Export', 'High Value'],
     bestVarieties: ['Bhagwa', 'Ganesh', 'Mridula', 'Arakta', 'Ruby', 'Phule Bhagwa Super'],
     expectedYield: {
@@ -418,7 +419,7 @@ export const KNOWLEDGE_BASE: KnowledgeItem[] = [
       { label: { mr: 'फळधारणा', en: 'Bearing' }, value: '3-4 Years', icon: 'clock' },
       { label: { mr: 'पाणी', en: 'Water' }, value: 'Drip Essential', icon: 'droplet' },
       { label: { mr: 'हवामान', en: 'Temp' }, value: '25°-35°C', icon: 'sun' },
-      { label: { mr: 'झाडे', en: 'Trees' }, value: '555/ha', icon: 'sprout' },
+      { label: { mr: 'झाडे', en: 'Trees' }, value: '555/ha', icon: 'sprout' }
     ],
     sections: [
       {
@@ -449,7 +450,7 @@ export const KNOWLEDGE_BASE: KnowledgeItem[] = [
     category: 'crop',
     title: { mr: 'द्राक्ष लागवड', hi: 'अंगूर की खेती', en: 'Grape Farming' },
     subtitle: { mr: 'निर्यातक्षम द्राक्ष उत्पादनाचे शास्त्र', hi: 'निर्यात योग्य अंगूर उत्पादन', en: 'Export Quality Grape Production' },
-    image: 'https://images.unsplash.com/photo-1537640538966-79f369143f8f?q=80&w=1200&auto=format&fit=crop',
+    image: 'https://images.unsplash.com/photo-1537640538966-79f369143f8f?q=70&w=800&auto=format&fit=crop&fm=webp',
     tags: ['Perennial', 'Fruit', 'Export', 'High Value'],
     bestVarieties: ['Thompson Seedless', 'Sharad Seedless (Kishmish)', 'Sonaka', 'Tas-A-Ganesh', 'Nanasaheb Purple', 'Crimson Seedless'],
     expectedYield: {
@@ -464,7 +465,7 @@ export const KNOWLEDGE_BASE: KnowledgeItem[] = [
       { label: { mr: 'फळधारणा', en: 'Bearing' }, value: '2-3 Years', icon: 'clock' },
       { label: { mr: 'पाणी', en: 'Water' }, value: 'Drip Only', icon: 'droplet' },
       { label: { mr: 'हवामान', en: 'Temp' }, value: '15°-35°C', icon: 'sun' },
-      { label: { mr: 'वेली', en: 'Vines' }, value: '2200/ha', icon: 'sprout' },
+      { label: { mr: 'वेली', en: 'Vines' }, value: '2200/ha', icon: 'sprout' }
     ],
     sections: [
       {
@@ -488,13 +489,13 @@ export const KNOWLEDGE_BASE: KnowledgeItem[] = [
     category: 'tech',
     title: { mr: 'ठिबक सिंचन', hi: 'ड्रिप सिंचाई', en: 'Drip Irrigation' },
     subtitle: { mr: 'पाण्याची ५०% बचत आणि दुप्पट उत्पादन', hi: 'पानी की बचत और दोगुनी उपज', en: 'Save 50% Water & Double Yield' },
-    image: 'https://images.unsplash.com/photo-1563514227147-6d2ff665a6a0?q=80&w=1200&auto=format&fit=crop',
+    image: 'https://images.unsplash.com/photo-1563514227147-6d2ff665a6a0?q=70&w=800&auto=format&fit=crop&fm=webp',
     tags: ['Technology', 'Water Saving', 'Efficiency', 'Subsidy'],
     stats: [
       { label: { mr: 'बचत', en: 'Saving' }, value: '50-60%', icon: 'droplet' },
       { label: { mr: 'उत्पन्न', en: 'Yield' }, value: '+40%', icon: 'trending-up' },
       { label: { mr: 'खर्च', en: 'Cost' }, value: '₹45-80K/ha', icon: 'indian-rupee' },
-      { label: { mr: 'अनुदान', en: 'Subsidy' }, value: '55-80%', icon: 'percent' },
+      { label: { mr: 'अनुदान', en: 'Subsidy' }, value: '55-80%', icon: 'percent' }
     ],
     sections: [
       {
@@ -532,13 +533,13 @@ export const KNOWLEDGE_BASE: KnowledgeItem[] = [
     category: 'tech',
     title: { mr: 'तुषार सिंचन', hi: 'स्प्रिंकलर सिंचाई', en: 'Sprinkler Irrigation' },
     subtitle: { mr: 'पावसासारखे पाणी - सर्व पिकांसाठी', hi: 'बारिश जैसा पानी', en: 'Rain-like Irrigation for All Crops' },
-    image: 'https://images.unsplash.com/photo-1560493676-04071c5f467b?q=80&w=1200&auto=format&fit=crop',
+    image: 'https://images.unsplash.com/photo-1560493676-04071c5f467b?q=70&w=800&auto=format&fit=crop&fm=webp',
     tags: ['Technology', 'Water Saving', 'Subsidy'],
     stats: [
       { label: { mr: 'बचत', en: 'Saving' }, value: '30-40%', icon: 'droplet' },
       { label: { mr: 'उत्पन्न', en: 'Yield' }, value: '+25%', icon: 'trending-up' },
       { label: { mr: 'खर्च', en: 'Cost' }, value: '₹25-50K/ha', icon: 'indian-rupee' },
-      { label: { mr: 'अनुदान', en: 'Subsidy' }, value: '55-75%', icon: 'percent' },
+      { label: { mr: 'अनुदान', en: 'Subsidy' }, value: '55-75%', icon: 'percent' }
     ],
     sections: [
       {
@@ -562,13 +563,13 @@ export const KNOWLEDGE_BASE: KnowledgeItem[] = [
     category: 'tech',
     title: { mr: 'गांडूळ खत', hi: 'वर्मीकम्पोस्ट', en: 'Vermicomposting' },
     subtitle: { mr: 'सेंद्रिय शेतीचा पाया', hi: 'जैविक खेती का आधार', en: 'Foundation of Organic Farming' },
-    image: 'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?q=80&w=1200&auto=format&fit=crop',
+    image: 'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?q=70&w=800&auto=format&fit=crop&fm=webp',
     tags: ['Organic', 'Soil Health', 'Low Cost'],
     stats: [
       { label: { mr: 'खर्च', en: 'Cost' }, value: '₹3-5/kg', icon: 'indian-rupee' },
       { label: { mr: 'कालावधी', en: 'Duration' }, value: '45-60 Days', icon: 'clock' },
       { label: { mr: 'उत्पन्न', en: 'Output' }, value: '60-70%', icon: 'trending-up' },
-      { label: { mr: 'NPK', en: 'NPK' }, value: '1.5:0.5:0.8', icon: 'sprout' },
+      { label: { mr: 'NPK', en: 'NPK' }, value: '1.5:0.5:0.8', icon: 'sprout' }
     ],
     sections: [
       {
@@ -592,13 +593,13 @@ export const KNOWLEDGE_BASE: KnowledgeItem[] = [
     category: 'tech',
     title: { mr: 'माती परीक्षण', hi: 'मृदा परीक्षण', en: 'Soil Testing' },
     subtitle: { mr: 'खत व्यवस्थापनाचा आधार', hi: 'उर्वरक प्रबंधन का आधार', en: 'Foundation for Fertilizer Management' },
-    image: 'https://images.unsplash.com/photo-1605000797499-95a51c5269ae?q=80&w=1200&auto=format&fit=crop',
+    image: 'https://images.unsplash.com/photo-1605000797499-95a51c5269ae?q=70&w=800&auto=format&fit=crop&fm=webp',
     tags: ['Technology', 'Soil Health', 'Essential'],
     stats: [
       { label: { mr: 'खर्च', en: 'Cost' }, value: 'Free-₹300', icon: 'indian-rupee' },
       { label: { mr: 'वेळ', en: 'Time' }, value: '15-20 Days', icon: 'clock' },
       { label: { mr: 'बचत', en: 'Savings' }, value: '30% Fertilizer', icon: 'trending-up' },
-      { label: { mr: 'वैधता', en: 'Validity' }, value: '3 Years', icon: 'percent' },
+      { label: { mr: 'वैधता', en: 'Validity' }, value: '3 Years', icon: 'percent' }
     ],
     sections: [
       {
@@ -622,13 +623,13 @@ export const KNOWLEDGE_BASE: KnowledgeItem[] = [
     category: 'scheme',
     title: { mr: 'पीएम किसान सन्मान निधी', hi: 'पीएम किसान सम्मान निधि', en: 'PM Kisan Samman Nidhi' },
     subtitle: { mr: 'दरवर्षी ₹६,००० थेट बँक खात्यात', hi: 'हर साल ₹6,000 सीधे बैंक खाते में', en: '₹6,000/Year Direct to Bank Account' },
-    image: 'https://images.unsplash.com/photo-1593113598332-cd288d649433?q=80&w=1200&auto=format&fit=crop',
+    image: 'https://images.unsplash.com/photo-1593113598332-cd288d649433?q=70&w=800&auto=format&fit=crop&fm=webp',
     tags: ['Government', 'Financial Aid', 'Direct Benefit'],
     stats: [
       { label: { mr: 'रक्कम', en: 'Amount' }, value: '₹6,000/Year', icon: 'indian-rupee' },
       { label: { mr: 'हप्ते', en: 'Installments' }, value: '3 × ₹2,000', icon: 'clock' },
       { label: { mr: 'लाभार्थी', en: 'Beneficiaries' }, value: '11 Crore+', icon: 'trending-up' },
-      { label: { mr: 'अर्ज', en: 'Apply' }, value: 'Online/CSC', icon: 'percent' },
+      { label: { mr: 'अर्ज', en: 'Apply' }, value: 'Online/CSC', icon: 'percent' }
     ],
     sections: [
       {
@@ -652,13 +653,13 @@ export const KNOWLEDGE_BASE: KnowledgeItem[] = [
     category: 'scheme',
     title: { mr: 'पीक विमा योजना (PMFBY)', hi: 'फसल बीमा योजना', en: 'Crop Insurance (PMFBY)' },
     subtitle: { mr: 'नैसर्गिक आपत्तीत नुकसान भरपाई', hi: 'प्राकृतिक आपदा में नुकसान भरपाई', en: 'Compensation for Natural Calamities' },
-    image: 'https://images.unsplash.com/photo-1500595046743-cd271d694d30?q=80&w=1200&auto=format&fit=crop',
+    image: 'https://images.unsplash.com/photo-1500595046743-cd271d694d30?q=70&w=800&auto=format&fit=crop&fm=webp',
     tags: ['Government', 'Insurance', 'Risk Management'],
     stats: [
       { label: { mr: 'प्रीमियम', en: 'Premium' }, value: '1.5-5%', icon: 'indian-rupee' },
       { label: { mr: 'खरीप', en: 'Kharif' }, value: '2% Premium', icon: 'clock' },
       { label: { mr: 'रब्बी', en: 'Rabi' }, value: '1.5% Premium', icon: 'trending-up' },
-      { label: { mr: 'नगदी', en: 'Commercial' }, value: '5% Premium', icon: 'percent' },
+      { label: { mr: 'नगदी', en: 'Commercial' }, value: '5% Premium', icon: 'percent' }
     ],
     sections: [
       {
@@ -682,13 +683,13 @@ export const KNOWLEDGE_BASE: KnowledgeItem[] = [
     category: 'livestock',
     title: { mr: 'दुग्धव्यवसाय', hi: 'डेयरी फार्मिंग', en: 'Dairy Farming' },
     subtitle: { mr: 'दूध उत्पादनातून शाश्वत उत्पन्न', hi: 'दूध उत्पादन से स्थिर आय', en: 'Sustainable Income from Milk Production' },
-    image: 'https://images.unsplash.com/photo-1570042225831-d98fa7577f1e?q=80&w=1200&auto=format&fit=crop',
+    image: 'https://images.unsplash.com/photo-1570042225831-d98fa7577f1e?q=70&w=800&auto=format&fit=crop&fm=webp',
     tags: ['Livestock', 'Dairy', 'Daily Income'],
     stats: [
       { label: { mr: 'दूध', en: 'Milk' }, value: '10-25 L/day', icon: 'droplet' },
       { label: { mr: 'दर', en: 'Rate' }, value: '₹30-45/L', icon: 'indian-rupee' },
       { label: { mr: 'जाती', en: 'Breeds' }, value: 'HF/Jersey/Gir', icon: 'sprout' },
-      { label: { mr: 'खर्च', en: 'Cost' }, value: '₹60-90K/cow', icon: 'trending-up' },
+      { label: { mr: 'खर्च', en: 'Cost' }, value: '₹60-90K/cow', icon: 'trending-up' }
     ],
     sections: [
       {
@@ -726,13 +727,13 @@ export const KNOWLEDGE_BASE: KnowledgeItem[] = [
     category: 'livestock',
     title: { mr: 'कुक्कुटपालन', hi: 'मुर्गीपालन', en: 'Poultry Farming' },
     subtitle: { mr: 'कमी जागेत जास्त उत्पन्न', hi: 'कम जगह में अधिक आय', en: 'High Income in Less Space' },
-    image: 'https://images.unsplash.com/photo-1548550023-2bdb3c5beed7?q=80&w=1200&auto=format&fit=crop',
+    image: 'https://images.unsplash.com/photo-1548550023-2bdb3c5beed7?q=70&w=800&auto=format&fit=crop&fm=webp',
     tags: ['Livestock', 'Poultry', 'Quick Returns'],
     stats: [
       { label: { mr: 'अंडी', en: 'Eggs' }, value: '250-300/year', icon: 'sprout' },
       { label: { mr: 'मांस', en: 'Meat' }, value: '2-2.5 kg/bird', icon: 'trending-up' },
       { label: { mr: 'गुंतवणूक', en: 'Investment' }, value: '₹50-80/bird', icon: 'indian-rupee' },
-      { label: { mr: 'परतावा', en: 'Returns' }, value: '6-8 Months', icon: 'clock' },
+      { label: { mr: 'परतावा', en: 'Returns' }, value: '6-8 Months', icon: 'clock' }
     ],
     sections: [
       {
@@ -758,5 +759,5 @@ export const CATEGORIES = [
   { id: 'crop', label: { mr: 'पिके', en: 'Crops' }, icon: 'wheat', color: 'from-green-500 to-emerald-600' },
   { id: 'tech', label: { mr: 'तंत्रज्ञान', en: 'Technology' }, icon: 'settings', color: 'from-blue-500 to-indigo-600' },
   { id: 'livestock', label: { mr: 'पशुपालन', en: 'Livestock' }, icon: 'milk', color: 'from-amber-500 to-orange-600' },
-  { id: 'scheme', label: { mr: 'योजना', en: 'Schemes' }, icon: 'landmark', color: 'from-purple-500 to-violet-600' },
+  { id: 'scheme', label: { mr: 'योजना', en: 'Schemes' }, icon: 'landmark', color: 'from-purple-500 to-violet-600' }
 ];
