@@ -123,8 +123,31 @@ const AdminDashboard = ({ onBack }: { onBack: () => void }) => {
       );
   }
 
+  // Handle error state where stats failed to load
+  if (!stats) {
+      return (
+          <div className="h-screen w-full flex flex-col items-center justify-center bg-[#020617] text-slate-400 gap-6">
+              <div className="w-20 h-20 rounded-full bg-red-500/10 flex items-center justify-center text-red-400 shadow-[0_0_30px_rgba(239,68,68,0.2)]">
+                  <AlertTriangle size={36} />
+              </div>
+              <div className="text-center space-y-1">
+                  <p className="text-lg font-bold text-slate-200">Unable to load analytics</p>
+                  <p className="text-sm text-slate-500">Please check your connection and try again.</p>
+              </div>
+              <div className="flex gap-4">
+                  <button onClick={() => window.location.reload()} className="px-6 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-full text-sm font-bold shadow-lg shadow-emerald-500/20 transition-all">
+                      Retry
+                  </button>
+                  <button onClick={onBack} className="px-6 py-2.5 bg-white/5 hover:bg-white/10 text-white rounded-full text-sm font-bold transition-all">
+                      Go Back
+                  </button>
+              </div>
+          </div>
+      );
+  }
+
   // ── DATA PREP ──
-  const filteredUsers = stats?.users.filter((u: any) => 
+  const filteredUsers = stats.users?.filter((u: any) => 
     u.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
     u.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (u.lastLocation && u.lastLocation.toLowerCase().includes(searchTerm.toLowerCase()))

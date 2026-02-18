@@ -10,25 +10,7 @@ import { FaceLandmarker, FilesetResolver } from '@mediapipe/tasks-vision';
 declare global {
   namespace JSX {
     interface IntrinsicElements {
-      group: any;
-      mesh: any;
-      circleGeometry: any;
-      meshBasicMaterial: any;
-      planeGeometry: any;
-      shaderMaterial: any;
-      pointLight: any;
-      sphereGeometry: any;
-      primitive: any;
-      coneGeometry: any;
-      meshStandardMaterial: any;
-      boxGeometry: any;
-      torusGeometry: any;
-      ambientLight: any;
-      directionalLight: any;
-      points: any;
-      bufferGeometry: any;
-      bufferAttribute: any;
-      pointsMaterial: any;
+      [elemName: string]: any;
     }
   }
 }
