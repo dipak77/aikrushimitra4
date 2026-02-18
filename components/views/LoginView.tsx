@@ -61,9 +61,10 @@ const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess, lang }) => {
         lastLogin: Date.now()
       };
 
+      // ── LOG GOOGLE LOGIN ──
+      logActivity('LOGIN_SUCCESS', location, userProfile, 'GOOGLE_AUTH');
+      
       localStorage.setItem('user_session', JSON.stringify(userProfile));
-      logActivity('LOGIN_SUCCESS', location, userProfile);
-
       setIsLocating(false);
       onLoginSuccess(userProfile);
 
@@ -81,7 +82,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess, lang }) => {
         setTimeout(() => {
             const guestUser: UserProfile = {
                 name: "Guest Farmer",
-                email: "guest@aikrushimitra.in",
+                email: `guest_${Date.now().toString().slice(-4)}@aikrushimitra.in`,
                 village: "Maharashtra",
                 district: "Pune",
                 landSize: "0 Acres",
@@ -90,8 +91,9 @@ const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess, lang }) => {
             };
             
             try {
+                // ── LOG GUEST LOGIN ──
+                logActivity('LOGIN_SUCCESS', "Guest Location", guestUser, 'GUEST_AUTH');
                 localStorage.setItem('user_session', JSON.stringify(guestUser));
-                logActivity('GUEST_LOGIN', "Guest Location", guestUser);
             } catch(e) {
                 console.error("Storage error", e);
             }

@@ -1,4 +1,6 @@
 
+import 'react';
+
 export type Language = 'mr' | 'hi' | 'en';
 
 export type ViewState = 
@@ -75,10 +77,15 @@ export interface ActivityLog {
   id: string;
   timestamp: number;
   view: string;
+  action?: string;
   location: string;
   userAgent: string;
   userName?: string;
   userEmail?: string;
+  sessionId?: string;
+  device?: string;
+  os?: string;
+  provider?: 'google' | 'guest' | 'unknown';
 }
 
 declare global {
@@ -101,6 +108,27 @@ declare global {
   namespace JSX {
     interface IntrinsicElements {
       [elemName: string]: any;
+      group: any;
+      mesh: any;
+      circleGeometry: any;
+      meshBasicMaterial: any;
+      planeGeometry: any;
+      shaderMaterial: any;
+      pointLight: any;
+      sphereGeometry: any;
+      primitive: any;
+      coneGeometry: any;
+      meshStandardMaterial: any;
+      boxGeometry: any;
+      torusGeometry: any;
+      ambientLight: any;
+      directionalLight: any;
+      fog: any;
+      color: any;
+      bufferGeometry: any;
+      bufferAttribute: any;
+      points: any;
+      pointsMaterial: any;
     }
     interface IntrinsicAttributes {
       key?: any;

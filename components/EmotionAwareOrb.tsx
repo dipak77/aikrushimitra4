@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect, useMemo, memo, useCallback } from 'react';
-import { Canvas, useFrame, useThree } from '@react-three/fiber';
+import { Canvas, useFrame } from '@react-three/fiber';
 import { Environment, PerspectiveCamera, Float } from '@react-three/drei';
 import { EffectComposer, Bloom, ChromaticAberration } from '@react-three/postprocessing';
 import { BlendFunction } from 'postprocessing';
@@ -110,7 +110,6 @@ const RingShader = {
     
     void main() {
       float angle = atan(vUv.y - 0.5, vUv.x - 0.5);
-      float dist = length(vUv - 0.5);
       
       // Rotating segments
       float segments = sin(angle * 12.0 - uTime * uSpeed) * 0.5 + 0.5;
@@ -223,7 +222,9 @@ const AnimatedEye = memo(({
         <planeGeometry args={[0.22, 0.22]} />
         <shaderMaterial
           ref={shaderRef}
-          {...EyeShader}
+          uniforms={THREE.UniformsUtils.clone(EyeShader.uniforms)}
+          vertexShader={EyeShader.vertexShader}
+          fragmentShader={EyeShader.fragmentShader}
           transparent
           depthWrite={false}
           blending={THREE.AdditiveBlending}
@@ -276,7 +277,9 @@ const HolographicRing = memo(({
       <planeGeometry args={[radius, radius]} />
       <shaderMaterial
         ref={shaderRef}
-        {...RingShader}
+        uniforms={THREE.UniformsUtils.clone(RingShader.uniforms)}
+        vertexShader={RingShader.vertexShader}
+        fragmentShader={RingShader.fragmentShader}
         transparent
         depthWrite={false}
         blending={THREE.AdditiveBlending}
@@ -538,7 +541,7 @@ const AIBird = memo(({
   faceData: FaceTrackingData | null;
 }) => {
   const [blinkAmount, setBlinkAmount] = useState(0);
-  const lookTarget = useMemo(() => new THREE.Vector2(0, 0), []);
+  const [lookTarget] = useState(() => new THREE.Vector2(0, 0));
   const blinkTimerRef = useRef<ReturnType<typeof setTimeout>>();
 
   // Blink animation
@@ -549,7 +552,9 @@ const AIBird = memo(({
       blinkTimerRef.current = setTimeout(blink, 2000 + Math.random() * 3000);
     };
     blinkTimerRef.current = setTimeout(blink, 2000);
-    return () => clearTimeout(blinkTimerRef.current);
+    return () => {
+      if (blinkTimerRef.current) clearTimeout(blinkTimerRef.current);
+    };
   }, []);
 
   // Look target
@@ -557,9 +562,11 @@ const AIBird = memo(({
     const t = state.clock.getElapsedTime();
     
     if (faceData?.detected) {
-      lookTarget.x = THREE.MathUtils.lerp(lookTarget.x, -faceData.rotY * 2, 0.08);
+      // Smoothed looking at user
+      lookTarget.x = THREE.MathUtils.lerp(lookTarget.x, -faceData.rotY * 1.5, 0.08);
       lookTarget.y = THREE.MathUtils.lerp(lookTarget.y, -faceData.rotX * 1.5, 0.08);
     } else {
+      // Idle looking around
       lookTarget.x = THREE.MathUtils.lerp(lookTarget.x, Math.sin(t * 0.3) * 0.5, 0.02);
       lookTarget.y = THREE.MathUtils.lerp(lookTarget.y, Math.cos(t * 0.25) * 0.3, 0.02);
     }
@@ -593,20 +600,27 @@ const FaceTracker = memo(({
   const landmarkerRef = useRef<FaceLandmarker | null>(null);
   const lastTimeRef = useRef(-1);
 
+  // Setup video element
   useEffect(() => {
     const video = document.createElement('video');
     video.autoplay = true;
     video.muted = true;
     video.playsInline = true;
+    // Set explicit size for Mediapipe
     video.width = 320;
     video.height = 240;
     videoRef.current = video;
 
+    let isMounted = true;
+
     const init = async () => {
       try {
         const resolver = await FilesetResolver.forVisionTasks(
-          "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.0/wasm"
+          "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/wasm"
         );
+        
+        if (!isMounted) return;
+
         landmarkerRef.current = await FaceLandmarker.createFromOptions(resolver, {
           baseOptions: {
             modelAssetPath: "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task",
@@ -623,10 +637,19 @@ const FaceTracker = memo(({
     init();
 
     return () => {
-      if (videoRef.current) videoRef.current.srcObject = null;
+      isMounted = false;
+      if (videoRef.current) {
+        videoRef.current.pause();
+        videoRef.current.srcObject = null;
+      }
+      if (landmarkerRef.current) {
+        (landmarkerRef.current as any).close();
+        landmarkerRef.current = null;
+      }
     };
   }, []);
 
+  // Update video stream
   useEffect(() => {
     if (stream && videoRef.current) {
       videoRef.current.srcObject = stream;
@@ -634,19 +657,23 @@ const FaceTracker = memo(({
     }
   }, [stream]);
 
+  // Detection loop
   useFrame(() => {
     if (!landmarkerRef.current || !videoRef.current || videoRef.current.paused) return;
 
     if (videoRef.current.currentTime !== lastTimeRef.current) {
       lastTimeRef.current = videoRef.current.currentTime;
       try {
-        const result = landmarkerRef.current.detectForVideo(videoRef.current, performance.now());
+        const now = performance.now();
+        const result = landmarkerRef.current.detectForVideo(videoRef.current, now);
         
         if (result.facialTransformationMatrixes?.length > 0) {
           const matrix = result.facialTransformationMatrixes[0].data;
+          // Matrix is 4x4, rotation is roughly encoded.
+          // Getting look direction from rotation part of matrix
           onFaceData({
-            rotX: -(matrix as any)[9] || 0,
-            rotY: -(matrix as any)[8] || 0,
+            rotX: -(matrix as any)[9] || 0, // Approx pitch
+            rotY: -(matrix as any)[8] || 0, // Approx yaw
             mouthOpen: 0,
             leftEyeOpen: 1,
             rightEyeOpen: 1,
@@ -656,7 +683,7 @@ const FaceTracker = memo(({
           onFaceData({ rotX: 0, rotY: 0, mouthOpen: 0, leftEyeOpen: 1, rightEyeOpen: 1, detected: false });
         }
       } catch (e) {
-        // Silent
+        // Handle stream resets or sizing errors gracefully
       }
     }
   });
@@ -672,7 +699,6 @@ const Scene = memo(({
   isSpeaking,
   isListening,
   status,
-  cameraEnabled,
   onFaceData,
 }: EmotionOrbProps) => {
   const [audioLevel, setAudioLevel] = useState(0);
@@ -693,15 +719,27 @@ const Scene = memo(({
 
   useFrame(() => {
     if (analyser) {
-      if (audioDataRef.current.length !== analyser.frequencyBinCount) {
-        audioDataRef.current = new Uint8Array(analyser.frequencyBinCount);
+      try {
+        if (audioDataRef.current.length !== analyser.frequencyBinCount) {
+          audioDataRef.current = new Uint8Array(analyser.frequencyBinCount);
+        }
+        analyser.getByteFrequencyData(audioDataRef.current);
+        
+        let sum = 0;
+        // Check only lower frequencies for voice activity
+        const bins = Math.min(audioDataRef.current.length, 64);
+        for(let i=0; i<bins; i++) {
+            sum += audioDataRef.current[i];
+        }
+        const avg = sum / bins / 255;
+        
+        // Smooth transition
+        setAudioLevel(prev => THREE.MathUtils.lerp(prev, avg, 0.2));
+      } catch (e) {
+        // Analyser might be disconnected
       }
-      analyser.getByteFrequencyData(audioDataRef.current);
-      
-      const sum = audioDataRef.current.reduce((a, b) => a + b, 0);
-      const avg = sum / audioDataRef.current.length / 255;
-      
-      setAudioLevel(THREE.MathUtils.lerp(audioLevel, avg, 0.3));
+    } else {
+      setAudioLevel(0);
     }
   });
 
@@ -755,38 +793,41 @@ const StatusIndicator = memo(({ aiState, isSpeaking, isListening, cameraEnabled 
 }) => {
   const getStatusColor = () => {
     if (isSpeaking) return 'bg-cyan-400 shadow-cyan-400/70';
-    if (isListening) return 'bg-green-400 shadow-green-400/70';
-    if (cameraEnabled) return 'bg-amber-400 shadow-amber-400/70';
-    return 'bg-gray-400 shadow-gray-400/50';
+    if (isListening) return 'bg-emerald-400 shadow-emerald-400/70';
+    return 'bg-slate-500';
   };
 
   const getStatusText = () => {
-    if (isSpeaking) return 'Speaking';
-    if (isListening) return 'Listening';
-    if (cameraEnabled) return 'Vision Active';
-    return 'Standby';
+    if (isSpeaking) return 'AI SPEAKING';
+    if (isListening) return 'LISTENING';
+    return 'STANDBY';
   };
 
   return (
-    <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-3 backdrop-blur-sm bg-black/20 px-6 py-3 rounded-full border border-cyan-500/30">
-      <div className="relative">
-        <div className={`w-3 h-3 rounded-full ${getStatusColor()}`} />
-        {(isSpeaking || isListening || cameraEnabled) && (
-          <div className={`absolute inset-0 rounded-full animate-ping ${
-            isSpeaking ? 'bg-cyan-400' : isListening ? 'bg-green-400' : 'bg-amber-400'
-          }`} />
-        )}
+    <div className="absolute bottom-24 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 pointer-events-none">
+      <div className={`
+        px-4 py-1.5 rounded-full backdrop-blur-md border border-white/10
+        flex items-center gap-2 transition-all duration-300
+        bg-black/40
+      `}>
+        <div className={`w-2 h-2 rounded-full ${getStatusColor()} animate-pulse shadow-[0_0_10px_currentColor]`} />
+        <span className="text-[10px] font-mono font-bold text-white/80 tracking-widest">
+          {getStatusText()}
+        </span>
       </div>
-      <span className="text-sm text-gray-200 font-medium tracking-wide">
-        {getStatusText()}
-      </span>
+      
+      {cameraEnabled && (
+        <div className="text-[9px] font-mono text-cyan-400/60 tracking-widest animate-pulse">
+          VISION ACTIVE
+        </div>
+      )}
     </div>
   );
 });
 
-/* ─── MAIN COMPONENT ─── */
+/* ─── EXPORTED COMPONENT ─── */
 
-const EmotionAwareOrb = memo((props: EmotionOrbProps) => {
+export default function EmotionAwareOrb(props: EmotionOrbProps) {
   const aiState: AIState = useMemo(() => {
     if (props.isSpeaking) return 'speaking';
     if (props.status === 'connecting' || props.status === 'reconnecting') return 'processing';
@@ -795,48 +836,25 @@ const EmotionAwareOrb = memo((props: EmotionOrbProps) => {
   }, [props.isSpeaking, props.isListening, props.status]);
 
   return (
-    <div className="w-full h-full relative overflow-hidden">
-      {/* Background */}
-      <div className="absolute inset-0 bg-gradient-to-b from-[#0a1628] via-[#0d1a2e] to-[#050a15]" />
-      
-      {/* Animated background glow */}
-      <div className="absolute inset-0 opacity-30">
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-cyan-500/20 rounded-full blur-3xl animate-pulse" />
-        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-blue-500/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
-      </div>
-
-      {/* Canvas */}
+    <div className="w-full h-full relative">
       <Canvas
-        shadows
         dpr={[1, 2]}
-        gl={{
-          antialias: true,
-          alpha: false,
-          powerPreference: "high-performance",
-          toneMapping: THREE.ACESFilmicToneMapping,
-          toneMappingExposure: 1,
+        gl={{ 
+          antialias: false, 
+          toneMapping: THREE.ReinhardToneMapping,
+          toneMappingExposure: 1.5,
+          alpha: true 
         }}
       >
-        <color attach="background" args={['#0a1628']} />
-        <fog attach="fog" args={['#0a1628', 8, 15]} />
         <Scene {...props} />
       </Canvas>
-
-      {/* UI Overlays */}
+      
       <StatusIndicator 
         aiState={aiState}
         isSpeaking={props.isSpeaking}
         isListening={props.isListening}
         cameraEnabled={props.cameraEnabled}
       />
-
-      {/* Corner frames */}
-      <div className="absolute top-6 left-6 w-20 h-20 border-l-2 border-t-2 border-cyan-400/40 pointer-events-none" />
-      <div className="absolute top-6 right-6 w-20 h-20 border-r-2 border-t-2 border-cyan-400/40 pointer-events-none" />
-      <div className="absolute bottom-6 left-6 w-20 h-20 border-l-2 border-b-2 border-cyan-400/40 pointer-events-none" />
-      <div className="absolute bottom-6 right-6 w-20 h-20 border-r-2 border-b-2 border-cyan-400/40 pointer-events-none" />
     </div>
   );
-});
-
-export default EmotionAwareOrb;
+}
