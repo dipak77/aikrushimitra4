@@ -107,7 +107,6 @@ declare global {
   // Augment global JSX namespace for custom elements (e.g. from R3F)
   namespace JSX {
     interface IntrinsicElements {
-      [elemName: string]: any;
       group: any;
       mesh: any;
       circleGeometry: any;

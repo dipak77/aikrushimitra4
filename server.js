@@ -20,10 +20,47 @@ const API_KEY = cleanKey(RAW_API_KEY);
 const isProduction = process.env.NODE_ENV === 'production';
 
 // --- CENTRAL ANALYTICS STORE ---
-// In a real DB environment, this would be MongoDB/Postgres.
-// For this setup, we use an in-memory array acting as a central store.
-const GLOBAL_ACTIVITY_LOGS = [];
-const MAX_LOGS = 5000; // Prevent memory overflow
+// Persistence file path
+const DATA_DIR = path.join(__dirname, 'data_store');
+const LOG_FILE = path.join(DATA_DIR, 'activity_logs.json');
+
+// Ensure data directory exists
+if (!fs.existsSync(DATA_DIR)) {
+  try {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+  } catch (e) {
+    console.error("Failed to create data dir:", e);
+  }
+}
+
+// In-memory store backed by file
+let GLOBAL_ACTIVITY_LOGS = [];
+const MAX_LOGS = 5000; 
+
+// Load logs on startup
+if (fs.existsSync(LOG_FILE)) {
+  try {
+    const fileData = fs.readFileSync(LOG_FILE, 'utf8');
+    const parsed = JSON.parse(fileData);
+    if (Array.isArray(parsed)) {
+      GLOBAL_ACTIVITY_LOGS = parsed;
+      console.log(`📂 Loaded ${GLOBAL_ACTIVITY_LOGS.length} activity logs from disk.`);
+    }
+  } catch (e) {
+    console.error("❌ Failed to load logs from disk:", e.message);
+  }
+}
+
+// Helper to persist logs (Throttled/Debounced could be added here for high traffic)
+const saveLogsToDisk = () => {
+  try {
+    fs.writeFile(LOG_FILE, JSON.stringify(GLOBAL_ACTIVITY_LOGS, null, 2), (err) => {
+      if (err) console.error("Error writing logs:", err);
+    });
+  } catch (e) {
+    console.error("Sync write error:", e);
+  }
+};
 
 console.log('🚀 Starting server...');
 console.log('📍 Environment:', isProduction ? 'PRODUCTION' : 'DEVELOPMENT');
@@ -40,6 +77,10 @@ app.use((req, res, next) => {
   res.header("Access-Control-Allow-Origin", "*"); 
   res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
   res.header("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  // Prevent Caching for API routes
+  res.header("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+  res.header("Pragma", "no-cache");
+  res.header("Expires", "0");
   res.removeHeader("X-Powered-By");
   next();
 });
@@ -52,6 +93,7 @@ app.get('/api/health', (req, res) => {
     status: 'ok',
     apiKeyConfigured: !!API_KEY,
     environment: isProduction ? 'production' : 'development',
+    logsCount: GLOBAL_ACTIVITY_LOGS.length,
     timestamp: new Date().toISOString()
   });
 });
@@ -65,10 +107,10 @@ const getAIClient = () => {
   return new GoogleGenAI({ apiKey: API_KEY });
 };
 
-// --- ANALYTICS ROUTES ---
+// --- ACTIVITY ROUTES ---
+// Defined with both names to prevent 404s if client/server versions mismatch
 
-// 1. Log Activity (POST)
-app.post('/api/analytics/log', (req, res) => {
+const handleLogActivity = (req, res) => {
   try {
     const logData = req.body;
     
@@ -77,7 +119,6 @@ app.post('/api/analytics/log', (req, res) => {
       ...logData,
       serverTimestamp: Date.now(),
       ip: req.headers['x-forwarded-for'] || req.socket.remoteAddress,
-      // Ensure specific fields exist
       userAgent: logData.userAgent || req.headers['user-agent']
     };
 
@@ -86,18 +127,28 @@ app.post('/api/analytics/log', (req, res) => {
     if (GLOBAL_ACTIVITY_LOGS.length > MAX_LOGS) {
       GLOBAL_ACTIVITY_LOGS.pop();
     }
+    
+    // Persist to disk
+    saveLogsToDisk();
 
     res.status(200).json({ success: true });
   } catch (e) {
-    console.error("Analytics Write Error:", e);
+    console.error("Activity Write Error:", e);
     res.status(500).json({ error: "Failed to log activity" });
   }
-});
+};
 
-// 2. Get Analytics (GET)
-app.get('/api/analytics/stats', (req, res) => {
+const handleGetStats = (req, res) => {
   res.json(GLOBAL_ACTIVITY_LOGS);
-});
+};
+
+// Register endpoints (both new 'activity' and legacy 'analytics')
+// Using separate calls to ensure registration
+app.post('/api/activity/log', handleLogActivity);
+app.post('/api/analytics/log', handleLogActivity);
+
+app.get('/api/activity/stats', handleGetStats);
+app.get('/api/analytics/stats', handleGetStats);
 
 
 // --- AI API Routes ---
@@ -154,6 +205,12 @@ app.post('/api/updates', async (req, res) => {
     console.error("Updates API Error:", error.message);
     res.status(500).json({ error: "Failed to fetch updates." });
   }
+});
+
+// --- API 404 Catch-All ---
+// Prevents API requests from falling through to Vite/React router
+app.all('/api/*', (req, res) => {
+  res.status(404).json({ error: "API route not found" });
 });
 
 // --- Server & WebSocket Setup ---

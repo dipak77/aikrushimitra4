@@ -6,15 +6,6 @@ import { BlendFunction } from 'postprocessing';
 import * as THREE from 'three';
 import { FaceLandmarker, FilesetResolver } from '@mediapipe/tasks-vision';
 
-/* ─── JSX TYPE AUGMENTATION ─── */
-declare global {
-  namespace JSX {
-    interface IntrinsicElements {
-      [elemName: string]: any;
-    }
-  }
-}
-
 /* ─── TYPES ─── */
 
 export interface EmotionOrbProps {

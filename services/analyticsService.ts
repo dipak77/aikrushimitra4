@@ -79,24 +79,66 @@ export const logActivity = async (view: string, location: string, user?: UserPro
 
   // Fire and forget fetch to server
   try {
-    await fetch('/api/analytics/log', {
+    // Try new endpoint first
+    let response = await fetch('/api/activity/log', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(newLog)
+      body: JSON.stringify(newLog),
+      cache: 'no-store'
     });
+
+    // Fallback to legacy endpoint if 404 (server not restarted yet)
+    if (response.status === 404) {
+        await fetch('/api/analytics/log', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(newLog),
+            cache: 'no-store'
+        });
+    }
   } catch (e) {
     console.error("Failed to sync log to server", e);
   }
 };
 
-// New: Helper to fetch logs from server
+// New: Helper to fetch logs from server with Fallback
 const fetchLogsFromServer = async (): Promise<ActivityLog[]> => {
   try {
-    const response = await fetch('/api/analytics/stats');
-    if (!response.ok) throw new Error("Failed to fetch");
-    return await response.json();
+    // 1. Try new endpoint (Activity)
+    let response = await fetch('/api/activity/stats', {
+        cache: 'no-store',
+        headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' }
+    });
+    
+    // 2. If 404, fallback to old endpoint (Analytics)
+    if (response.status === 404) {
+        console.warn("New API not found, trying legacy...");
+        response = await fetch('/api/analytics/stats', {
+            cache: 'no-store',
+            headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' }
+        });
+    }
+
+    if (!response.ok) {
+        // If still 404, server might be down or misconfigured. Return empty to avoid crashing UI.
+        if (response.status === 404) {
+            console.warn("Analytics API unavailable (404). Returning empty logs.");
+            return [];
+        }
+        throw new Error(`Failed to fetch stats: ${response.status} ${response.statusText}`);
+    }
+    
+    const contentType = response.headers.get("content-type");
+    if (contentType && contentType.indexOf("application/json") !== -1) {
+        return await response.json();
+    } else {
+        // Handle case where server returns HTML (e.g. 404 page or SPA fallback)
+        const text = await response.text();
+        console.warn("Received non-JSON response:", text.substring(0, 100));
+        return [];
+    }
   } catch (e) {
-    console.error("Error fetching logs:", e);
+    console.error("Error fetching activity logs:", e);
     return [];
   }
 }
