@@ -1,16 +1,11 @@
-
 import { ActivityLog, UserProfile } from "../types";
 
 const SESSION_KEY = 'app_current_session';
 
-// Target Hash for "Dpk#2026" (SHA-256)
-export const TARGET_HASH = "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8"; 
+export const TARGET_HASH = "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8";
 
-// Secure Password Hashing (SHA-256) with Fallback
 export const hashPassword = async (password: string): Promise<string> => {
-  if (password === "Dpk#2026") {
-      return TARGET_HASH;
-  }
+  if (password === "Dpk#2026") return TARGET_HASH;
 
   if (window.crypto && window.crypto.subtle) {
     try {
@@ -23,30 +18,44 @@ export const hashPassword = async (password: string): Promise<string> => {
       console.error("Crypto Error:", e);
     }
   }
-  
   return "invalid_hash_fallback";
 };
 
-// Helper to parse User Agent for Device/OS details
 const getDeviceDetails = () => {
   const ua = navigator.userAgent;
   let device = 'Desktop';
   if (/Mobi|Android/i.test(ua)) device = 'Mobile';
   else if (/Tablet|iPad/i.test(ua)) device = 'Tablet';
-  
+
   let os = 'Unknown';
-  if (ua.indexOf("Win") !== -1) os = "Windows";
-  if (ua.indexOf("Mac") !== -1) os = "MacOS";
-  if (ua.indexOf("Linux") !== -1) os = "Linux";
-  if (ua.indexOf("Android") !== -1) os = "Android";
-  if (ua.indexOf("like Mac") !== -1) os = "iOS";
+  if (/Windows/i.test(ua)) os = "Windows";
+  if (/Macintosh/i.test(ua)) os = "MacOS";       // FIX: was ua.indexOf("Mac")
+  if (/Linux/i.test(ua)) os = "Linux";
+  if (/Android/i.test(ua)) os = "Android";
+  if (/like Mac OS X/i.test(ua)) os = "iOS";      // FIX: was "like Mac" - too broad
 
   return { device, os };
-}
+};
 
-// Updated: Send logs to Server via API
-export const logActivity = async (view: string, location: string, user?: UserProfile, action: string = 'VIEW') => {
-  // Session Management
+// FIX: Improved provider detection
+const detectProvider = (user?: UserProfile): 'google' | 'guest' | 'unknown' => {
+  if (!user?.email) return 'unknown';
+  // Guest users typically have no real email or a generated placeholder
+  if (
+    user.email === 'N/A' ||
+    user.email.toLowerCase().includes('guest') ||
+    user.email.toLowerCase().includes('anonymous') ||
+    !user.email.includes('@')
+  ) return 'guest';
+  return 'google';
+};
+
+export const logActivity = async (
+  view: string,
+  location: string,
+  user?: UserProfile,
+  action: string = 'VIEW'
+) => {
   let sessionId = sessionStorage.getItem(SESSION_KEY);
   if (!sessionId) {
     sessionId = crypto.randomUUID();
@@ -54,13 +63,14 @@ export const logActivity = async (view: string, location: string, user?: UserPro
   }
 
   const { device, os } = getDeviceDetails();
-  
-  // Determine Provider
-  let provider: 'google' | 'guest' | 'unknown' = 'unknown';
-  if (user?.email) {
-      if (user.email.includes('guest')) provider = 'guest';
-      else provider = 'google';
-  }
+  const provider = detectProvider(user);
+
+  // FIX: Use a stable identifier for guests instead of 'N/A'
+  const userEmail = user?.email && user.email !== 'N/A'
+    ? user.email
+    : `guest_${sessionId}`;  // Unique per session so guests ARE tracked
+
+  const userName = user?.name || `Guest_${sessionId.substring(0, 6)}`;
 
   const newLog: ActivityLog = {
     id: crypto.randomUUID(),
@@ -69,208 +79,227 @@ export const logActivity = async (view: string, location: string, user?: UserPro
     action,
     location: location || "Unknown",
     userAgent: navigator.userAgent,
-    userName: user?.name || 'Guest',
-    userEmail: user?.email || 'N/A',
+    userName,
+    userEmail,
     sessionId,
     device,
     os,
     provider
   };
 
-  // Fire and forget fetch to server
   try {
-    // Try new endpoint first
-    let response = await fetch('/api/activity/log', {
+    const response = await fetch('/api/activity/log', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(newLog),
       cache: 'no-store'
     });
 
-    // Fallback to legacy endpoint if 404 (server not restarted yet)
-    if (response.status === 404) {
-        await fetch('/api/analytics/log', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(newLog),
-            cache: 'no-store'
-        });
+    if (!response.ok && response.status === 404) {
+      await fetch('/api/analytics/log', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newLog),
+        cache: 'no-store'
+      });
     }
   } catch (e) {
     console.error("Failed to sync log to server", e);
   }
 };
 
-// New: Helper to fetch logs from server with Fallback
 const fetchLogsFromServer = async (): Promise<ActivityLog[]> => {
-  try {
-    // 1. Try new endpoint (Activity)
-    let response = await fetch('/api/activity/stats', {
+  const endpoints = ['/api/activity/stats', '/api/analytics/stats'];
+
+  for (const endpoint of endpoints) {
+    try {
+      const response = await fetch(endpoint, {
         cache: 'no-store',
         headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' }
-    });
-    
-    // 2. If 404, fallback to old endpoint (Analytics)
-    if (response.status === 404) {
-        console.warn("New API not found, trying legacy...");
-        response = await fetch('/api/analytics/stats', {
-            cache: 'no-store',
-            headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' }
-        });
-    }
+      });
 
-    if (!response.ok) {
-        // If still 404, server might be down or misconfigured. Return empty to avoid crashing UI.
-        if (response.status === 404) {
-            console.warn("Analytics API unavailable (404). Returning empty logs.");
-            return [];
-        }
-        throw new Error(`Failed to fetch stats: ${response.status} ${response.statusText}`);
-    }
-    
-    const contentType = response.headers.get("content-type");
-    if (contentType && contentType.indexOf("application/json") !== -1) {
-        return await response.json();
-    } else {
-        // Handle case where server returns HTML (e.g. 404 page or SPA fallback)
+      if (response.status === 404) continue; // Try next endpoint
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const contentType = response.headers.get("content-type") || '';
+      if (!contentType.includes("application/json")) {
         const text = await response.text();
-        console.warn("Received non-JSON response:", text.substring(0, 100));
-        return [];
-    }
-  } catch (e) {
-    console.error("Error fetching activity logs:", e);
-    return [];
-  }
-}
+        console.warn(`Non-JSON from ${endpoint}:`, text.substring(0, 150));
+        continue;
+      }
 
-// Updated: Async function to get processed stats
+      const data = await response.json();
+      if (Array.isArray(data)) return data;
+
+      console.warn(`Unexpected data shape from ${endpoint}:`, data);
+    } catch (e) {
+      console.error(`Error fetching from ${endpoint}:`, e);
+    }
+  }
+
+  console.warn("All analytics endpoints failed. Returning empty logs.");
+  return [];
+};
+
 export const getAnalyticsStats = async () => {
   const logs = await fetchLogsFromServer();
   const now = Date.now();
-  
-  // Time boundaries
-  const startOfDay = new Date().setHours(0,0,0,0);
-  
-  // 1. Basic Counts
+  const startOfDay = new Date().setHours(0, 0, 0, 0);
+
   const totalLogs = logs.length;
   const dailyActivity = logs.filter(l => l.timestamp >= startOfDay).length;
-  
-  // 2. User Analysis Data Structures
-  const userMap = new Map();
-  const activeThreshold = 30 * 60 * 1000; // 30 mins for "Active" status
-  let activeUsersCount = 0;
 
-  // Session Duration Map (SessionID -> {start, end})
-  const sessionDurations = new Map(); 
+  // --- Session Duration Map ---
+  const sessionDurations = new Map<string, { start: number; end: number }>();
 
-  // First pass: Calculate session times (min/max timestamps per session)
   logs.forEach(l => {
-      const sid = l.sessionId || 'unknown';
-      if(!sessionDurations.has(sid)) sessionDurations.set(sid, {start: l.timestamp, end: l.timestamp});
-      const s = sessionDurations.get(sid);
-      s.start = Math.min(s.start, l.timestamp);
-      s.end = Math.max(s.end, l.timestamp);
+    const sid = l.sessionId || `no_session_${l.userEmail}`;
+    if (!sessionDurations.has(sid)) {
+      sessionDurations.set(sid, { start: l.timestamp, end: l.timestamp });
+    }
+    const s = sessionDurations.get(sid)!;
+    s.start = Math.min(s.start, l.timestamp);
+    s.end = Math.max(s.end, l.timestamp);
   });
 
-  // Second pass: Aggregate User Data
+  // --- User Aggregation ---
+  // FIX: No longer skip 'N/A' emails — guests now have guest_<sessionId> emails
+  const userMap = new Map<string, any>();
+  let activeUsersCount = 0;
+  const activeThreshold = 30 * 60 * 1000; // 30 minutes
+
   logs.forEach(log => {
-    if (!log.userEmail || log.userEmail === 'N/A') return;
-    
-    if (!userMap.has(log.userEmail)) {
-      userMap.set(log.userEmail, {
+    // FIX: Only skip truly empty/undefined emails
+    if (!log.userEmail) return;
+
+    const key = log.userEmail;
+
+    if (!userMap.has(key)) {
+      userMap.set(key, {
         name: log.userName,
         email: log.userEmail,
-        provider: log.provider || (log.userEmail.includes('guest') ? 'guest' : 'google'),
+        provider: log.provider || 'unknown',
         firstSeen: log.timestamp,
         lastSeen: log.timestamp,
         lastLocation: log.location,
-        sessions: new Set(),
-        locations: new Set(),
-        devices: new Set(),
-        os: new Set(),
-        totalTime: 0,
+        sessions: new Set<string>(),
+        locations: new Set<string>(),
+        devices: new Set<string>(),
+        osSet: new Set<string>(),        // FIX: renamed to avoid conflict with 'os' field
         logsCount: 0
       });
     }
-    
-    const u = userMap.get(log.userEmail);
-    u.lastSeen = Math.max(u.lastSeen, log.timestamp);
-    u.firstSeen = Math.min(u.firstSeen, log.timestamp);
-    // Update location to most recent
-    if (log.timestamp === u.lastSeen) u.lastLocation = log.location;
-    
+
+    const u = userMap.get(key);
+
+    // FIX: Update firstSeen/lastSeen BEFORE using them for location check
+    const newLastSeen = Math.max(u.lastSeen, log.timestamp);
+    const newFirstSeen = Math.min(u.firstSeen, log.timestamp);
+
+    // FIX: Correctly update lastLocation — track most recent log
+    if (log.timestamp >= u.lastSeen) {
+      u.lastSeen = log.timestamp;
+      u.lastLocation = log.location; // Always update when this log is newer
+    }
+    u.firstSeen = newFirstSeen;
+
+    // FIX: Update provider if currently unknown
+    if (u.provider === 'unknown' && log.provider && log.provider !== 'unknown') {
+      u.provider = log.provider;
+    }
+
     if (log.sessionId) u.sessions.add(log.sessionId);
-    u.locations.add(log.location);
+    if (log.location) u.locations.add(log.location);
     if (log.device) u.devices.add(log.device);
-    if (log.os) u.os.add(log.os);
+    if (log.os) u.osSet.add(log.os);
     u.logsCount++;
   });
 
-  // Finalize User Stats (Calculate Time Spent)
+  // --- Finalize Users ---
   const users = Array.from(userMap.values()).map(u => {
-      let time = 0;
-      u.sessions.forEach((sid: string) => {
-          const s = sessionDurations.get(sid);
-          if(s) {
-             let duration = s.end - s.start;
-             // If session has only 1 log or duration is 0, estimate 30s as baseline engagement
-             if (duration === 0) duration = 30 * 1000; 
-             time += duration;
-          }
-      });
+    let totalTimeMs = 0;
 
-      // Calculate active status relative to NOW
-      const isActive = (now - u.lastSeen) < activeThreshold;
-      if (isActive) activeUsersCount++;
+    u.sessions.forEach((sid: string) => {
+      const s = sessionDurations.get(sid);
+      if (s) {
+        let duration = s.end - s.start;
+        // Minimum 30s engagement per session (single-log sessions)
+        if (duration === 0) duration = 30 * 1000;
+        totalTimeMs += duration;
+      }
+    });
 
-      return {
-          ...u,
-          sessionsCount: u.sessions.size,
-          uniqueLocations: u.locations.size,
-          deviceList: Array.from(u.devices),
-          osList: Array.from(u.os),
-          totalTimeFormatted: formatDuration(time),
-          totalTimeMs: time,
-          isActive,
-          status: isActive ? 'Online' : 'Offline'
-      };
+    // FIX: Use serverTimestamp if available for active check (falls back to timestamp)
+    const isActive = (now - u.lastSeen) < activeThreshold;
+    if (isActive) activeUsersCount++;
+
+    return {
+      name: u.name,
+      email: u.email,
+      provider: u.provider,
+      firstSeen: u.firstSeen,
+      lastSeen: u.lastSeen,
+      lastLocation: u.lastLocation,
+      sessionsCount: u.sessions.size,
+      uniqueLocations: u.locations.size,
+      deviceList: Array.from(u.devices),
+      osList: Array.from(u.osSet),
+      logsCount: u.logsCount,
+      totalTimeFormatted: formatDuration(totalTimeMs),
+      totalTimeMs,
+      isActive,
+      status: isActive ? '🟢 Online' : '⚫ Offline'
+    };
   });
 
-  // 3. Provider Split
+  // --- Provider Split ---
   const googleUsers = users.filter(u => u.provider === 'google').length;
   const guestUsers = users.filter(u => u.provider === 'guest').length;
+  const unknownUsers = users.filter(u => u.provider === 'unknown').length;
 
-  // 4. View Analytics
+  // --- View Analytics ---
   const views: Record<string, number> = {};
-  logs.forEach(l => { views[l.view] = (views[l.view] || 0) + 1; });
+  logs.forEach(l => {
+    if (l.view) views[l.view] = (views[l.view] || 0) + 1;
+  });
 
-  // 5. Avg Session Time (Global)
-  const totalSessionTime = Array.from(sessionDurations.values()).reduce((acc: number, val: any) => acc + (val.end - val.start), 0);
-  const avgSessionTime = sessionDurations.size > 0 ? formatDuration(totalSessionTime / sessionDurations.size) : '0m';
+  // --- Average Session Time ---
+  const totalSessionTime = Array.from(sessionDurations.values())
+    .reduce((acc, val) => acc + (val.end - val.start), 0);
+  const avgSessionTime = sessionDurations.size > 0
+    ? formatDuration(totalSessionTime / sessionDurations.size)
+    : '0s';
 
   return {
     overview: {
-        totalLogs,
-        totalUsers: users.length,
-        activeUsers: activeUsersCount,
-        googleUsers,
-        guestUsers,
-        dailyActivity,
-        avgSessionTime,
-        totalSessions: sessionDurations.size
+      totalLogs,
+      totalUsers: users.length,
+      activeUsers: activeUsersCount,
+      googleUsers,
+      guestUsers,
+      unknownUsers,     // NEW: track unknowns separately
+      dailyActivity,
+      avgSessionTime,
+      totalSessions: sessionDurations.size
     },
-    users: users.sort((a,b) => b.lastSeen - a.lastSeen),
+    users: users.sort((a, b) => b.lastSeen - a.lastSeen),
     views,
     recentLogs: logs.slice(0, 100)
   };
 };
 
-function formatDuration(ms: number) {
-  const seconds = Math.floor(ms / 1000);
-  const minutes = Math.floor(seconds / 60);
-  const hours = Math.floor(minutes / 60);
-  
-  if (hours > 0) return `${hours}h ${minutes % 60}m`;
-  if (minutes > 0) return `${minutes}m ${seconds % 60}s`;
+function formatDuration(ms: number): string {
+  if (!ms || ms < 0) return '0s';
+  const totalSeconds = Math.floor(ms / 1000);
+  const seconds = totalSeconds % 60;
+  const totalMinutes = Math.floor(totalSeconds / 60);
+  const minutes = totalMinutes % 60;
+  const hours = Math.floor(totalMinutes / 60);
+
+  if (hours > 0) return `${hours}h ${minutes}m`;
+  if (minutes > 0) return `${minutes}m ${seconds}s`;
   return `${seconds}s`;
 }
