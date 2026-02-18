@@ -6,6 +6,33 @@ import { BlendFunction } from 'postprocessing';
 import * as THREE from 'three';
 import { FaceLandmarker, FilesetResolver } from '@mediapipe/tasks-vision';
 
+/* ─── JSX TYPE AUGMENTATION ─── */
+declare global {
+  namespace JSX {
+    interface IntrinsicElements {
+      group: any;
+      mesh: any;
+      circleGeometry: any;
+      meshBasicMaterial: any;
+      planeGeometry: any;
+      shaderMaterial: any;
+      pointLight: any;
+      sphereGeometry: any;
+      primitive: any;
+      coneGeometry: any;
+      meshStandardMaterial: any;
+      boxGeometry: any;
+      torusGeometry: any;
+      ambientLight: any;
+      directionalLight: any;
+      points: any;
+      bufferGeometry: any;
+      bufferAttribute: any;
+      pointsMaterial: any;
+    }
+  }
+}
+
 /* ─── TYPES ─── */
 
 export interface EmotionOrbProps {
@@ -542,7 +569,7 @@ const AIBird = memo(({
 }) => {
   const [blinkAmount, setBlinkAmount] = useState(0);
   const [lookTarget] = useState(() => new THREE.Vector2(0, 0));
-  const blinkTimerRef = useRef<ReturnType<typeof setTimeout>>();
+  const blinkTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   // Blink animation
   useEffect(() => {

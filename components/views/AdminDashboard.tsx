@@ -4,7 +4,7 @@ import { getAnalyticsStats, hashPassword, TARGET_HASH } from '../../services/ana
 import { 
   ShieldCheck, Lock, Unlock, Activity, MapPin, Smartphone, 
   Calendar, Eye, EyeOff, AlertTriangle, Users, Clock, 
-  Globe, Laptop, Search, ChevronDown, CheckCircle2, User 
+  Globe, Laptop, Search, ChevronDown, CheckCircle2, User, Loader2
 } from 'lucide-react';
 import { Button } from '../Button';
 import SimpleView from '../layout/SimpleView';
@@ -16,19 +16,31 @@ const AdminDashboard = ({ onBack }: { onBack: () => void }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [stats, setStats] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'logs'>('overview');
   const [searchTerm, setSearchTerm] = useState('');
 
   // Initial Load & Auto-Refresh
   useEffect(() => {
       let interval: any;
+      
+      const loadStats = async () => {
+          try {
+              if (!stats) setLoading(true); // Only show loader on first load
+              const data = await getAnalyticsStats();
+              setStats(data);
+          } catch(e) {
+              console.error("Failed to load stats", e);
+          } finally {
+              setLoading(false);
+          }
+      };
+
       if (isAuthenticated) {
           // Load immediately
-          setStats(getAnalyticsStats());
-          // Refresh every 30s
-          interval = setInterval(() => {
-              setStats(getAnalyticsStats());
-          }, 30000);
+          loadStats();
+          // Refresh every 10s for near-realtime updates
+          interval = setInterval(loadStats, 10000);
       }
       return () => clearInterval(interval);
   }, [isAuthenticated]);
@@ -41,7 +53,7 @@ const AdminDashboard = ({ onBack }: { onBack: () => void }) => {
       const hash = await hashPassword(cleanPassword);
       if (hash === TARGET_HASH) {
         setIsAuthenticated(true);
-        setStats(getAnalyticsStats());
+        // Stats loading triggers via useEffect
         setError('');
       } else {
         setError('Access Denied');
@@ -101,6 +113,14 @@ const AdminDashboard = ({ onBack }: { onBack: () => void }) => {
         </div>
       </div>
     );
+  }
+
+  if (loading && !stats) {
+      return (
+          <div className="h-screen w-full flex items-center justify-center bg-[#020617] text-emerald-400">
+              <Loader2 className="animate-spin" size={32} />
+          </div>
+      );
   }
 
   // ── DATA PREP ──

@@ -19,6 +19,12 @@ const API_KEY = cleanKey(RAW_API_KEY);
 // Environment Detection
 const isProduction = process.env.NODE_ENV === 'production';
 
+// --- CENTRAL ANALYTICS STORE ---
+// In a real DB environment, this would be MongoDB/Postgres.
+// For this setup, we use an in-memory array acting as a central store.
+const GLOBAL_ACTIVITY_LOGS = [];
+const MAX_LOGS = 5000; // Prevent memory overflow
+
 console.log('🚀 Starting server...');
 console.log('📍 Environment:', isProduction ? 'PRODUCTION' : 'DEVELOPMENT');
 
@@ -59,7 +65,42 @@ const getAIClient = () => {
   return new GoogleGenAI({ apiKey: API_KEY });
 };
 
-// --- API Routes ---
+// --- ANALYTICS ROUTES ---
+
+// 1. Log Activity (POST)
+app.post('/api/analytics/log', (req, res) => {
+  try {
+    const logData = req.body;
+    
+    // Enrich with server-side details for better tracking
+    const enrichedLog = {
+      ...logData,
+      serverTimestamp: Date.now(),
+      ip: req.headers['x-forwarded-for'] || req.socket.remoteAddress,
+      // Ensure specific fields exist
+      userAgent: logData.userAgent || req.headers['user-agent']
+    };
+
+    // Add to beginning, keep limit
+    GLOBAL_ACTIVITY_LOGS.unshift(enrichedLog);
+    if (GLOBAL_ACTIVITY_LOGS.length > MAX_LOGS) {
+      GLOBAL_ACTIVITY_LOGS.pop();
+    }
+
+    res.status(200).json({ success: true });
+  } catch (e) {
+    console.error("Analytics Write Error:", e);
+    res.status(500).json({ error: "Failed to log activity" });
+  }
+});
+
+// 2. Get Analytics (GET)
+app.get('/api/analytics/stats', (req, res) => {
+  res.json(GLOBAL_ACTIVITY_LOGS);
+});
+
+
+// --- AI API Routes ---
 app.post('/api/chat', async (req, res) => {
   try {
     const { prompt, systemInstruction } = req.body;

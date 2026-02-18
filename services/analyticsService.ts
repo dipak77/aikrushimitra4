@@ -1,7 +1,6 @@
 
 import { ActivityLog, UserProfile } from "../types";
 
-const STORAGE_KEY = 'app_activity_logs';
 const SESSION_KEY = 'app_current_session';
 
 // Target Hash for "Dpk#2026" (SHA-256)
@@ -45,7 +44,8 @@ const getDeviceDetails = () => {
   return { device, os };
 }
 
-export const logActivity = (view: string, location: string, user?: UserProfile, action: string = 'VIEW') => {
+// Updated: Send logs to Server via API
+export const logActivity = async (view: string, location: string, user?: UserProfile, action: string = 'VIEW') => {
   // Session Management
   let sessionId = sessionStorage.getItem(SESSION_KEY);
   if (!sessionId) {
@@ -77,24 +77,33 @@ export const logActivity = (view: string, location: string, user?: UserProfile, 
     provider
   };
 
-  const existingLogs = getLogs();
-  // Keep last 5000 logs for robust history
-  const updatedLogs = [newLog, ...existingLogs].slice(0, 5000);
-  
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedLogs));
-};
-
-export const getLogs = (): ActivityLog[] => {
+  // Fire and forget fetch to server
   try {
-    const data = localStorage.getItem(STORAGE_KEY);
-    return data ? JSON.parse(data) : [];
+    await fetch('/api/analytics/log', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newLog)
+    });
   } catch (e) {
-    return [];
+    console.error("Failed to sync log to server", e);
   }
 };
 
-export const getAnalyticsStats = () => {
-  const logs = getLogs();
+// New: Helper to fetch logs from server
+const fetchLogsFromServer = async (): Promise<ActivityLog[]> => {
+  try {
+    const response = await fetch('/api/analytics/stats');
+    if (!response.ok) throw new Error("Failed to fetch");
+    return await response.json();
+  } catch (e) {
+    console.error("Error fetching logs:", e);
+    return [];
+  }
+}
+
+// Updated: Async function to get processed stats
+export const getAnalyticsStats = async () => {
+  const logs = await fetchLogsFromServer();
   const now = Date.now();
   
   // Time boundaries
@@ -168,6 +177,7 @@ export const getAnalyticsStats = () => {
           }
       });
 
+      // Calculate active status relative to NOW
       const isActive = (now - u.lastSeen) < activeThreshold;
       if (isActive) activeUsersCount++;
 
