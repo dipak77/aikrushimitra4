@@ -6,6 +6,35 @@ import { BlendFunction } from 'postprocessing';
 import * as THREE from 'three';
 import { FaceLandmarker, FilesetResolver } from '@mediapipe/tasks-vision';
 
+// Local augmentation to ensure R3F types are recognized in this file context
+declare global {
+  namespace JSX {
+    interface IntrinsicElements {
+      group: any;
+      mesh: any;
+      circleGeometry: any;
+      meshBasicMaterial: any;
+      planeGeometry: any;
+      shaderMaterial: any;
+      pointLight: any;
+      sphereGeometry: any;
+      primitive: any;
+      coneGeometry: any;
+      meshStandardMaterial: any;
+      boxGeometry: any;
+      torusGeometry: any;
+      ambientLight: any;
+      directionalLight: any;
+      fog: any;
+      color: any;
+      bufferGeometry: any;
+      bufferAttribute: any;
+      points: any;
+      pointsMaterial: any;
+    }
+  }
+}
+
 /* ─── TYPES ─── */
 
 export interface EmotionOrbProps {

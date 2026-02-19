@@ -133,4 +133,33 @@ declare global {
       key?: any;
     }
   }
+
+  // Augment React.JSX namespace for newer React types
+  namespace React {
+    namespace JSX {
+      interface IntrinsicElements {
+        group: any;
+        mesh: any;
+        circleGeometry: any;
+        meshBasicMaterial: any;
+        planeGeometry: any;
+        shaderMaterial: any;
+        pointLight: any;
+        sphereGeometry: any;
+        primitive: any;
+        coneGeometry: any;
+        meshStandardMaterial: any;
+        boxGeometry: any;
+        torusGeometry: any;
+        ambientLight: any;
+        directionalLight: any;
+        fog: any;
+        color: any;
+        bufferGeometry: any;
+        bufferAttribute: any;
+        points: any;
+        pointsMaterial: any;
+      }
+    }
+  }
 }

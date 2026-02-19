@@ -1162,6 +1162,7 @@ export const WeatherWidget = ({
         className="absolute inset-0 rounded-[inherit] pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-700"
         style={{ boxShadow: `inset 0 0 0 1px var(--ww-ring), inset 0 0 30px var(--ww-aurora)` }}
       />
+      </div>
     </GlassTile>
   );
 };
