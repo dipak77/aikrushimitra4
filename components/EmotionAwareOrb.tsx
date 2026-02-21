@@ -1,40 +1,19 @@
 
 import React, { useRef, useEffect, useState, useMemo, memo } from 'react';
-import { FaceLandmarker, FilesetResolver } from '@mediapipe/tasks-vision';
 
 /* ─── TYPES ─── */
 
 export interface EmotionOrbProps {
-  stream: MediaStream | null;
+  stream: MediaStream | null; // Kept for interface compatibility, but unused for video
   analyser: AnalyserNode | null;
   isSpeaking: boolean;
   isListening: boolean;
   status: string;
   mode?: 'cinematic' | 'minimal';
-  cameraEnabled?: boolean;
-  onFaceData?: (data: FaceTrackingData | null) => void;
-  onEmotionData?: (data: EmotionData) => void;
-  onVoiceData?: (data: VoiceData) => void;
+  cameraEnabled?: boolean; // Kept for interface compatibility
 }
 
 type AIState = 'idle' | 'listening' | 'processing' | 'speaking';
-
-interface FaceTrackingData {
-  rotX: number;
-  rotY: number;
-  mouthOpen: number;
-  leftEyeOpen: number;
-  rightEyeOpen: number;
-  detected: boolean;
-}
-
-interface EmotionData {
-  emotion: string;
-}
-
-interface VoiceData {
-  level: number;
-}
 
 interface Ring {
   z: number;
@@ -55,116 +34,12 @@ interface LightLine {
   radialSpeed: number;
 }
 
-interface Particle {
-  x: number;
-  y: number;
-  z: number;
-  speed: number;
-  size: number;
-  hue: number;
-  brightness: number;
-  angle: number;
-  radius: number;
-}
-
-/* ─── HELPER: FACE TRACKER HOOK ─── */
-const useFaceTracker = (
-  stream: MediaStream | null, 
-  onFaceData?: (data: FaceTrackingData | null) => void
-) => {
-  const videoRef = useRef<HTMLVideoElement | null>(null);
-  const landmarkerRef = useRef<FaceLandmarker | null>(null);
-  const rafRef = useRef<number>(0);
-  const lastTimeRef = useRef<number>(-1);
-
-  useEffect(() => {
-    if (!videoRef.current) {
-      const video = document.createElement('video');
-      video.autoplay = true;
-      video.muted = true;
-      video.playsInline = true;
-      video.width = 320;
-      video.height = 240;
-      videoRef.current = video;
-    }
-  }, []);
-
-  useEffect(() => {
-    let isMounted = true;
-    const init = async () => {
-      try {
-        const resolver = await FilesetResolver.forVisionTasks(
-          "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/wasm"
-        );
-        if (!isMounted) return;
-        
-        landmarkerRef.current = await FaceLandmarker.createFromOptions(resolver, {
-          baseOptions: {
-            modelAssetPath: "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task",
-            delegate: "GPU"
-          },
-          outputFacialTransformationMatrixes: true,
-          runningMode: "VIDEO",
-          numFaces: 1
-        });
-      } catch (e) {
-        console.error('FaceLandmarker init failed:', e);
-      }
-    };
-    init();
-    return () => { isMounted = false; };
-  }, []);
-
-  useEffect(() => {
-    if (stream && videoRef.current) {
-      videoRef.current.srcObject = stream;
-      videoRef.current.play().catch(() => {});
-    }
-
-    const loop = () => {
-      if (landmarkerRef.current && videoRef.current && !videoRef.current.paused) {
-        if (videoRef.current.currentTime !== lastTimeRef.current) {
-          lastTimeRef.current = videoRef.current.currentTime;
-          try {
-            const now = performance.now();
-            const result = landmarkerRef.current.detectForVideo(videoRef.current, now);
-            
-            if (result.facialTransformationMatrixes?.length > 0) {
-              const matrix = result.facialTransformationMatrixes[0].data;
-              onFaceData?.({
-                rotX: -(matrix as any)[9] || 0,
-                rotY: -(matrix as any)[8] || 0,
-                mouthOpen: 0,
-                leftEyeOpen: 1,
-                rightEyeOpen: 1,
-                detected: true
-              });
-            } else {
-              onFaceData?.({ rotX: 0, rotY: 0, mouthOpen: 0, leftEyeOpen: 1, rightEyeOpen: 1, detected: false });
-            }
-          } catch (e) {
-            // ignore
-          }
-        }
-      }
-      rafRef.current = requestAnimationFrame(loop);
-    };
-
-    loop();
-
-    return () => {
-      cancelAnimationFrame(rafRef.current);
-    };
-  }, [stream, onFaceData]);
-};
-
 /* ─── STATUS INDICATOR ─── */
 
-const StatusIndicator = memo(({ aiState, isSpeaking, isListening, cameraEnabled }: {
+const StatusIndicator = memo(({ aiState, isSpeaking, isListening }: {
   aiState: AIState;
   isSpeaking: boolean;
   isListening: boolean;
-  cameraEnabled?: boolean;
 }) => {
   const getStatusColor = () => {
     if (isSpeaking) return 'bg-cyan-400 shadow-[0_0_15px_rgba(6,182,212,0.8)]';
@@ -190,12 +65,6 @@ const StatusIndicator = memo(({ aiState, isSpeaking, isListening, cameraEnabled 
           {getStatusText()}
         </span>
       </div>
-      
-      {cameraEnabled && (
-        <div className="text-[10px] font-mono font-bold text-cyan-400/80 tracking-[0.4em] animate-pulse bg-black/40 px-3 py-1 rounded-full border border-cyan-500/20 backdrop-blur-md">
-          VISION ACTIVE
-        </div>
-      )}
     </div>
   );
 });
@@ -210,7 +79,7 @@ export default function EmotionAwareOrb(props: EmotionOrbProps) {
   
   // Data Refs for Animation Loop (Avoids re-renders)
   const audioLevelRef = useRef(0);
-  const facePosRef = useRef({ x: 0, y: 0 });
+  const facePosRef = useRef({ x: 0, y: 0 }); // Used via mouse interaction now
   const aiStateRef = useRef<AIState>('idle');
 
   // Determine AI State
@@ -246,16 +115,6 @@ export default function EmotionAwareOrb(props: EmotionOrbProps) {
     const handle = requestAnimationFrame(updateAudio);
     return () => cancelAnimationFrame(handle);
   }, [props.analyser]);
-
-  // Face Tracking Hook
-  useFaceTracker(props.stream, (data) => {
-    if (props.onFaceData) props.onFaceData(data);
-    if (data?.detected) {
-      const targetX = Math.max(-1, Math.min(1, data.rotY)); 
-      const targetY = Math.max(-1, Math.min(1, data.rotX));
-      facePosRef.current = { x: targetX, y: targetY };
-    }
-  });
 
   // ═══════════════════════════════════════════════════════════════
   // ANIMATION LOOP (Ultra Premium Tuning)
@@ -324,14 +183,12 @@ export default function EmotionAwareOrb(props: EmotionOrbProps) {
     let currentLookX = 0;
     let currentLookY = 0;
 
-    // Mouse Interaction
+    // Mouse Interaction (Primary mode since camera is removed)
     const handleMouseMove = (e: MouseEvent) => {
-        if (!props.cameraEnabled) {
-            const rect = container.getBoundingClientRect();
-            const x = (e.clientX - rect.left) / width;
-            const y = (e.clientY - rect.top) / height;
-            facePosRef.current = { x: (x - 0.5) * 2, y: (y - 0.5) * 2 };
-        }
+        const rect = container.getBoundingClientRect();
+        const x = (e.clientX - rect.left) / width;
+        const y = (e.clientY - rect.top) / height;
+        facePosRef.current = { x: (x - 0.5) * 2, y: (y - 0.5) * 2 };
     };
     window.addEventListener('mousemove', handleMouseMove);
 
@@ -502,7 +359,7 @@ export default function EmotionAwareOrb(props: EmotionOrbProps) {
       resizeObserver.disconnect();
       window.removeEventListener('mousemove', handleMouseMove);
     };
-  }, [props.cameraEnabled]);
+  }, []);
 
   return (
     <div ref={containerRef} className="w-full h-full relative overflow-hidden bg-[#020617]">
@@ -515,7 +372,6 @@ export default function EmotionAwareOrb(props: EmotionOrbProps) {
         aiState={aiState}
         isSpeaking={props.isSpeaking}
         isListening={props.isListening}
-        cameraEnabled={props.cameraEnabled}
       />
     </div>
   );

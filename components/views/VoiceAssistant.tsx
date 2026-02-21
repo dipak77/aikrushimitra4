@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { UserProfile, Language } from '../../types';
 import { TRANSLATIONS } from '../../constants';
-import { ArrowLeft, Mic, MicOff, Video, VideoOff, Scan, Shield, Activity, Zap, Cpu, Sparkles, ChevronDown, AlertOctagon, RefreshCw, Radio } from 'lucide-react';
+import { ArrowLeft, Mic, MicOff, Activity, Zap, Cpu, Sparkles, ChevronDown, AlertOctagon, RefreshCw, Radio } from 'lucide-react';
 import { decode, decodeAudioData, createPCMChunkBase64 } from '../../utils/audio';
 import { triggerHaptic } from '../../utils/common';
 import { GoogleGenAI, LiveServerMessage, Modality, Type } from '@google/genai';
@@ -74,21 +74,6 @@ function getWorkletUrl() {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// HELPER: Video Frame Capture
-// ═══════════════════════════════════════════════════════════════
-
-async function captureFrame(video: HTMLVideoElement): Promise<string | null> {
-  if (!video.videoWidth) return null;
-  const canvas = document.createElement('canvas');
-  canvas.width = 480; 
-  canvas.height = 360;
-  const ctx = canvas.getContext('2d');
-  if (!ctx) return null;
-  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-  return canvas.toDataURL('image/jpeg', 0.7).split(',')[1];
-}
-
-// ═══════════════════════════════════════════════════════════════
 // MAIN COMPONENT
 // ═══════════════════════════════════════════════════════════════
 
@@ -108,7 +93,6 @@ const VoiceAssistant = ({
   const [errorMessage, setErrorMessage] = useState('');
   const [transcripts, setTranscripts] = useState<Transcript[]>([]);
   const [isSpeaking, setIsSpeaking] = useState(false);
-  const [cameraEnabled, setCameraEnabled] = useState(true);
   const [showTranscripts, setShowTranscripts] = useState(true);
   const [activeTool, setActiveTool] = useState<{name: string, result: string} | null>(null);
 
@@ -121,12 +105,8 @@ const VoiceAssistant = ({
   const sessionRef = useRef<any>(null);
   const setupDone = useRef(false);
 
-  // Audio/Video Refs
+  // Audio Refs
   const streamRef = useRef<MediaStream | null>(null);
-  const [videoStream, setVideoStream] = useState<MediaStream | null>(null);
-  const hiddenVideoRef = useRef<HTMLVideoElement | null>(null);
-  const videoIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
   const inputAnalyserRef = useRef<AnalyserNode | null>(null);
   const outputAnalyserRef = useRef<AnalyserNode | null>(null);
 
@@ -147,7 +127,7 @@ const VoiceAssistant = ({
   }, [transcripts, showTranscripts]);
 
   // ═══════════════════════════════════════════════════════════════
-  // VISUALIZER LOOP (High-Fidelity Smooth Easing)
+  // VISUALIZER LOOP
   // ═══════════════════════════════════════════════════════════════
   useEffect(() => {
     const inData = new Uint8Array(128);
@@ -173,15 +153,13 @@ const VoiceAssistant = ({
         targetA = (sum / 32) / 255;
       }
 
-      // Smooth interpolation for organic movement
+      // Smooth interpolation
       currentUVol += (targetU - currentUVol) * 0.15;
       currentAVol += (targetA - currentAVol) * 0.25;
 
       if (containerRef.current) {
         containerRef.current.style.setProperty('--u-vol', currentUVol.toFixed(4));
         containerRef.current.style.setProperty('--a-vol', currentAVol.toFixed(4));
-        
-        // Map volume to dynamic colors for intense glowing
         const glowIntensity = Math.min(1, currentAVol * 1.5 + 0.2);
         containerRef.current.style.setProperty('--ai-glow-opacity', glowIntensity.toFixed(2));
       }
@@ -200,7 +178,6 @@ const VoiceAssistant = ({
   const cleanup = useCallback((fullyStop = false) => {
     if (reconnectTimer.current) clearTimeout(reconnectTimer.current);
     if (speakingTimeoutRef.current) clearTimeout(speakingTimeoutRef.current);
-    if (videoIntervalRef.current) clearInterval(videoIntervalRef.current);
 
     if (sessionRef.current) {
       try { sessionRef.current.close(); } catch { /* ignore */ }
@@ -219,7 +196,6 @@ const VoiceAssistant = ({
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(track => track.stop());
       streamRef.current = null;
-      setVideoStream(null);
     }
 
     [inputCtxRef, outputCtxRef].forEach(ref => {
@@ -251,7 +227,7 @@ const VoiceAssistant = ({
     if (!shouldStayRef.current) return;
     if (retryCount.current >= MAX_RETRIES) {
       setStatus('error');
-      setErrorMessage(lang === 'mr' ? 'कनेक्शन तुटले. पुन्हा प्रयत्न करा.' : 'Connection lost. Permission Denied or Network Error.');
+      setErrorMessage(lang === 'mr' ? 'कनेक्शन तुटले. पुन्हा प्रयत्न करा.' : 'Connection lost. Network Error.');
       shouldStayRef.current = false;
       return;
     }
@@ -310,32 +286,6 @@ const VoiceAssistant = ({
     setStatus(retryCount.current > 0 ? 'reconnecting' : 'connecting');
 
     try {
-      const constraints: MediaStreamConstraints = {
-        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
-        video: cameraEnabled ? { width: 640, height: 480, facingMode: 'environment' } : false,
-      };
-
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
-
-      if (!shouldStayRef.current) {
-        stream.getTracks().forEach(track => track.stop());
-        return;
-      }
-
-      streamRef.current = stream;
-
-      if (cameraEnabled) {
-        const videoTrack = stream.getVideoTracks()[0];
-        if (videoTrack) {
-          const videoStreamOnly = new MediaStream([videoTrack]);
-          setVideoStream(videoStreamOnly);
-          if (hiddenVideoRef.current) {
-            hiddenVideoRef.current.srcObject = videoStreamOnly;
-            hiddenVideoRef.current.play().catch(() => {});
-          }
-        }
-      }
-
       const ACClass = window.AudioContext || (window as any).webkitAudioContext;
       const inCtx = new ACClass({ sampleRate: 16000 });
       await inCtx.resume();
@@ -361,7 +311,6 @@ const VoiceAssistant = ({
       outAnalyser.connect(outCtx.destination);
       compressorRef.current = comp;
 
-      const source = inCtx.createMediaStreamSource(stream);
       await inCtx.audioWorklet.addModule(getWorkletUrl());
       const worklet = new AudioWorkletNode(inCtx, 'pcm-forwarder');
       workletRef.current = worklet;
@@ -369,6 +318,27 @@ const VoiceAssistant = ({
       const mute = inCtx.createGain();
       mute.gain.value = 0;
       muteGainRef.current = mute;
+
+      // ── Mute/Silent Fallback if Mic is denied ──
+      let source: AudioNode;
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ 
+            audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } 
+        });
+        if (!shouldStayRef.current) {
+          stream.getTracks().forEach(track => track.stop());
+          return;
+        }
+        streamRef.current = stream;
+        source = inCtx.createMediaStreamSource(stream);
+      } catch (err) {
+        console.warn("Microphone permission denied or unavailable. Using silent fallback.");
+        const osc = inCtx.createOscillator();
+        osc.type = 'sine';
+        osc.frequency.value = 0; // Pure silence
+        osc.start();
+        source = osc;
+      }
 
       source.connect(inAnalyser);
       source.connect(worklet);
@@ -402,17 +372,12 @@ const VoiceAssistant = ({
             setStatus('connected');
             triggerHaptic('heavy');
             
-            if (cameraEnabled && hiddenVideoRef.current) {
-               if (videoIntervalRef.current) clearInterval(videoIntervalRef.current);
-               videoIntervalRef.current = setInterval(async () => {
-                  if (!setupDone.current || !sessionRef.current || !hiddenVideoRef.current) return;
-                  const base64Data = await captureFrame(hiddenVideoRef.current);
-                  if (base64Data) {
-                     sessionRef.current.sendRealtimeInput({
-                        media: { mimeType: 'image/jpeg', data: base64Data }
-                     });
-                  }
-               }, 2000);
+            // Send initial greeting if fallback is used to trigger AI speech
+            if (!streamRef.current) {
+                // Trigger AI to speak without user audio input
+                sessionRef.current?.sendToolResponse({
+                    functionResponses: []
+                });
             }
           },
           onmessage: async (message: LiveServerMessage) => {
@@ -451,14 +416,13 @@ const VoiceAssistant = ({
           },
           onclose: () => {
             setupDone.current = false;
-            if (videoIntervalRef.current) clearInterval(videoIntervalRef.current);
             if (shouldStayRef.current) handleReconnect();
             else setStatus('idle');
           },
           onerror: (e: any) => {
             console.error('Session Error:', e);
             setStatus('error');
-            setErrorMessage('Network Interrupted or Permission Denied.');
+            setErrorMessage('Network Interrupted. Connection Lost.');
           },
         },
       });
@@ -476,10 +440,10 @@ const VoiceAssistant = ({
         } catch (e) { console.error(e); }
       };
     } catch (e: any) {
-      setErrorMessage(e?.message || 'Permission Denied. System Reboot Required.');
+      setErrorMessage(e?.message || 'Connection Failed. System Reboot Required.');
       setStatus('error');
     }
-  }, [cleanup, handleReconnect, lang, cameraEnabled]);
+  }, [cleanup, handleReconnect, lang]);
 
   useEffect(() => { connectRef.current = connect; }, [connect]);
 
@@ -493,26 +457,15 @@ const VoiceAssistant = ({
     }
   }, [status, connect, cleanup]);
 
-  const toggleCamera = useCallback(() => {
-    setCameraEnabled(prev => {
-      const next = !prev;
-      if (status === 'connected' || status === 'connecting') {
-        cleanup(false);
-        setTimeout(() => connect(false), 200);
-      }
-      return next;
-    });
-  }, [status, cleanup, connect]);
-
   // Determine active theme colors based on state
   const aiTheme = useMemo(() => {
     if (status === 'error') return { color: '239,68,68', name: 'error', hex: '#ef4444' };
     if (status === 'connecting' || status === 'reconnecting') return { color: '245,158,11', name: 'processing', hex: '#f59e0b' };
     if (status === 'connected') {
-      if (isSpeaking) return { color: '6,182,212', name: 'speaking', hex: '#06b6d4' }; // Cyan
-      return { color: '16,185,129', name: 'listening', hex: '#10b981' }; // Emerald
+      if (isSpeaking) return { color: '6,182,212', name: 'speaking', hex: '#06b6d4' }; 
+      return { color: '16,185,129', name: 'listening', hex: '#10b981' }; 
     }
-    return { color: '99,102,241', name: 'idle', hex: '#6366f1' }; // Indigo
+    return { color: '99,102,241', name: 'idle', hex: '#6366f1' }; 
   }, [status, isSpeaking]);
 
   // ═══════════════════════════════════════════════════════════════
@@ -547,18 +500,16 @@ const VoiceAssistant = ({
       <div className="absolute inset-0 opacity-10 pointer-events-none bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAwIDEwIEwgNDAgMTAgTSAxMCAwIEwgMTAgNDAiIGZpbGw9Im5vbmUiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMC41IiBvcGFjaXR5PSIwLjUiLz48L3BhdHRlcm4+PC9kZWZzPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9InVybCgjZ3JpZCkiLz48L3N2Zz4=')]"
            style={{ transform: 'perspective(1000px) rotateX(60deg) translateY(-100px) translateZ(-200px)', transformOrigin: 'top' }} />
 
-      <video ref={hiddenVideoRef} className="hidden" muted playsInline autoPlay width={640} height={480} />
-
-      {/* ─── HEADER ─── */}
-      <header className="relative z-50 flex items-center justify-between px-6 pt-safe-top mt-4 pb-2">
+      {/* ─── HEADER (Top Layer, Always Accessible) ─── */}
+      <header className="absolute top-0 inset-x-0 z-[1000] flex items-center justify-between px-6 pt-safe-top mt-4 pb-2 pointer-events-none">
         <button
           onClick={() => { cleanup(true); onBack(); }}
-          className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-white backdrop-blur-2xl hover:bg-white/10 active:scale-95 transition-all shadow-[0_8px_32px_rgba(0,0,0,0.5)] group"
+          className="pointer-events-auto w-12 h-12 rounded-2xl bg-[#0a1128]/80 border border-white/10 flex items-center justify-center text-white backdrop-blur-2xl hover:bg-white/10 active:scale-95 transition-all shadow-[0_8px_32px_rgba(0,0,0,0.5)] group"
         >
           <ArrowLeft size={22} className="group-hover:-translate-x-1 transition-transform" />
         </button>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 pointer-events-auto">
           {/* Status Badge */}
           <div className="px-4 py-2 rounded-2xl bg-[#0a1128]/80 backdrop-blur-2xl border border-white/10 flex items-center gap-2.5 shadow-[0_8px_32px_rgba(0,0,0,0.5)] transition-colors duration-500"
                style={{ borderColor: `rgba(var(--theme-color), 0.3)` }}>
@@ -568,44 +519,12 @@ const VoiceAssistant = ({
               {status === 'error' ? 'SYS FAIL' : status === 'connected' ? 'LIVE SYNC' : status === 'connecting' ? 'BOOTING' : status}
             </span>
           </div>
-
-          {/* Camera Toggle */}
-          <button
-            onClick={toggleCamera}
-            className={clsx(
-              'w-12 h-12 rounded-2xl border flex items-center justify-center backdrop-blur-2xl transition-all active:scale-95 shadow-[0_8px_32px_rgba(0,0,0,0.5)]',
-              cameraEnabled
-                ? 'bg-[rgba(var(--theme-color),0.15)] border-[rgba(var(--theme-color),0.4)] text-[rgb(var(--theme-color))]'
-                : 'bg-white/5 border-white/10 text-white/40'
-            )}
-          >
-            {cameraEnabled ? <Scan size={20} /> : <VideoOff size={20} />}
-          </button>
         </div>
       </header>
 
-      {/* ─── HOLOGRAPHIC AVATAR SCENE ─── */}
-      <div className="flex-1 relative z-10 w-full flex flex-col justify-center items-center overflow-hidden">
+      {/* ─── HOLOGRAPHIC AVATAR SCENE (ABSOLUTELY CENTERED) ─── */}
+      <div className="absolute inset-0 flex flex-col justify-center items-center pointer-events-none z-10 pt-10">
         
-        {/* HUD Camera Feed Background */}
-        {cameraEnabled && status === 'connected' && videoStream && (
-           <div className="absolute inset-6 md:inset-12 rounded-[2.5rem] overflow-hidden border border-[rgba(var(--theme-color),0.3)] opacity-40 pointer-events-none shadow-[0_0_50px_rgba(var(--theme-color),0.1)_inset]">
-               <video 
-                   autoPlay playsInline muted 
-                   className="w-full h-full object-cover filter contrast-125 saturate-50 opacity-60 mix-blend-screen"
-                   ref={v => { if(v) v.srcObject = videoStream }}
-               />
-               <div className="absolute inset-0 bg-[linear-gradient(rgba(0,0,0,0)_50%,rgba(0,0,0,0.25)_50%)] bg-[length:100%_4px] pointer-events-none"></div>
-               {/* Targeting Bracket Corners */}
-               <div className="absolute top-4 left-4 w-8 h-8 border-t-2 border-l-2 border-[rgb(var(--theme-color))]"></div>
-               <div className="absolute top-4 right-4 w-8 h-8 border-t-2 border-r-2 border-[rgb(var(--theme-color))]"></div>
-               <div className="absolute bottom-4 left-4 w-8 h-8 border-b-2 border-l-2 border-[rgb(var(--theme-color))]"></div>
-               <div className="absolute bottom-4 right-4 w-8 h-8 border-b-2 border-r-2 border-[rgb(var(--theme-color))]"></div>
-               <div className="absolute top-0 bottom-0 left-1/2 w-[1px] bg-[rgb(var(--theme-color))] opacity-20"></div>
-               <div className="absolute left-0 right-0 top-1/2 h-[1px] bg-[rgb(var(--theme-color))] opacity-20"></div>
-           </div>
-        )}
-
         {/* ─── THE EAGLE AVATAR (Ultra Premium SVG) ─── */}
         <div className={clsx(
             "relative flex items-center justify-center transition-all duration-700",
@@ -727,7 +646,7 @@ const VoiceAssistant = ({
 
         {/* Start Button Overlay */}
         {status === 'idle' && (
-          <div className="absolute inset-0 flex items-center justify-center z-30 bg-black/40 backdrop-blur-sm animate-[fadeIn_0.5s_ease-out]">
+          <div className="absolute inset-0 flex items-center justify-center z-30 bg-black/40 backdrop-blur-sm animate-[fadeIn_0.5s_ease-out] pointer-events-auto">
             <button
               onClick={handleToggle}
               className="relative group flex flex-col items-center justify-center w-40 h-40 rounded-full border border-indigo-400/50 bg-indigo-950/40 backdrop-blur-2xl shadow-[0_0_60px_rgba(99,102,241,0.3)] hover:scale-105 active:scale-95 transition-all overflow-hidden"
@@ -742,10 +661,10 @@ const VoiceAssistant = ({
 
         {/* Error / Reboot Overlay */}
         {status === 'error' && (
-           <div className="absolute inset-0 flex flex-col items-center justify-center z-30 bg-red-950/80 backdrop-blur-xl animate-[fadeIn_0.3s_ease-out]">
+           <div className="absolute inset-0 flex flex-col items-center justify-center z-[900] bg-red-950/90 backdrop-blur-xl animate-[fadeIn_0.3s_ease-out] pointer-events-auto">
               <AlertOctagon size={64} className="text-red-500 mb-6 animate-pulse drop-shadow-[0_0_20px_rgba(239,68,68,0.8)]" strokeWidth={1.5} />
               <div className="bg-black/50 border border-red-500/50 px-8 py-6 rounded-3xl text-center max-w-sm shadow-[0_0_50px_rgba(239,68,68,0.2)]">
-                  <h3 className="text-xl font-black text-red-400 tracking-widest mb-2 font-mono">SYSTEM FAILURE</h3>
+                  <h3 className="text-xl font-black text-red-400 tracking-widest mb-2 font-mono">SYSTEM ERROR</h3>
                   <p className="text-red-200/80 text-sm mb-8 font-mono">{errorMessage}</p>
                   <button 
                       onClick={handleToggle}
@@ -759,7 +678,7 @@ const VoiceAssistant = ({
 
         {/* Active Tool Chip */}
         {activeTool && (
-            <div className="absolute top-32 left-1/2 -translate-x-1/2 z-40 animate-[slideDown_0.4s_cubic-bezier(0.175,0.885,0.32,1.275)]">
+            <div className="absolute top-28 left-1/2 -translate-x-1/2 z-40 animate-[slideDown_0.4s_cubic-bezier(0.175,0.885,0.32,1.275)]">
                 <div className="bg-[#0a1128]/90 backdrop-blur-2xl border border-[rgba(var(--theme-color),0.5)] pl-2 pr-6 py-2 rounded-full shadow-[0_20px_40px_rgba(0,0,0,0.8),0_0_30px_rgba(var(--theme-color),0.3)] flex items-center gap-4">
                     <div className="w-10 h-10 rounded-full bg-[rgba(var(--theme-color),0.2)] flex items-center justify-center border border-[rgba(var(--theme-color),0.4)]">
                         <Cpu size={18} className="text-[rgb(var(--theme-color))] animate-pulse" />
@@ -775,7 +694,7 @@ const VoiceAssistant = ({
 
       {/* ─── TRANSCRIPT & CONTROLS HUD ─── */}
       <div className={clsx(
-          "relative z-40 w-full transition-all duration-700 ease-[cubic-bezier(0.4,0,0.2,1)]",
+          "absolute bottom-0 inset-x-0 z-40 w-full transition-all duration-700 ease-[cubic-bezier(0.4,0,0.2,1)] pointer-events-none",
           showTranscripts ? "h-[45vh]" : "h-[14vh]"
       )}>
           {/* Advanced Glass Base */}
@@ -784,17 +703,17 @@ const VoiceAssistant = ({
 
           {/* Transcripts Area */}
           <div className={clsx(
-              "relative h-full flex flex-col pt-6 pb-36 px-4 md:px-8 overflow-y-auto hide-scrollbar scroll-smooth transition-opacity duration-500",
-              showTranscripts ? "opacity-100" : "opacity-0 pointer-events-none"
+              "relative h-full flex flex-col pt-6 pb-36 px-4 md:px-8 overflow-y-auto hide-scrollbar scroll-smooth transition-opacity duration-500 pointer-events-auto",
+              showTranscripts ? "opacity-100" : "opacity-0"
           )}>
             {transcripts.length === 0 && status === 'connected' && (
-              <div className="m-auto flex flex-col items-center opacity-50">
+              <div className="m-auto flex flex-col items-center opacity-50 pointer-events-none">
                 <div className="w-16 h-16 rounded-full border border-[rgba(var(--theme-color),0.4)] bg-[rgba(var(--theme-color),0.1)] flex items-center justify-center mb-4 relative">
                     <div className="absolute inset-0 rounded-full border-2 border-[rgb(var(--theme-color))] border-t-transparent animate-spin"></div>
                     <Radio size={24} className="text-[rgb(var(--theme-color))] animate-pulse" />
                 </div>
                 <p className="text-xs font-mono font-bold tracking-[0.25em] text-[rgb(var(--theme-color))] text-center leading-relaxed">
-                  AWAITING VOICE INPUT<br/>OR VISUAL SCAN
+                  AWAITING VOICE INPUT
                 </p>
               </div>
             )}
@@ -822,7 +741,7 @@ const VoiceAssistant = ({
           </div>
 
           {/* Floating Controls Bar */}
-          <div className="absolute bottom-8 inset-x-6 md:max-w-2xl md:mx-auto flex items-center justify-between z-50">
+          <div className="absolute bottom-8 inset-x-6 md:max-w-2xl md:mx-auto flex items-center justify-between z-50 pointer-events-auto">
              
              {/* Left: Transcript Toggle */}
              <button
