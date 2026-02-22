@@ -2,8 +2,9 @@ import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { UserProfile, Language } from '../../types';
 import { TRANSLATIONS } from '../../constants';
 import {
-  ArrowLeft, Mic, MicOff, Video, VideoOff, Scan, Shield, Activity, Zap, Cpu,
-  Sparkles, ChevronDown, AlertOctagon, RefreshCw, Radio
+  ArrowLeft, Mic, VideoOff, Scan, Activity, Cpu,
+  Sparkles, ChevronUp, AlertTriangle, RefreshCw, Radio,
+  Eye, Waves, Signal, Hexagon, CircuitBoard
 } from 'lucide-react';
 import { decode, decodeAudioData, createPCMChunkBase64 } from '../../utils/audio';
 import { triggerHaptic } from '../../utils/common';
@@ -13,15 +14,11 @@ import clsx from 'clsx';
 import { MOCK_MARKET } from '../../data/mock';
 
 // ═══════════════════════════════════════════════════════════════
-// TYPES
+// TYPES & CONSTANTS
 // ═══════════════════════════════════════════════════════════════
 
 type Status = 'idle' | 'connecting' | 'connected' | 'reconnecting' | 'error' | 'offline';
-type Transcript = { role: 'user' | 'model'; text: string; id: string };
-
-// ═══════════════════════════════════════════════════════════════
-// CONSTANTS
-// ═══════════════════════════════════════════════════════════════
+type Transcript = { role: 'user' | 'model'; text: string; id: string; ts: number };
 
 const MAX_RETRIES = 5;
 const RECONNECT_BASE_DELAY = 1000;
@@ -35,9 +32,7 @@ const TOOLS = [
         description: "Get current weather and forecast for the farm location.",
         parameters: {
           type: Type.OBJECT,
-          properties: {
-            location: { type: Type.STRING, description: "Village or city name" }
-          },
+          properties: { location: { type: Type.STRING, description: "Village or city name" } },
           required: ["location"]
         }
       },
@@ -46,9 +41,7 @@ const TOOLS = [
         description: "Get live market prices (bajar bhav) for crops.",
         parameters: {
           type: Type.OBJECT,
-          properties: {
-            crop: { type: Type.STRING, description: "Crop name (e.g. Soyabean, Cotton)" }
-          },
+          properties: { crop: { type: Type.STRING, description: "Crop name (e.g. Soyabean, Cotton)" } },
           required: ["crop"]
         }
       }
@@ -67,23 +60,15 @@ function getWorkletUrl() {
     class PCMForwarder extends AudioWorkletProcessor {
       process(inputs) {
         const ch = inputs?.[0]?.[0];
-        if (ch?.length) {
-          this.port.postMessage(ch);
-        }
+        if (ch?.length) this.port.postMessage(ch);
         return true;
       }
     }
     registerProcessor('pcm-forwarder', PCMForwarder);
   `;
-  workletUrlCache = URL.createObjectURL(
-    new Blob([code], { type: 'application/javascript' })
-  );
+  workletUrlCache = URL.createObjectURL(new Blob([code], { type: 'application/javascript' }));
   return workletUrlCache;
 }
-
-// ═══════════════════════════════════════════════════════════════
-// HELPER: Video Frame Capture
-// ═══════════════════════════════════════════════════════════════
 
 async function captureFrame(video: HTMLVideoElement): Promise<string | null> {
   if (!video.videoWidth) return null;
@@ -97,33 +82,175 @@ async function captureFrame(video: HTMLVideoElement): Promise<string | null> {
 }
 
 // ═══════════════════════════════════════════════════════════════
+// PARTICLE FIELD COMPONENT
+// ═══════════════════════════════════════════════════════════════
+
+const ParticleField = React.memo(({ active, color }: { active: boolean; color: string }) => {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const particles = useRef<Array<{ x: number; y: number; vx: number; vy: number; size: number; alpha: number; decay: number }>>([]);
+  const rafRef = useRef(0);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const resize = () => {
+      canvas.width = canvas.offsetWidth * window.devicePixelRatio;
+      canvas.height = canvas.offsetHeight * window.devicePixelRatio;
+      ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+    };
+    resize();
+    window.addEventListener('resize', resize);
+
+    const w = () => canvas.offsetWidth;
+    const h = () => canvas.offsetHeight;
+
+    const animate = () => {
+      ctx.clearRect(0, 0, w(), h());
+
+      if (active && Math.random() > 0.6) {
+        const cx = w() / 2;
+        const cy = h() * 0.4;
+        const angle = Math.random() * Math.PI * 2;
+        const dist = 40 + Math.random() * 80;
+        particles.current.push({
+          x: cx + Math.cos(angle) * dist,
+          y: cy + Math.sin(angle) * dist,
+          vx: (Math.random() - 0.5) * 1.5,
+          vy: -0.5 - Math.random() * 2,
+          size: 1 + Math.random() * 2.5,
+          alpha: 0.6 + Math.random() * 0.4,
+          decay: 0.005 + Math.random() * 0.015,
+        });
+      }
+
+      particles.current = particles.current.filter(p => {
+        p.x += p.vx;
+        p.y += p.vy;
+        p.alpha -= p.decay;
+        if (p.alpha <= 0) return false;
+
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(${color}, ${p.alpha})`;
+        ctx.fill();
+
+        // Glow
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size * 3, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(${color}, ${p.alpha * 0.15})`;
+        ctx.fill();
+
+        return true;
+      });
+
+      rafRef.current = requestAnimationFrame(animate);
+    };
+
+    rafRef.current = requestAnimationFrame(animate);
+    return () => {
+      cancelAnimationFrame(rafRef.current);
+      window.removeEventListener('resize', resize);
+    };
+  }, [active, color]);
+
+  return <canvas ref={canvasRef} className="absolute inset-0 w-full h-full pointer-events-none z-[5]" />;
+});
+
+// ═══════════════════════════════════════════════════════════════
+// WAVEFORM RING COMPONENT (Canvas-based)
+// ═══════════════════════════════════════════════════════════════
+
+const WaveformRing = React.memo(({ analyser, color, radius, lineWidth = 2 }: {
+  analyser: AnalyserNode | null; color: string; radius: number; lineWidth?: number;
+}) => {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const rafRef = useRef(0);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const size = radius * 2 + 60;
+    canvas.width = size * window.devicePixelRatio;
+    canvas.height = size * window.devicePixelRatio;
+    canvas.style.width = `${size}px`;
+    canvas.style.height = `${size}px`;
+    ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+
+    const data = new Uint8Array(analyser?.frequencyBinCount || 128);
+    const cx = size / 2;
+    const cy = size / 2;
+
+    const draw = () => {
+      ctx.clearRect(0, 0, size, size);
+
+      if (analyser) {
+        analyser.getByteTimeDomainData(data);
+      }
+
+      const steps = 128;
+      ctx.beginPath();
+      for (let i = 0; i <= steps; i++) {
+        const angle = (i / steps) * Math.PI * 2 - Math.PI / 2;
+        const dataIndex = Math.floor((i / steps) * data.length);
+        const v = analyser ? (data[dataIndex] - 128) / 128 : 0;
+        const r = radius + v * 30;
+        const x = cx + Math.cos(angle) * r;
+        const y = cy + Math.sin(angle) * r;
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.closePath();
+      ctx.strokeStyle = `rgba(${color}, 0.6)`;
+      ctx.lineWidth = lineWidth;
+      ctx.stroke();
+
+      // Inner glow
+      ctx.shadowColor = `rgba(${color}, 0.4)`;
+      ctx.shadowBlur = 15;
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+
+      rafRef.current = requestAnimationFrame(draw);
+    };
+
+    rafRef.current = requestAnimationFrame(draw);
+    return () => cancelAnimationFrame(rafRef.current);
+  }, [analyser, color, radius, lineWidth]);
+
+  return (
+    <canvas
+      ref={canvasRef}
+      className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none"
+    />
+  );
+});
+
+// ═══════════════════════════════════════════════════════════════
 // MAIN COMPONENT
 // ═══════════════════════════════════════════════════════════════
 
 const VoiceAssistant = ({
-  lang,
-  user,
-  onBack,
+  lang, user, onBack,
 }: {
-  lang: Language;
-  user: UserProfile;
-  onBack: () => void;
+  lang: Language; user: UserProfile; onBack: () => void;
 }) => {
   const t = TRANSLATIONS[lang];
 
-  // ─── State ───
   const [status, setStatus] = useState<Status>('idle');
   const [errorMessage, setErrorMessage] = useState('');
   const [transcripts, setTranscripts] = useState<Transcript[]>([]);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [cameraEnabled, setCameraEnabled] = useState(true);
-  const [showTranscripts, setShowTranscripts] = useState(true);
-  const [activeTool, setActiveTool] = useState<{
-    name: string;
-    result: string;
-  } | null>(null);
+  const [showTranscripts, setShowTranscripts] = useState(false);
+  const [activeTool, setActiveTool] = useState<{ name: string; result: string } | null>(null);
+  const [elapsed, setElapsed] = useState(0);
 
-  // ─── Refs ───
   const containerRef = useRef<HTMLDivElement>(null);
   const shouldStayRef = useRef(false);
   const reconnectTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -131,17 +258,14 @@ const VoiceAssistant = ({
   const connectRef = useRef<any>(null);
   const sessionRef = useRef<any>(null);
   const setupDone = useRef(false);
-
-  // Audio/Video Refs
   const streamRef = useRef<MediaStream | null>(null);
   const [videoStream, setVideoStream] = useState<MediaStream | null>(null);
   const hiddenVideoRef = useRef<HTMLVideoElement | null>(null);
   const videoIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
   const inputAnalyserRef = useRef<AnalyserNode | null>(null);
   const outputAnalyserRef = useRef<AnalyserNode | null>(null);
-
-  // Audio Processing Refs
+  const [inputAnalyserState, setInputAnalyserState] = useState<AnalyserNode | null>(null);
+  const [outputAnalyserState, setOutputAnalyserState] = useState<AnalyserNode | null>(null);
   const inputCtxRef = useRef<AudioContext | null>(null);
   const outputCtxRef = useRef<AudioContext | null>(null);
   const workletRef = useRef<AudioWorkletNode | null>(null);
@@ -150,117 +274,92 @@ const VoiceAssistant = ({
   const nextPlayTime = useRef(0);
   const transcriptEndRef = useRef<HTMLDivElement>(null);
   const speakingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const visualizerRafRef = useRef<number>(0);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const startTimeRef = useRef(0);
 
-  // Scroll
+  // Timer
+  useEffect(() => {
+    if (status === 'connected') {
+      startTimeRef.current = Date.now();
+      timerRef.current = setInterval(() => {
+        setElapsed(Math.floor((Date.now() - startTimeRef.current) / 1000));
+      }, 1000);
+    } else {
+      if (timerRef.current) clearInterval(timerRef.current);
+      if (status === 'idle') setElapsed(0);
+    }
+    return () => { if (timerRef.current) clearInterval(timerRef.current); };
+  }, [status]);
+
+  const formatTime = (s: number) => {
+    const m = Math.floor(s / 60);
+    const sec = s % 60;
+    return `${m.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`;
+  };
+
   useEffect(() => {
     transcriptEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [transcripts, showTranscripts]);
 
   // ═══════════════════════════════════════════════════════════════
-  // VISUALIZER LOOP
+  // VOLUME CSS VARS
   // ═══════════════════════════════════════════════════════════════
+
   useEffect(() => {
     const inData = new Uint8Array(128);
     const outData = new Uint8Array(128);
-    let currentUVol = 0;
-    let currentAVol = 0;
+    let uVol = 0, aVol = 0;
+    let raf = 0;
 
-    const updateVisuals = () => {
-      let targetU = 0;
-      let targetA = 0;
-
+    const loop = () => {
+      let tU = 0, tA = 0;
       if (inputAnalyserRef.current) {
         inputAnalyserRef.current.getByteFrequencyData(inData);
-        let sum = 0;
-        for (let i = 0; i < 32; i++) sum += inData[i];
-        targetU = sum / 32 / 255;
+        let s = 0; for (let i = 0; i < 32; i++) s += inData[i];
+        tU = s / 32 / 255;
       }
-
       if (outputAnalyserRef.current) {
         outputAnalyserRef.current.getByteFrequencyData(outData);
-        let sum = 0;
-        for (let i = 0; i < 32; i++) sum += outData[i];
-        targetA = sum / 32 / 255;
+        let s = 0; for (let i = 0; i < 32; i++) s += outData[i];
+        tA = s / 32 / 255;
       }
-
-      currentUVol += (targetU - currentUVol) * 0.15;
-      currentAVol += (targetA - currentAVol) * 0.25;
-
+      uVol += (tU - uVol) * 0.15;
+      aVol += (tA - aVol) * 0.25;
       if (containerRef.current) {
-        containerRef.current.style.setProperty('--u-vol', currentUVol.toFixed(4));
-        containerRef.current.style.setProperty('--a-vol', currentAVol.toFixed(4));
-        const glowIntensity = Math.min(1, currentAVol * 1.5 + 0.2);
-        containerRef.current.style.setProperty(
-          '--ai-glow-opacity',
-          glowIntensity.toFixed(2)
-        );
+        containerRef.current.style.setProperty('--u', uVol.toFixed(4));
+        containerRef.current.style.setProperty('--a', aVol.toFixed(4));
       }
-
-      visualizerRafRef.current = requestAnimationFrame(updateVisuals);
+      raf = requestAnimationFrame(loop);
     };
-
-    visualizerRafRef.current = requestAnimationFrame(updateVisuals);
-    return () => cancelAnimationFrame(visualizerRafRef.current);
+    raf = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(raf);
   }, []);
 
   // ═══════════════════════════════════════════════════════════════
-  // CLEANUP & RECONNECT
+  // CLEANUP
   // ═══════════════════════════════════════════════════════════════
 
-  const cleanup = useCallback((fullyStop = false) => {
+  const cleanup = useCallback((full = false) => {
     if (reconnectTimer.current) clearTimeout(reconnectTimer.current);
     if (speakingTimeoutRef.current) clearTimeout(speakingTimeoutRef.current);
     if (videoIntervalRef.current) clearInterval(videoIntervalRef.current);
-
-    if (sessionRef.current) {
-      try {
-        sessionRef.current.close();
-      } catch {
-        /* ignore */
-      }
-      sessionRef.current = null;
-    }
-
+    if (sessionRef.current) { try { sessionRef.current.close(); } catch {} sessionRef.current = null; }
     setupDone.current = false;
-
-    [workletRef, muteGainRef, compressorRef].forEach((ref) => {
-      if (ref.current) {
-        try {
-          (ref.current as AudioNode).disconnect();
-        } catch {
-          /* ignore */
-        }
-        (ref as any).current = null;
-      }
+    [workletRef, muteGainRef, compressorRef].forEach(r => {
+      if (r.current) { try { (r.current as AudioNode).disconnect(); } catch {} (r as any).current = null; }
     });
-
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach((track) => track.stop());
-      streamRef.current = null;
-      setVideoStream(null);
-    }
-
-    [inputCtxRef, outputCtxRef].forEach((ref) => {
-      if (ref.current) {
-        ref.current.close().catch(() => {});
-        (ref as any).current = null;
-      }
-    });
-
+    if (streamRef.current) { streamRef.current.getTracks().forEach(t => t.stop()); streamRef.current = null; setVideoStream(null); }
+    [inputCtxRef, outputCtxRef].forEach(r => { if (r.current) { r.current.close().catch(() => {}); (r as any).current = null; } });
     inputAnalyserRef.current = null;
     outputAnalyserRef.current = null;
-
-    if (fullyStop) {
+    setInputAnalyserState(null);
+    setOutputAnalyserState(null);
+    if (full) {
       shouldStayRef.current = false;
       setStatus('idle');
       setIsSpeaking(false);
       setActiveTool(null);
-      if (containerRef.current) {
-        containerRef.current.style.setProperty('--u-vol', '0');
-        containerRef.current.style.setProperty('--a-vol', '0');
-        containerRef.current.style.setProperty('--ai-glow-opacity', '0.2');
-      }
+      if (containerRef.current) { containerRef.current.style.setProperty('--u', '0'); containerRef.current.style.setProperty('--a', '0'); }
     }
   }, []);
 
@@ -270,345 +369,172 @@ const VoiceAssistant = ({
     if (!shouldStayRef.current) return;
     if (retryCount.current >= MAX_RETRIES) {
       setStatus('error');
-      setErrorMessage(
-        lang === 'mr'
-          ? 'कनेक्शन तुटले. पुन्हा प्रयत्न करा.'
-          : 'Connection lost. Permission Denied or Network Error.'
-      );
+      setErrorMessage(lang === 'mr' ? 'कनेक्शन तुटले.' : 'Connection lost. Try again.');
       shouldStayRef.current = false;
       return;
     }
     setStatus('reconnecting');
-    const delay = Math.min(
-      RECONNECT_BASE_DELAY * Math.pow(2, retryCount.current),
-      10000
-    );
-    reconnectTimer.current = setTimeout(() => {
-      retryCount.current++;
-      connectRef.current?.(true);
-    }, delay);
+    const delay = Math.min(RECONNECT_BASE_DELAY * Math.pow(2, retryCount.current), 10000);
+    reconnectTimer.current = setTimeout(() => { retryCount.current++; connectRef.current?.(true); }, delay);
   }, [lang]);
-
-  // ═══════════════════════════════════════════════════════════════
-  // TOOL CALLS
-  // ═══════════════════════════════════════════════════════════════
 
   const handleToolCall = async (functionCalls: any[]) => {
     if (!functionCalls?.length) return [];
     const responses = [];
-
     for (const call of functionCalls) {
       let result = {};
-      let displayText = '';
-
-      if (call.name === 'get_weather_forecast') {
-        result = {
-          condition: 'Partly Cloudy',
-          temp: '28°C',
-          forecast: 'Chance of light rain.',
-        };
-        displayText = '🌤️ Fetching Weather Data...';
-      } else if (call.name === 'get_mandi_price') {
+      let displayText = "";
+      if (call.name === "get_weather_forecast") {
+        result = { condition: "Partly Cloudy", temp: "28°C", forecast: "Chance of light rain." };
+        displayText = "🌤️ Weather Analysis";
+      } else if (call.name === "get_mandi_price") {
         const crop = call.args.crop;
-        const m = MOCK_MARKET.find((x) =>
-          x.name.toLowerCase().includes(crop.toLowerCase())
-        );
-        result = m
-          ? { price: m.price, trend: m.trend }
-          : { price: '4500', trend: 'Stable' };
-        displayText = `💰 Analyzing ${crop} Market...`;
+        const m = MOCK_MARKET.find(x => x.name.toLowerCase().includes(crop.toLowerCase()));
+        result = m ? { price: m.price, trend: m.trend } : { price: "4500", trend: "Stable" };
+        displayText = `💰 ${crop} Market Data`;
       }
-
       setActiveTool({ name: displayText, result: JSON.stringify(result) });
       setTimeout(() => setActiveTool(null), 3500);
-
-      responses.push({
-        id: call.id,
-        name: call.name,
-        response: { result },
-      });
+      responses.push({ id: call.id, name: call.name, response: { result } });
     }
     return responses;
   };
 
   // ═══════════════════════════════════════════════════════════════
-  // CONNECT LOGIC
+  // CONNECT
   // ═══════════════════════════════════════════════════════════════
 
-  const connect = useCallback(
-    async (isRetry?: boolean) => {
-      if (!navigator.onLine) {
-        setStatus('offline');
-        return;
+  const connect = useCallback(async (isRetry?: boolean) => {
+    if (!navigator.onLine) { setStatus('offline'); return; }
+    cleanup(false);
+    shouldStayRef.current = true;
+    setErrorMessage('');
+    setStatus(retryCount.current > 0 ? 'reconnecting' : 'connecting');
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+        video: cameraEnabled ? { width: 640, height: 480, facingMode: 'environment' } : false,
+      });
+      if (!shouldStayRef.current) { stream.getTracks().forEach(t => t.stop()); return; }
+      streamRef.current = stream;
+      if (cameraEnabled) {
+        const vt = stream.getVideoTracks()[0];
+        if (vt) {
+          const vs = new MediaStream([vt]);
+          setVideoStream(vs);
+          if (hiddenVideoRef.current) { hiddenVideoRef.current.srcObject = vs; hiddenVideoRef.current.play().catch(() => {}); }
+        }
       }
-
-      cleanup(false);
-      shouldStayRef.current = true;
-      setErrorMessage('');
-      setStatus(retryCount.current > 0 ? 'reconnecting' : 'connecting');
-
-      try {
-        const constraints: MediaStreamConstraints = {
-          audio: {
-            echoCancellation: true,
-            noiseSuppression: true,
-            autoGainControl: true,
+      const AC = window.AudioContext || (window as any).webkitAudioContext;
+      const inCtx = new AC({ sampleRate: 16000 }); await inCtx.resume(); inputCtxRef.current = inCtx;
+      const outCtx = new AC({ sampleRate: 24000 }); await outCtx.resume(); outputCtxRef.current = outCtx;
+      nextPlayTime.current = outCtx.currentTime;
+      const inA = inCtx.createAnalyser(); inA.fftSize = 256; inA.smoothingTimeConstant = 0.75; inputAnalyserRef.current = inA; setInputAnalyserState(inA);
+      const outA = outCtx.createAnalyser(); outA.fftSize = 256; outA.smoothingTimeConstant = 0.75; outputAnalyserRef.current = outA; setOutputAnalyserState(outA);
+      const comp = outCtx.createDynamicsCompressor(); comp.connect(outA); outA.connect(outCtx.destination); compressorRef.current = comp;
+      const src = inCtx.createMediaStreamSource(stream);
+      await inCtx.audioWorklet.addModule(getWorkletUrl());
+      const wk = new AudioWorkletNode(inCtx, 'pcm-forwarder'); workletRef.current = wk;
+      const mute = inCtx.createGain(); mute.gain.value = 0; muteGainRef.current = mute;
+      src.connect(inA); src.connect(wk); wk.connect(mute).connect(inCtx.destination);
+      const apiKey = getGenAIKey(); if (!apiKey) throw new Error("API Key missing");
+      const ai = new GoogleGenAI({ apiKey });
+      const systemPrompt = `You are KRUSHI MITRA AI, a highly advanced agricultural robotic assistant. ROLE: Friendly, expert agronomist speaking ${lang === 'mr' ? 'Marathi' : lang === 'hi' ? 'Hindi' : 'English'}. STYLE: Concise, natural spoken voice.`;
+      const session = await ai.live.connect({
+        model: 'gemini-2.5-flash-native-audio-preview-12-2025',
+        config: {
+          responseModalities: [Modality.AUDIO],
+          speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Puck' } } },
+          systemInstruction: { parts: [{ text: systemPrompt }] },
+          tools: TOOLS,
+          inputAudioTranscription: {},
+          outputAudioTranscription: {},
+        },
+        callbacks: {
+          onopen: () => {
+            setupDone.current = true; retryCount.current = 0; setStatus('connected'); triggerHaptic('heavy');
+            if (cameraEnabled && hiddenVideoRef.current) {
+              if (videoIntervalRef.current) clearInterval(videoIntervalRef.current);
+              videoIntervalRef.current = setInterval(async () => {
+                if (!setupDone.current || !sessionRef.current || !hiddenVideoRef.current) return;
+                const b = await captureFrame(hiddenVideoRef.current);
+                if (b) sessionRef.current.sendRealtimeInput({ media: { mimeType: 'image/jpeg', data: b } });
+              }, 2000);
+            }
           },
-          video: cameraEnabled
-            ? { width: 640, height: 480, facingMode: 'environment' }
-            : false,
-        };
-
-        const stream = await navigator.mediaDevices.getUserMedia(constraints);
-
-        if (!shouldStayRef.current) {
-          stream.getTracks().forEach((track) => track.stop());
-          return;
-        }
-
-        streamRef.current = stream;
-
-        if (cameraEnabled) {
-          const videoTrack = stream.getVideoTracks()[0];
-          if (videoTrack) {
-            const videoStreamOnly = new MediaStream([videoTrack]);
-            setVideoStream(videoStreamOnly);
-            if (hiddenVideoRef.current) {
-              hiddenVideoRef.current.srcObject = videoStreamOnly;
-              hiddenVideoRef.current.play().catch(() => {});
+          onmessage: async (msg: LiveServerMessage) => {
+            if (msg.toolCall) {
+              const r = await handleToolCall(msg.toolCall.functionCalls);
+              if (r.length > 0 && sessionRef.current) sessionRef.current.sendToolResponse({ functionResponses: r });
             }
-          }
-        }
-
-        const ACClass =
-          window.AudioContext || (window as any).webkitAudioContext;
-        const inCtx = new ACClass({ sampleRate: 16000 });
-        await inCtx.resume();
-        inputCtxRef.current = inCtx;
-
-        const outCtx = new ACClass({ sampleRate: 24000 });
-        await outCtx.resume();
-        outputCtxRef.current = outCtx;
-        nextPlayTime.current = outCtx.currentTime;
-
-        const inAnalyser = inCtx.createAnalyser();
-        inAnalyser.fftSize = 256;
-        inAnalyser.smoothingTimeConstant = 0.8;
-        inputAnalyserRef.current = inAnalyser;
-
-        const outAnalyser = outCtx.createAnalyser();
-        outAnalyser.fftSize = 256;
-        outAnalyser.smoothingTimeConstant = 0.8;
-        outputAnalyserRef.current = outAnalyser;
-
-        const comp = outCtx.createDynamicsCompressor();
-        comp.connect(outAnalyser);
-        outAnalyser.connect(outCtx.destination);
-        compressorRef.current = comp;
-
-        const source = inCtx.createMediaStreamSource(stream);
-        await inCtx.audioWorklet.addModule(getWorkletUrl());
-        const worklet = new AudioWorkletNode(inCtx, 'pcm-forwarder');
-        workletRef.current = worklet;
-
-        const mute = inCtx.createGain();
-        mute.gain.value = 0;
-        muteGainRef.current = mute;
-
-        source.connect(inAnalyser);
-        source.connect(worklet);
-        worklet.connect(mute).connect(inCtx.destination);
-
-        // --- WEBSOCKET CONNECTION ---
-        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const wsUrl = `${protocol}//${window.location.host}/ws/live`;
-        const ws = new WebSocket(wsUrl);
-        sessionRef.current = ws;
-
-        ws.onopen = () => {
-          console.log('✅ WS Connected');
-          // Send Setup Message
-          const systemPrompt = `
-          You are KRUSHI MITRA AI, a highly advanced agricultural robotic assistant.
-          ROLE: Friendly, expert agronomist speaking ${lang === 'mr' ? 'Marathi' : lang === 'hi' ? 'Hindi' : 'English'}.
-          STYLE: Concise, natural spoken voice. Act like a knowledgeable field companion.
-          `;
-          
-          ws.send(JSON.stringify({
-            type: 'setup',
-            config: {
-              voiceName: 'Puck',
-              systemInstruction: systemPrompt,
-              enableInputTranscription: true,
-              enableOutputTranscription: true
-            }
-          }));
-        };
-
-        ws.onmessage = async (event) => {
-          try {
-            const message = JSON.parse(event.data);
-
-            if (message.type === 'setup_complete') {
-              setupDone.current = true;
-              retryCount.current = 0;
-              setStatus('connected');
-              triggerHaptic('heavy');
-
-              // Start Video Loop
-              if (cameraEnabled && hiddenVideoRef.current) {
-                if (videoIntervalRef.current) clearInterval(videoIntervalRef.current);
-                videoIntervalRef.current = setInterval(async () => {
-                  if (!setupDone.current || !sessionRef.current || !hiddenVideoRef.current) return;
-                  const base64Data = await captureFrame(hiddenVideoRef.current);
-                  if (base64Data) {
-                    ws.send(JSON.stringify({
-                      realtimeInput: {
-                        media: { mimeType: 'image/jpeg', data: base64Data }
-                      }
-                    }));
-                  }
-                }, 2000);
-              }
-              return;
-            }
-
-            if (message.type === 'error') {
-              console.error('WS Error:', message);
-              setStatus('error');
-              setErrorMessage(message.message || 'Server Error');
-              return;
-            }
-
-            // Handle Gemini Messages (forwarded from server)
-            const geminiMsg = message as LiveServerMessage;
-
-            if (geminiMsg.toolCall) {
-              const responses = await handleToolCall(geminiMsg.toolCall.functionCalls);
-              if (responses.length > 0) {
-                 ws.send(JSON.stringify({
-                   toolResponse: { functionResponses: responses }
-                 }));
-              }
-            }
-
-            const audioData = geminiMsg.serverContent?.modelTurn?.parts?.[0]?.inlineData?.data;
-            if (audioData && outputCtxRef.current && compressorRef.current) {
-              const ctx = outputCtxRef.current;
-              const buffer = await decodeAudioData(decode(audioData), ctx, 24000, 1);
-              const src = ctx.createBufferSource();
-              src.buffer = buffer;
-              src.connect(compressorRef.current);
-
-              const now = ctx.currentTime;
-              if (nextPlayTime.current < now) nextPlayTime.current = now;
-              src.start(nextPlayTime.current);
-              nextPlayTime.current += buffer.duration;
-
+            const ad = msg.serverContent?.modelTurn?.parts?.[0]?.inlineData?.data;
+            if (ad && outputCtxRef.current && compressorRef.current) {
+              const c = outputCtxRef.current;
+              const buf = await decodeAudioData(decode(ad as string), c, 24000, 1);
+              const s = c.createBufferSource(); s.buffer = buf; s.connect(compressorRef.current);
+              const now = c.currentTime; if (nextPlayTime.current < now) nextPlayTime.current = now;
+              s.start(nextPlayTime.current); nextPlayTime.current += buf.duration;
               setIsSpeaking(true);
               if (speakingTimeoutRef.current) clearTimeout(speakingTimeoutRef.current);
-              src.onended = () => {
-                speakingTimeoutRef.current = setTimeout(() => setIsSpeaking(false), 200);
-              };
+              s.onended = () => { speakingTimeoutRef.current = setTimeout(() => setIsSpeaking(false), 200); };
             }
+            const ut = msg.serverContent?.inputTranscription?.text;
+            if (ut?.trim()) setTranscripts(p => [...p, { role: 'user', text: ut.trim(), id: uid(), ts: Date.now() }]);
+            const mt = msg.serverContent?.outputTranscription?.text;
+            if (mt?.trim()) setTranscripts(p => [...p, { role: 'model', text: mt.trim(), id: uid(), ts: Date.now() }]);
+          },
+          onclose: () => {
+            setupDone.current = false;
+            if (videoIntervalRef.current) clearInterval(videoIntervalRef.current);
+            if (shouldStayRef.current) handleReconnect(); else setStatus('idle');
+          },
+          onerror: (e: any) => { console.error(e); setStatus('error'); setErrorMessage('Connection interrupted.'); },
+        },
+      });
+      sessionRef.current = session;
+      wk.port.onmessage = (evt: MessageEvent) => {
+        const chunk = evt.data as Float32Array;
+        if (!chunk || !setupDone.current || !sessionRef.current) return;
+        try {
+          const b = createPCMChunkBase64(chunk, inputCtxRef.current?.sampleRate || 16000);
+          session.sendRealtimeInput({ media: { mimeType: 'audio/pcm;rate=16000', data: b } });
+        } catch {}
+      };
+    } catch (e: any) {
+      setErrorMessage(e?.message || 'Permission Denied.');
+      setStatus('error');
+    }
+  }, [cleanup, handleReconnect, lang, cameraEnabled]);
 
-            const userText = geminiMsg.serverContent?.inputTranscription?.text;
-            if (userText?.trim()) {
-              setTranscripts((p) => [...p, { role: 'user', text: userText.trim(), id: uid() }]);
-            }
-
-            const modelText = geminiMsg.serverContent?.outputTranscription?.text;
-            if (modelText?.trim()) {
-              setTranscripts((p) => [...p, { role: 'model', text: modelText.trim(), id: uid() }]);
-            }
-
-          } catch (e) {
-            console.error('WS Message Parse Error:', e);
-          }
-        };
-
-        ws.onclose = (event) => {
-          console.log('WS Closed:', event.code, event.reason);
-          setupDone.current = false;
-          if (videoIntervalRef.current) clearInterval(videoIntervalRef.current);
-          if (shouldStayRef.current) handleReconnect();
-          else setStatus('idle');
-        };
-
-        ws.onerror = (error) => {
-          console.error('WS Error:', error);
-          setStatus('error');
-          setErrorMessage('Connection Error');
-        };
-
-        worklet.port.onmessage = (evt: MessageEvent) => {
-          const chunk = evt.data as Float32Array;
-          if (!chunk || !setupDone.current || !sessionRef.current) return;
-          try {
-             // Send raw PCM via WebSocket
-             const b64 = createPCMChunkBase64(chunk, inputCtxRef.current?.sampleRate || 16000);
-             ws.send(JSON.stringify({
-               realtimeInput: {
-                 media: { mimeType: 'audio/pcm;rate=16000', data: b64 }
-               }
-             }));
-          } catch (e) {
-            console.error(e);
-          }
-        };
-
-      } catch (e: any) {
-        setErrorMessage(
-          e?.message || 'Permission Denied. System Reboot Required.'
-        );
-        setStatus('error');
-      }
-    },
-    [cleanup, handleReconnect, lang, cameraEnabled]
-  );
-
-  useEffect(() => {
-    connectRef.current = connect;
-  }, [connect]);
+  useEffect(() => { connectRef.current = connect; }, [connect]);
 
   const handleToggle = useCallback(() => {
     triggerHaptic('medium');
-    if (
-      status === 'idle' ||
-      status === 'error' ||
-      status === 'offline'
-    ) {
+    if (status === 'idle' || status === 'error' || status === 'offline') {
       if (status !== 'error') setTranscripts([]);
       connect(false);
-    } else {
-      cleanup(true);
-    }
+    } else { cleanup(true); }
   }, [status, connect, cleanup]);
 
   const toggleCamera = useCallback(() => {
-    setCameraEnabled((prev) => {
-      const next = !prev;
-      if (status === 'connected' || status === 'connecting') {
-        cleanup(false);
-        setTimeout(() => connect(false), 200);
-      }
-      return next;
+    setCameraEnabled(prev => {
+      if (status === 'connected' || status === 'connecting') { cleanup(false); setTimeout(() => connect(false), 200); }
+      return !prev;
     });
   }, [status, cleanup, connect]);
 
-  // Theme colors based on state
-  const aiTheme = useMemo(() => {
-    if (status === 'error')
-      return { color: '239,68,68', name: 'error', hex: '#ef4444' };
-    if (status === 'connecting' || status === 'reconnecting')
-      return { color: '245,158,11', name: 'processing', hex: '#f59e0b' };
+  const theme = useMemo(() => {
+    if (status === 'error') return { rgb: '239,68,68', hex: '#ef4444', label: 'CRITICAL' };
+    if (status === 'connecting' || status === 'reconnecting') return { rgb: '251,191,36', hex: '#fbbf24', label: 'SYNCING' };
     if (status === 'connected') {
-      if (isSpeaking)
-        return { color: '6,182,212', name: 'speaking', hex: '#06b6d4' };
-      return { color: '16,185,129', name: 'listening', hex: '#10b981' };
+      if (isSpeaking) return { rgb: '56,189,248', hex: '#38bdf8', label: 'SPEAKING' };
+      return { rgb: '52,211,153', hex: '#34d399', label: 'LISTENING' };
     }
-    return { color: '99,102,241', name: 'idle', hex: '#6366f1' };
+    return { rgb: '139,92,246', hex: '#8b5cf6', label: 'STANDBY' };
   }, [status, isSpeaking]);
+
+  const isActive = status === 'connected';
+  const isLoading = status === 'connecting' || status === 'reconnecting';
 
   // ═══════════════════════════════════════════════════════════════
   // RENDER
@@ -617,728 +543,485 @@ const VoiceAssistant = ({
   return (
     <div
       ref={containerRef}
-      className="fixed inset-0 z-[200] flex flex-col h-[100dvh] w-full overflow-hidden bg-[#020617] font-sans selection:bg-cyan-500/30"
-      style={
-        {
-          '--u-vol': 0,
-          '--a-vol': 0,
-          '--ai-glow-opacity': 0.2,
-          '--theme-color': aiTheme.color,
-          '--theme-hex': aiTheme.hex,
-        } as React.CSSProperties
-      }
+      className="fixed inset-0 z-[200] flex flex-col h-[100dvh] w-full overflow-hidden select-none"
+      style={{ '--u': '0', '--a': '0', '--c': theme.rgb, '--ch': theme.hex } as React.CSSProperties}
     >
-      {/* ─── AMBIENT BACKGROUND ─── */}
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-[#0a1128] via-[#020617] to-black pointer-events-none" />
+      {/* ═══ BACKGROUND LAYERS ═══ */}
+      <div className="absolute inset-0 bg-gradient-to-b from-[#030712] via-[#0a0f1e] to-[#030712]" />
+      
+      {/* Noise texture */}
+      <div className="absolute inset-0 opacity-[0.03] pointer-events-none"
+        style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E")` }} />
 
-      {/* Reactive Core Glow — centered in avatar zone, not the whole page */}
-      <div
-        className="absolute pointer-events-none mix-blend-screen transition-colors duration-700"
+      {/* Ambient orbs */}
+      <div className="absolute top-[15%] left-[10%] w-[400px] h-[400px] rounded-full opacity-[0.07] blur-[120px] pointer-events-none transition-colors duration-1000"
+        style={{ background: `rgb(${theme.rgb})` }} />
+      <div className="absolute bottom-[20%] right-[5%] w-[300px] h-[300px] rounded-full opacity-[0.05] blur-[100px] pointer-events-none transition-colors duration-1000"
+        style={{ background: `rgb(${theme.rgb})` }} />
+
+      {/* Subtle grid */}
+      <div className="absolute inset-0 opacity-[0.025] pointer-events-none"
         style={{
-          top: '28%',
-          left: '50%',
-          width: 'min(70vw, 500px)',
-          height: 'min(70vw, 500px)',
-          transform:
-            'translate(-50%, -50%) scale(calc(1 + var(--a-vol) * 0.5 + var(--u-vol) * 0.2))',
-          background: `radial-gradient(circle, rgba(var(--theme-color), var(--ai-glow-opacity)), transparent 70%)`,
-          borderRadius: '50%',
-          filter: 'blur(80px)',
-        }}
-      />
+          backgroundImage: `linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)`,
+          backgroundSize: '60px 60px',
+        }} />
 
-      {/* Cyber Grid */}
-      <div
-        className="absolute inset-0 opacity-[0.06] pointer-events-none bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAwIDEwIEwgNDAgMTAgTSAxMCAwIEwgMTAgNDAiIGZpbGw9Im5vbmUiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMC41IiBvcGFjaXR5PSIwLjUiLz48L3BhdHRlcm4+PC9kZWZzPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9InVybCgjZ3JpZCkiLz48L3N2Zz4=')]"
-        style={{
-          transform:
-            'perspective(1000px) rotateX(60deg) translateY(-100px) translateZ(-200px)',
-          transformOrigin: 'top',
-        }}
-      />
+      <video ref={hiddenVideoRef} className="hidden" muted playsInline autoPlay width={640} height={480} />
 
-      <video
-        ref={hiddenVideoRef}
-        className="hidden"
-        muted
-        playsInline
-        autoPlay
-        width={640}
-        height={480}
-      />
+      {/* Particle effects */}
+      <ParticleField active={isActive} color={theme.rgb} />
 
-      {/* ─── HEADER ─── */}
-      <header className="relative z-50 flex items-center justify-between px-4 sm:px-6 pt-3 pb-2 shrink-0">
-        <button
-          onClick={() => {
-            cleanup(true);
-            onBack();
-          }}
-          className="w-11 h-11 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-white backdrop-blur-2xl hover:bg-white/10 active:scale-95 transition-all shadow-[0_4px_20px_rgba(0,0,0,0.4)] group"
-        >
-          <ArrowLeft
-            size={20}
-            className="group-hover:-translate-x-0.5 transition-transform"
-          />
-        </button>
-
-        <div className="flex items-center gap-2">
-          {/* Status Badge */}
-          <div
-            className="px-3 py-1.5 rounded-xl bg-[#0a1128]/80 backdrop-blur-2xl border border-white/10 flex items-center gap-2 shadow-[0_4px_20px_rgba(0,0,0,0.4)] transition-colors duration-500"
-            style={{
-              borderColor: `rgba(var(--theme-color), 0.3)`,
-            }}
+      {/* ═══ HEADER ═══ */}
+      <header className="relative z-50 shrink-0 px-4 sm:px-6 pt-3 pb-2">
+        <div className="flex items-center justify-between">
+          {/* Back */}
+          <button
+            onClick={() => { cleanup(true); onBack(); }}
+            className="group w-10 h-10 rounded-xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center text-white/60 hover:text-white hover:bg-white/[0.08] active:scale-95 transition-all"
           >
-            <div
-              className="w-1.5 h-1.5 rounded-full shadow-[0_0_8px_currentColor] animate-pulse"
-              style={{
-                backgroundColor: `rgb(var(--theme-color))`,
-                color: `rgb(var(--theme-color))`,
-              }}
-            />
-            <span
-              className="text-[9px] font-black uppercase tracking-[0.15em] text-white/90"
-              style={{
-                textShadow: `0 0 8px rgba(var(--theme-color), 0.5)`,
-              }}
-            >
-              {status === 'error'
-                ? 'SYS FAIL'
-                : status === 'connected'
-                ? 'LIVE SYNC'
-                : status === 'connecting'
-                ? 'BOOTING'
-                : status === 'reconnecting'
-                ? 'RETRY'
-                : status === 'offline'
-                ? 'OFFLINE'
-                : 'STANDBY'}
-            </span>
+            <ArrowLeft size={18} className="group-hover:-translate-x-0.5 transition-transform" />
+          </button>
+
+          {/* Center branding */}
+          <div className="flex items-center gap-2.5">
+            <div className="relative">
+              <Hexagon size={20} className="text-white/20" strokeWidth={1.5} />
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="w-1.5 h-1.5 rounded-full transition-colors duration-500" style={{ background: theme.hex, boxShadow: `0 0 8px ${theme.hex}` }} />
+              </div>
+            </div>
+            <div className="flex flex-col">
+              <span className="text-[10px] font-bold text-white/80 tracking-[0.15em] leading-none">KRUSHI MITRA</span>
+              <span className="text-[8px] font-medium tracking-[0.2em] leading-none mt-0.5 transition-colors duration-500" style={{ color: theme.hex }}>
+                {theme.label}
+              </span>
+            </div>
           </div>
 
-          {/* Camera Toggle */}
-          <button
-            onClick={toggleCamera}
-            className={clsx(
-              'w-11 h-11 rounded-2xl border flex items-center justify-center backdrop-blur-2xl transition-all active:scale-95 shadow-[0_4px_20px_rgba(0,0,0,0.4)]',
-              cameraEnabled
-                ? 'bg-[rgba(var(--theme-color),0.15)] border-[rgba(var(--theme-color),0.4)] text-[rgb(var(--theme-color))]'
-                : 'bg-white/5 border-white/10 text-white/40'
+          {/* Right controls */}
+          <div className="flex items-center gap-2">
+            {isActive && (
+              <div className="px-2.5 py-1 rounded-lg bg-white/[0.04] border border-white/[0.06] flex items-center gap-1.5 animate-[fadeIn_0.5s]">
+                <div className="w-1 h-1 rounded-full bg-red-500 animate-pulse" />
+                <span className="text-[9px] font-mono font-bold text-white/50 tabular-nums">{formatTime(elapsed)}</span>
+              </div>
             )}
-          >
-            {cameraEnabled ? <Scan size={18} /> : <VideoOff size={18} />}
-          </button>
+            <button
+              onClick={toggleCamera}
+              className={clsx(
+                'w-10 h-10 rounded-xl border flex items-center justify-center transition-all active:scale-95',
+                cameraEnabled
+                  ? 'bg-white/[0.06] border-white/[0.12] text-white/70'
+                  : 'bg-white/[0.03] border-white/[0.06] text-white/30'
+              )}
+            >
+              {cameraEnabled ? <Eye size={16} /> : <VideoOff size={16} />}
+            </button>
+          </div>
         </div>
       </header>
 
-      {/* ─── AVATAR SCENE (true center of remaining space) ─── */}
-      <div className="flex-1 relative z-10 w-full min-h-0 flex flex-col items-center justify-center overflow-hidden">
-        {/* Camera Feed Background — contained inside avatar area */}
-        {cameraEnabled && status === 'connected' && videoStream && (
-          <div className="absolute inset-4 sm:inset-8 md:inset-12 rounded-3xl overflow-hidden border border-[rgba(var(--theme-color),0.2)] opacity-30 pointer-events-none shadow-[0_0_40px_rgba(var(--theme-color),0.08)_inset]">
+      {/* ═══ MAIN SCENE ═══ */}
+      <div className="flex-1 relative z-10 min-h-0 flex flex-col items-center justify-center">
+        
+        {/* Camera feed pip */}
+        {cameraEnabled && isActive && videoStream && (
+          <div className="absolute top-3 right-3 sm:top-4 sm:right-4 w-24 h-32 sm:w-28 sm:h-36 rounded-2xl overflow-hidden border border-white/[0.12] shadow-2xl z-20 animate-[slideInRight_0.5s_ease-out]">
             <video
-              autoPlay
-              playsInline
-              muted
-              className="w-full h-full object-cover filter contrast-110 saturate-50 opacity-50 mix-blend-screen"
-              ref={(v) => {
-                if (v) v.srcObject = videoStream;
-              }}
+              autoPlay playsInline muted
+              className="w-full h-full object-cover"
+              ref={v => { if (v) v.srcObject = videoStream; }}
             />
-            {/* Scanlines */}
-            <div className="absolute inset-0 bg-[linear-gradient(rgba(0,0,0,0)_50%,rgba(0,0,0,0.2)_50%)] bg-[length:100%_4px] pointer-events-none" />
-            {/* Corner brackets */}
-            <div className="absolute top-3 left-3 w-6 h-6 border-t-2 border-l-2 border-[rgb(var(--theme-color))] opacity-60" />
-            <div className="absolute top-3 right-3 w-6 h-6 border-t-2 border-r-2 border-[rgb(var(--theme-color))] opacity-60" />
-            <div className="absolute bottom-3 left-3 w-6 h-6 border-b-2 border-l-2 border-[rgb(var(--theme-color))] opacity-60" />
-            <div className="absolute bottom-3 right-3 w-6 h-6 border-b-2 border-r-2 border-[rgb(var(--theme-color))] opacity-60" />
-            {/* Crosshairs */}
-            <div className="absolute top-0 bottom-0 left-1/2 -translate-x-px w-px bg-[rgb(var(--theme-color))] opacity-10" />
-            <div className="absolute left-0 right-0 top-1/2 -translate-y-px h-px bg-[rgb(var(--theme-color))] opacity-10" />
+            <div className="absolute inset-0 border border-white/[0.06] rounded-2xl pointer-events-none" />
+            <div className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_6px_#34d399] animate-pulse" />
+            <div className="absolute bottom-0 inset-x-0 h-8 bg-gradient-to-t from-black/60 to-transparent flex items-end justify-center pb-1">
+              <span className="text-[7px] font-bold text-white/60 tracking-wider">LIVE</span>
+            </div>
           </div>
         )}
 
-        {/* ─── EAGLE AVATAR + RINGS container ─── */}
-        <div
-          className={clsx(
-            'relative flex items-center justify-center transition-all duration-700',
-            aiTheme.name === 'error'
-              ? 'animate-[glitch_0.2s_ease-in-out_infinite]'
-              : 'animate-[float_6s_ease-in-out_infinite]'
-          )}
+        {/* ─── CORE AVATAR AREA ─── */}
+        <div className="relative flex items-center justify-center"
+          style={{ width: 'clamp(260px, 65vw, 420px)', height: 'clamp(260px, 65vw, 420px)' }}
         >
-          {/* Holographic Rings — centered on the avatar */}
+          {/* Waveform rings */}
+          <WaveformRing analyser={inputAnalyserState} color="255,255,255" radius={100} lineWidth={1} />
+          <WaveformRing analyser={outputAnalyserState} color={theme.rgb} radius={130} lineWidth={2} />
+
+          {/* Rotating dashed orbit */}
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            {/* User Voice Ring */}
             <div
-              className="absolute rounded-full border border-white/15 transition-transform duration-100 ease-out"
+              className="rounded-full border border-dashed animate-[spin_30s_linear_infinite] transition-all duration-500"
               style={{
-                width: 'clamp(200px, 60vw, 340px)',
-                height: 'clamp(200px, 60vw, 340px)',
-                transform:
-                  'rotateX(70deg) scale(calc(1 + var(--u-vol) * 0.8))',
-                boxShadow: '0 0 15px rgba(255,255,255,0.08) inset',
-              }}
-            />
-
-            {/* AI Voice Ring */}
-            <div
-              className="absolute rounded-full border-[2.5px] border-dashed transition-all duration-75 ease-out animate-[spin_20s_linear_infinite]"
-              style={{
-                width: 'clamp(240px, 72vw, 400px)',
-                height: 'clamp(240px, 72vw, 400px)',
-                borderColor: 'var(--theme-hex)',
-                opacity: 0.35,
-                transform:
-                  'rotateX(70deg) scale(calc(1 + var(--a-vol) * 0.6))',
-                filter: 'drop-shadow(0 0 8px var(--theme-hex))',
-              }}
-            />
-
-            {/* Base Projector Glow */}
-            <div
-              className="absolute rounded-[100%] blur-xl transition-colors duration-700"
-              style={{
-                bottom: '-40px',
-                width: '120px',
-                height: '30px',
-                background: 'var(--theme-hex)',
-                opacity: 0.4,
-                left: '50%',
-                transform: 'translateX(-50%)',
+                width: 'clamp(220px, 55vw, 360px)',
+                height: 'clamp(220px, 55vw, 360px)',
+                borderColor: `rgba(${theme.rgb}, 0.15)`,
               }}
             />
           </div>
 
-          {/* Eagle SVG */}
-          <div
-            className={clsx(
-              'relative z-10 transition-all duration-700',
-              status === 'idle'
-                ? 'opacity-50 saturate-0'
-                : 'opacity-100 saturate-100'
-            )}
-            style={{
-              width: 'clamp(180px, 50vw, 300px)',
-              height: 'clamp(180px, 50vw, 300px)',
-            }}
-          >
-            <svg
-              viewBox="0 0 400 400"
-              className="w-full h-full overflow-visible"
-            >
-              <defs>
-                <radialGradient id="bodyGrad" cx="50%" cy="40%" r="50%">
-                  <stop offset="0%" stopColor="#1e293b" />
-                  <stop offset="70%" stopColor="#0f172a" />
-                  <stop offset="100%" stopColor="#020617" />
-                </radialGradient>
-                <linearGradient
-                  id="armorGrad"
-                  x1="0%"
-                  y1="0%"
-                  x2="100%"
-                  y2="100%"
-                >
-                  <stop
-                    offset="0%"
-                    stopColor="var(--theme-hex)"
-                    stopOpacity="0.8"
-                  />
-                  <stop
-                    offset="50%"
-                    stopColor="var(--theme-hex)"
-                    stopOpacity="0.4"
-                  />
-                  <stop
-                    offset="100%"
-                    stopColor="#020617"
-                    stopOpacity="0.9"
-                  />
-                </linearGradient>
-                <filter
-                  id="neonGlow"
-                  x="-20%"
-                  y="-20%"
-                  width="140%"
-                  height="140%"
-                >
-                  <feGaussianBlur stdDeviation="8" result="blur" />
-                  <feMerge>
-                    <feMergeNode in="blur" />
-                    <feMergeNode in="blur" />
-                    <feMergeNode in="SourceGraphic" />
-                  </feMerge>
-                </filter>
-                <filter id="dropShadow">
-                  <feDropShadow
-                    dx="0"
-                    dy="10"
-                    stdDeviation="15"
-                    floodColor="var(--theme-hex)"
-                    floodOpacity="0.3"
-                  />
-                </filter>
-              </defs>
-
-              {/* Wings */}
-              <g
-                style={{
-                  transformOrigin: '200px 200px',
-                  transform:
-                    status === 'idle'
-                      ? 'scaleX(0.8) translateY(10px)'
-                      : 'scaleX(calc(1 + var(--u-vol)*0.15)) translateY(calc(var(--u-vol)*-15px))',
-                  transition:
-                    'transform 0.1s cubic-bezier(0.4, 0, 0.2, 1)',
-                }}
-              >
-                <path
-                  d="M120 180 C50 130, 10 90, 30 70 C60 40, 110 70, 140 130 Z"
-                  fill="url(#armorGrad)"
-                  filter="url(#dropShadow)"
-                  stroke="var(--theme-hex)"
-                  strokeWidth="2"
-                />
-                <path
-                  d="M110 160 C60 120, 30 90, 45 75 C70 50, 105 80, 130 130"
-                  fill="none"
-                  stroke="white"
-                  strokeWidth="1"
-                  strokeOpacity="0.5"
-                />
-                <path
-                  d="M280 180 C350 130, 390 90, 370 70 C340 40, 290 70, 260 130 Z"
-                  fill="url(#armorGrad)"
-                  filter="url(#dropShadow)"
-                  stroke="var(--theme-hex)"
-                  strokeWidth="2"
-                />
-                <path
-                  d="M290 160 C340 120, 370 90, 355 75 C330 50, 295 80, 270 130"
-                  fill="none"
-                  stroke="white"
-                  strokeWidth="1"
-                  strokeOpacity="0.5"
-                />
-              </g>
-
-              {/* Body */}
-              <path
-                d="M160 120 Q200 80 240 120 L260 220 Q200 280 140 220 Z"
-                fill="url(#bodyGrad)"
-                stroke="var(--theme-hex)"
-                strokeWidth="1.5"
-                filter="url(#dropShadow)"
-              />
-
-              {/* Panel Lines */}
-              <path
-                d="M180 140 L200 160 L220 140 M170 180 L200 210 L230 180"
-                fill="none"
-                stroke="var(--theme-hex)"
-                strokeWidth="1"
-                strokeOpacity="0.6"
-              />
-
-              {/* Chest Reactor */}
-              <g
-                style={{
-                  transformOrigin: '200px 180px',
-                  transform:
-                    'scale(calc(1 + var(--a-vol)*0.6 + var(--u-vol)*0.2))',
-                  transition: 'transform 0.05s',
-                }}
-              >
-                <circle
-                  cx="200"
-                  cy="180"
-                  r="24"
-                  fill="#020617"
-                  stroke="var(--theme-hex)"
-                  strokeWidth="3"
-                />
-                <circle
-                  cx="200"
-                  cy="180"
-                  r="14"
-                  fill="var(--theme-hex)"
-                  filter="url(#neonGlow)"
-                />
-                <circle
-                  cx="200"
-                  cy="180"
-                  r="6"
-                  fill="#ffffff"
-                  filter="url(#neonGlow)"
-                />
-                <g
-                  className="animate-[spin_4s_linear_infinite]"
-                  style={{ transformOrigin: '200px 180px' }}
-                >
-                  <path
-                    d="M200 150 L205 160 L195 160 Z"
-                    fill="var(--theme-hex)"
-                  />
-                  <path
-                    d="M200 210 L205 200 L195 200 Z"
-                    fill="var(--theme-hex)"
-                  />
-                  <path
-                    d="M170 180 L180 175 L180 185 Z"
-                    fill="var(--theme-hex)"
-                  />
-                  <path
-                    d="M230 180 L220 175 L220 185 Z"
-                    fill="var(--theme-hex)"
-                  />
-                </g>
-              </g>
-
-              {/* Head */}
-              <g
-                style={{
-                  transformOrigin: '200px 150px',
-                  transform: 'rotate(calc(var(--u-vol) * 12deg))',
-                  transition: 'transform 0.1s ease-out',
-                }}
-              >
-                <path
-                  d="M175 110 Q200 60 225 110 L200 140 Z"
-                  fill="url(#armorGrad)"
-                  stroke="var(--theme-hex)"
-                  strokeWidth="2"
-                />
-                <path
-                  d="M185 95 L195 100 L188 105 Z"
-                  fill="#ffffff"
-                  filter="url(#neonGlow)"
-                />
-                <path
-                  d="M215 95 L205 100 L212 105 Z"
-                  fill="#ffffff"
-                  filter="url(#neonGlow)"
-                />
-                <g
-                  style={{
-                    transformOrigin: '200px 105px',
-                    transform: 'scaleY(calc(1 + var(--a-vol)*1.2))',
-                    transition: 'transform 0.05s',
-                  }}
-                >
-                  <path
-                    d="M195 105 L200 125 L205 105 Z"
-                    fill="var(--theme-hex)"
-                    filter="url(#neonGlow)"
-                  />
-                </g>
-              </g>
-
-              {/* Tail */}
-              <path
-                d="M180 230 L200 280 L220 230 Z"
-                fill="url(#armorGrad)"
-                stroke="var(--theme-hex)"
-                strokeWidth="1.5"
-              />
-            </svg>
-          </div>
-        </div>
-
-        {/* ─── IDLE START OVERLAY ─── */}
-        {status === 'idle' && (
-          <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/40 backdrop-blur-sm animate-[fadeIn_0.5s_ease-out]">
-            <button
-              onClick={handleToggle}
-              className="relative group flex flex-col items-center justify-center w-36 h-36 sm:w-40 sm:h-40 rounded-full border border-indigo-400/50 bg-indigo-950/40 backdrop-blur-2xl shadow-[0_0_50px_rgba(99,102,241,0.3)] hover:scale-105 active:scale-95 transition-all overflow-hidden"
-            >
-              <div className="absolute inset-0 bg-gradient-to-t from-indigo-500/20 to-transparent" />
-              <div className="absolute inset-0 rounded-full border-[3px] border-indigo-400/30 border-dashed animate-[spin_10s_linear_infinite]" />
-              <Mic
-                size={44}
-                className="text-indigo-300 drop-shadow-[0_0_15px_rgba(99,102,241,0.8)] mb-2 relative z-10 group-hover:scale-110 transition-transform"
-              />
-              <span className="text-[9px] sm:text-[10px] font-black tracking-[0.3em] text-indigo-200 relative z-10">
-                INITIALIZE
-              </span>
-            </button>
-          </div>
-        )}
-
-        {/* ─── ERROR OVERLAY ─── */}
-        {status === 'error' && (
-          <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-red-950/80 backdrop-blur-xl animate-[fadeIn_0.3s_ease-out] p-6">
-            <AlertOctagon
-              size={56}
-              className="text-red-500 mb-5 animate-pulse drop-shadow-[0_0_20px_rgba(239,68,68,0.8)]"
-              strokeWidth={1.5}
-            />
-            <div className="bg-black/50 border border-red-500/50 px-6 py-5 rounded-3xl text-center max-w-xs w-full shadow-[0_0_40px_rgba(239,68,68,0.15)]">
-              <h3 className="text-lg font-black text-red-400 tracking-widest mb-1.5 font-mono">
-                SYSTEM FAILURE
-              </h3>
-              <p className="text-red-200/80 text-xs sm:text-sm mb-6 font-mono leading-relaxed">
-                {errorMessage}
-              </p>
-              <button
-                onClick={handleToggle}
-                className="w-full py-3.5 rounded-xl bg-red-500/20 border border-red-500 text-red-400 font-bold tracking-widest flex items-center justify-center gap-2.5 hover:bg-red-500 hover:text-white transition-all active:scale-95 shadow-[0_0_15px_rgba(239,68,68,0.3)] text-sm"
-              >
-                <RefreshCw size={16} /> REBOOT SYSTEM
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Active Tool Chip — positioned relative to the avatar area top */}
-        {activeTool && (
-          <div className="absolute top-4 left-1/2 z-40 -translate-x-1/2 animate-[slideDown_0.4s_cubic-bezier(0.175,0.885,0.32,1.275)]">
-            <div className="bg-[#0a1128]/90 backdrop-blur-2xl border border-[rgba(var(--theme-color),0.5)] pl-2 pr-5 py-2 rounded-full shadow-[0_15px_40px_rgba(0,0,0,0.7),0_0_25px_rgba(var(--theme-color),0.2)] flex items-center gap-3">
-              <div className="w-9 h-9 rounded-full bg-[rgba(var(--theme-color),0.2)] flex items-center justify-center border border-[rgba(var(--theme-color),0.4)] shrink-0">
-                <Cpu
-                  size={16}
-                  className="text-[rgb(var(--theme-color))] animate-pulse"
-                />
-              </div>
-              <div className="flex flex-col min-w-0">
-                <span className="text-[8px] font-bold text-slate-400 uppercase tracking-[0.15em]">
-                  PROCESSING
-                </span>
-                <span className="text-white text-xs sm:text-sm font-black tracking-wide truncate">
-                  {activeTool.name}
-                </span>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* ─── TRANSCRIPT & CONTROLS PANEL ─── */}
-      <div
-        className={clsx(
-          'relative z-40 w-full shrink-0 transition-all duration-700 ease-[cubic-bezier(0.4,0,0.2,1)]',
-          showTranscripts ? 'h-[42vh]' : 'h-[100px]'
-        )}
-      >
-        {/* Glass background */}
-        <div
-          className="absolute inset-0 bg-gradient-to-t from-[#020617] via-[#060b1e]/95 to-transparent backdrop-blur-xl border-t border-white/[0.08]"
-          style={{ boxShadow: '0 -15px 50px rgba(0,0,0,0.4)' }}
-        />
-
-        {/* Transcripts scroll area — padding-bottom accounts for floating controls */}
-        <div
-          className={clsx(
-            'relative h-full flex flex-col px-4 sm:px-6 md:px-8 overflow-y-auto hide-scrollbar scroll-smooth transition-opacity duration-500',
-            showTranscripts
-              ? 'opacity-100 pt-4 pb-28'
-              : 'opacity-0 pointer-events-none pt-4 pb-28'
-          )}
-        >
-          {transcripts.length === 0 && status === 'connected' && (
-            <div className="m-auto flex flex-col items-center opacity-50 py-6">
-              <div className="w-14 h-14 rounded-full border border-[rgba(var(--theme-color),0.4)] bg-[rgba(var(--theme-color),0.1)] flex items-center justify-center mb-3 relative">
-                <div className="absolute inset-0 rounded-full border-2 border-[rgb(var(--theme-color))] border-t-transparent animate-spin" />
-                <Radio
-                  size={20}
-                  className="text-[rgb(var(--theme-color))] animate-pulse"
-                />
-              </div>
-              <p className="text-[10px] font-mono font-bold tracking-[0.2em] text-[rgb(var(--theme-color))] text-center leading-relaxed">
-                AWAITING VOICE INPUT
-                <br />
-                OR VISUAL SCAN
-              </p>
-            </div>
-          )}
-
-          {transcripts.map((transcript) => (
+          {/* Secondary orbit */}
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
             <div
-              key={transcript.id}
-              className={clsx(
-                'max-w-[85%] sm:max-w-[75%] p-3.5 rounded-[1.25rem] text-sm sm:text-[15px] font-medium mb-3 shadow-lg backdrop-blur-md border animate-[slideUpFade_0.4s_ease-out_forwards]',
-                transcript.role === 'user'
-                  ? 'self-end bg-white/5 border-white/10 text-white rounded-br-sm shadow-[0_8px_24px_rgba(0,0,0,0.25)]'
-                  : 'self-start bg-[rgba(var(--theme-color),0.1)] border-[rgba(var(--theme-color),0.25)] text-[rgb(var(--theme-color))] rounded-bl-sm shadow-[0_8px_24px_rgba(var(--theme-color),0.08)] brightness-125'
-              )}
+              className="rounded-full border animate-[spin_45s_linear_infinite_reverse] transition-all duration-500"
+              style={{
+                width: 'clamp(270px, 68vw, 440px)',
+                height: 'clamp(270px, 68vw, 440px)',
+                borderColor: `rgba(${theme.rgb}, 0.06)`,
+              }}
             >
-              {transcript.role === 'model' && (
-                <div className="flex items-center gap-1.5 mb-1.5 opacity-70">
-                  <Sparkles size={10} />
-                  <span className="text-[8px] font-black uppercase tracking-widest">
-                    Krushi Mitra AI
-                  </span>
+              {/* Orbiting dot */}
+              <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 rounded-full transition-colors duration-500"
+                style={{ background: theme.hex, boxShadow: `0 0 10px ${theme.hex}` }} />
+            </div>
+          </div>
+
+          {/* Center Avatar Core */}
+          <div className={clsx(
+            "relative z-10 flex items-center justify-center transition-all duration-700",
+            status === 'idle' && 'opacity-40 scale-90',
+            isLoading && 'animate-pulse',
+            isActive && 'opacity-100 scale-100',
+            status === 'error' && 'opacity-80'
+          )}>
+            {/* Glow backdrop */}
+            <div
+              className="absolute rounded-full blur-[60px] transition-all duration-700 pointer-events-none"
+              style={{
+                width: '160px', height: '160px',
+                background: `rgba(${theme.rgb}, ${isActive ? 0.2 : 0.08})`,
+              }}
+            />
+
+            {/* Main orb */}
+            <div className="relative">
+              {/* Outer ring */}
+              <div
+                className="absolute -inset-6 rounded-full border-2 transition-all duration-500"
+                style={{
+                  borderColor: `rgba(${theme.rgb}, 0.25)`,
+                  transform: `scale(calc(1 + var(--a) * 0.15))`,
+                  boxShadow: `0 0 30px rgba(${theme.rgb}, 0.08), inset 0 0 30px rgba(${theme.rgb}, 0.05)`,
+                }}
+              />
+
+              {/* Glass sphere */}
+              <div
+                className="relative w-28 h-28 sm:w-32 sm:h-32 rounded-full overflow-hidden transition-all duration-300"
+                style={{
+                  background: `radial-gradient(circle at 35% 30%, rgba(${theme.rgb}, 0.15), rgba(${theme.rgb}, 0.03) 50%, rgba(0,0,0,0.4))`,
+                  boxShadow: `0 0 60px rgba(${theme.rgb}, 0.12), inset 0 1px 0 rgba(255,255,255,0.1), inset 0 -2px 10px rgba(0,0,0,0.3)`,
+                  border: `1.5px solid rgba(${theme.rgb}, 0.2)`,
+                  transform: `scale(calc(1 + var(--a) * 0.08 + var(--u) * 0.04))`,
+                }}
+              >
+                {/* Inner glow & pattern */}
+                <div className="absolute inset-0 flex items-center justify-center">
+                  {/* Animated inner rings */}
+                  <div className="absolute w-16 h-16 sm:w-20 sm:h-20 rounded-full border border-white/[0.08] animate-[spin_8s_linear_infinite]" />
+                  <div className="absolute w-10 h-10 sm:w-12 sm:h-12 rounded-full border border-white/[0.06] animate-[spin_5s_linear_infinite_reverse]" />
+
+                  {/* Core icon */}
+                  <div className="relative z-10 transition-all duration-300" style={{
+                    transform: `scale(calc(1 + var(--a) * 0.3))`,
+                    filter: `drop-shadow(0 0 12px rgba(${theme.rgb}, 0.6))`,
+                  }}>
+                    {status === 'error' ? (
+                      <AlertTriangle size={32} className="text-red-400" strokeWidth={1.5} />
+                    ) : isLoading ? (
+                      <Signal size={28} className="text-amber-300 animate-pulse" strokeWidth={1.5} />
+                    ) : isSpeaking ? (
+                      <Waves size={30} className="text-sky-300" strokeWidth={1.5} />
+                    ) : (
+                      <CircuitBoard size={28} className="text-emerald-300" strokeWidth={1.5} />
+                    )}
+                  </div>
                 </div>
-              )}
-              <span className="leading-relaxed">{transcript.text}</span>
-            </div>
-          ))}
-          <div ref={transcriptEndRef} className="h-2 shrink-0" />
-        </div>
 
-        {/* ─── Floating Controls Bar ─── */}
-        <div className="absolute bottom-6 left-4 right-4 sm:left-6 sm:right-6 md:max-w-xl md:left-1/2 md:-translate-x-1/2 md:w-full flex items-center justify-between z-50">
-          {/* Left: Transcript Toggle */}
-          <button
-            onClick={() => setShowTranscripts(!showTranscripts)}
-            className="w-12 h-12 rounded-2xl bg-[#0a1128]/80 border border-white/10 flex items-center justify-center text-white/50 hover:text-white hover:bg-white/10 hover:border-white/20 backdrop-blur-2xl transition-all active:scale-95 shadow-[0_6px_24px_rgba(0,0,0,0.4)]"
-          >
-            <ChevronDown
-              size={22}
-              className={clsx(
-                'transition-transform duration-500',
-                !showTranscripts && 'rotate-180'
-              )}
-            />
-          </button>
+                {/* Highlight reflection */}
+                <div className="absolute top-0 left-1/4 w-1/2 h-1/3 bg-gradient-to-b from-white/[0.08] to-transparent rounded-full blur-sm" />
+              </div>
 
-          {/* Center: Main Action Button */}
-          {status !== 'idle' && status !== 'error' && (
-            <div className="relative group/mic">
-              {/* Pulse rings */}
-              {status === 'connected' && (
+              {/* Pulse waves (when speaking) */}
+              {isSpeaking && (
                 <>
-                  <div className="absolute -inset-5 rounded-full border border-[rgb(var(--theme-color))] animate-[ping_2.5s_cubic-bezier(0,0,0.2,1)_infinite] opacity-25 pointer-events-none" />
-                  <div className="absolute -inset-3 rounded-full border-[1.5px] border-[rgb(var(--theme-color))] animate-[ping_2.5s_cubic-bezier(0,0,0.2,1)_infinite_0.5s] opacity-15 pointer-events-none" />
+                  <div className="absolute -inset-2 rounded-full border border-sky-400/20 animate-[ripple_2s_ease-out_infinite]" />
+                  <div className="absolute -inset-2 rounded-full border border-sky-400/15 animate-[ripple_2s_ease-out_infinite_0.6s]" />
+                  <div className="absolute -inset-2 rounded-full border border-sky-400/10 animate-[ripple_2s_ease-out_infinite_1.2s]" />
                 </>
               )}
-
-              <button
-                onClick={handleToggle}
-                className={clsx(
-                  'relative w-16 h-16 sm:w-18 sm:h-18 rounded-full flex items-center justify-center backdrop-blur-3xl border-2 transition-all duration-300 active:scale-90 shadow-[0_12px_40px_rgba(0,0,0,0.5)] group-hover/mic:shadow-[0_16px_50px_rgba(var(--theme-color),0.35)]',
-                  status === 'connected'
-                    ? 'bg-[rgba(var(--theme-color),0.15)] border-[rgba(var(--theme-color),0.5)] text-[rgb(var(--theme-color))]'
-                    : 'bg-amber-500/20 border-amber-500/50 text-amber-400'
-                )}
-              >
-                <div className="absolute inset-0 rounded-full bg-gradient-to-t from-black/40 to-transparent pointer-events-none" />
-                {status === 'connected' ? (
-                  <Activity
-                    size={28}
-                    className="relative z-10 drop-shadow-[0_0_8px_currentColor]"
-                    strokeWidth={2.5}
-                  />
-                ) : (
-                  <RefreshCw
-                    size={28}
-                    className="relative z-10 animate-spin"
-                    strokeWidth={2.5}
-                  />
-                )}
-              </button>
             </div>
-          )}
+          </div>
+        </div>
 
-          {/* Spacer when mic not shown to keep layout balanced */}
-          {(status === 'idle' || status === 'error') && (
-            <div className="w-16 h-16" />
-          )}
-
-          {/* Right: Audio Visualizer indicator */}
-          <div className="w-12 h-12 rounded-2xl bg-[#0a1128]/80 border border-white/10 backdrop-blur-2xl flex items-center justify-center shadow-[0_6px_24px_rgba(0,0,0,0.4)] overflow-hidden px-2.5">
-            {isSpeaking ? (
-              <div className="flex items-end justify-center gap-[2.5px] h-5 w-full">
-                {[1, 2, 3, 4, 5].map((i) => (
+        {/* Status label below avatar */}
+        <div className="mt-6 flex flex-col items-center gap-2 animate-[fadeIn_0.5s]">
+          {isActive && (
+            <>
+              <div className="flex items-center gap-2">
+                <div className="w-1.5 h-1.5 rounded-full animate-pulse transition-colors duration-500" style={{ background: theme.hex, boxShadow: `0 0 8px ${theme.hex}` }} />
+                <span className="text-xs font-semibold tracking-[0.2em] uppercase transition-colors duration-500" style={{ color: theme.hex }}>
+                  {isSpeaking ? 'AI Speaking' : 'Listening'}
+                </span>
+              </div>
+              {/* Mini waveform bars */}
+              <div className="flex items-end justify-center gap-[3px] h-4">
+                {Array.from({ length: 7 }).map((_, i) => (
                   <div
                     key={i}
-                    className="w-1 bg-[rgb(var(--theme-color))] rounded-t-sm animate-[waveform_0.4s_ease-in-out_infinite_alternate] shadow-[0_0_6px_currentColor]"
+                    className="w-[3px] rounded-full transition-colors duration-500 animate-[bar_0.6s_ease-in-out_infinite_alternate]"
                     style={{
-                      animationDelay: `${i * 0.1}s`,
-                      height: '2px',
+                      background: theme.hex,
+                      animationDelay: `${i * 0.08}s`,
+                      height: isActive ? undefined : '2px',
+                      opacity: isActive ? 0.6 : 0.2,
                     }}
                   />
                 ))}
               </div>
-            ) : (
-              <div className="w-7 h-[2px] bg-white/15 rounded-full" />
+            </>
+          )}
+        </div>
+
+        {/* ─── OVERLAYS ─── */}
+
+        {/* IDLE */}
+        {status === 'idle' && (
+          <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/30 backdrop-blur-sm animate-[fadeIn_0.4s]">
+            <div className="flex flex-col items-center gap-6">
+              <button
+                onClick={handleToggle}
+                className="group relative w-24 h-24 rounded-full flex items-center justify-center transition-all hover:scale-105 active:scale-95"
+              >
+                {/* Outer glow ring */}
+                <div className="absolute inset-0 rounded-full border-2 border-violet-400/30 group-hover:border-violet-400/50 transition-all" />
+                <div className="absolute -inset-3 rounded-full border border-violet-400/10 animate-[spin_12s_linear_infinite]" style={{borderStyle: 'dashed'}} />
+                
+                {/* Glass button */}
+                <div className="w-20 h-20 rounded-full bg-gradient-to-br from-violet-500/20 to-violet-900/30 border border-violet-400/20 flex items-center justify-center backdrop-blur-xl shadow-[0_0_40px_rgba(139,92,246,0.2)] group-hover:shadow-[0_0_60px_rgba(139,92,246,0.35)] transition-all">
+                  <Mic size={32} className="text-violet-300 group-hover:text-violet-200 drop-shadow-[0_0_10px_rgba(139,92,246,0.8)] transition-all" />
+                </div>
+              </button>
+              <div className="flex flex-col items-center gap-1">
+                <span className="text-[11px] font-bold text-white/60 tracking-[0.25em]">TAP TO START</span>
+                <span className="text-[9px] text-white/30 tracking-wider">Voice + Vision AI Assistant</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ERROR */}
+        {status === 'error' && (
+          <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/50 backdrop-blur-md animate-[fadeIn_0.3s] p-6">
+            <div className="flex flex-col items-center gap-5 max-w-xs w-full">
+              <div className="w-16 h-16 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center">
+                <AlertTriangle size={28} className="text-red-400" strokeWidth={1.5} />
+              </div>
+              <div className="text-center">
+                <h3 className="text-sm font-bold text-red-300 tracking-wider mb-1">CONNECTION FAILED</h3>
+                <p className="text-xs text-white/40 leading-relaxed">{errorMessage}</p>
+              </div>
+              <button
+                onClick={handleToggle}
+                className="w-full py-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-300 text-sm font-semibold tracking-wider flex items-center justify-center gap-2 hover:bg-red-500/20 active:scale-[0.98] transition-all"
+              >
+                <RefreshCw size={14} /> Retry Connection
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Tool chip */}
+        {activeTool && (
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-40 animate-[slideDown_0.4s_cubic-bezier(0.175,0.885,0.32,1.275)]">
+            <div className="bg-[#0c1425]/90 backdrop-blur-2xl border border-white/[0.08] px-4 py-2.5 rounded-2xl shadow-2xl flex items-center gap-3">
+              <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 transition-colors duration-500"
+                style={{ background: `rgba(${theme.rgb}, 0.15)`, border: `1px solid rgba(${theme.rgb}, 0.25)` }}>
+                <Cpu size={14} className="animate-pulse" style={{ color: theme.hex }} />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[8px] text-white/30 font-bold tracking-[0.15em] uppercase">Processing</p>
+                <p className="text-xs font-semibold text-white/80 truncate">{activeTool.name}</p>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ═══ BOTTOM PANEL ═══ */}
+      <div className={clsx(
+        'relative z-40 w-full shrink-0 transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)]',
+        showTranscripts ? 'h-[48vh] sm:h-[44vh]' : 'h-[88px]'
+      )}>
+        {/* Glass panel */}
+        <div className="absolute inset-0 bg-gradient-to-t from-[#030712] via-[#080d1c]/98 to-[#080d1c]/80 backdrop-blur-2xl border-t border-white/[0.06]" />
+
+        {/* Drag handle + toggle */}
+        <button
+          onClick={() => setShowTranscripts(!showTranscripts)}
+          className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-10 h-5 rounded-full bg-[#0c1425] border border-white/[0.1] flex items-center justify-center hover:bg-white/[0.08] active:scale-95 transition-all shadow-lg"
+        >
+          <ChevronUp size={14} className={clsx('text-white/40 transition-transform duration-500', showTranscripts && 'rotate-180')} />
+        </button>
+
+        {/* Transcript area */}
+        <div className={clsx(
+          'relative h-full flex flex-col px-4 sm:px-6 overflow-y-auto hide-scrollbar scroll-smooth transition-all duration-500',
+          showTranscripts ? 'opacity-100 pt-6 pb-24' : 'opacity-0 pointer-events-none pt-6 pb-24'
+        )}>
+          {transcripts.length === 0 && isActive && (
+            <div className="m-auto flex flex-col items-center gap-3 opacity-40">
+              <Radio size={20} className="animate-pulse" style={{ color: theme.hex }} />
+              <p className="text-[10px] font-mono tracking-[0.2em] text-center" style={{ color: theme.hex }}>
+                AWAITING INPUT
+              </p>
+            </div>
+          )}
+
+          {transcripts.map((tx) => (
+            <div
+              key={tx.id}
+              className={clsx(
+                'max-w-[82%] sm:max-w-[72%] mb-3 animate-[msgIn_0.35s_ease-out_forwards]',
+                tx.role === 'user' ? 'self-end' : 'self-start'
+              )}
+            >
+              {tx.role === 'model' && (
+                <div className="flex items-center gap-1.5 mb-1 ml-1">
+                  <Sparkles size={9} style={{ color: theme.hex }} />
+                  <span className="text-[8px] font-bold uppercase tracking-[0.15em]" style={{ color: `rgba(${theme.rgb}, 0.6)` }}>
+                    Krushi Mitra
+                  </span>
+                </div>
+              )}
+              <div className={clsx(
+                'px-4 py-3 text-[13px] sm:text-sm leading-relaxed font-medium backdrop-blur-md border',
+                tx.role === 'user'
+                  ? 'bg-white/[0.05] border-white/[0.08] text-white/90 rounded-2xl rounded-br-md'
+                  : 'border-white/[0.06] text-white/85 rounded-2xl rounded-bl-md'
+              )}
+              style={tx.role === 'model' ? {
+                background: `rgba(${theme.rgb}, 0.06)`,
+                borderColor: `rgba(${theme.rgb}, 0.12)`,
+              } : undefined}
+              >
+                <span>{tx.text}</span>
+              </div>
+              <span className={clsx(
+                'text-[8px] text-white/20 mt-1 block',
+                tx.role === 'user' ? 'text-right mr-1' : 'ml-1'
+              )}>
+                {new Date(tx.ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              </span>
+            </div>
+          ))}
+          <div ref={transcriptEndRef} className="h-1 shrink-0" />
+        </div>
+
+        {/* ─── FLOATING CONTROLS ─── */}
+        <div className="absolute bottom-5 left-4 right-4 sm:left-6 sm:right-6 md:max-w-lg md:left-1/2 md:-translate-x-1/2 md:w-full z-50">
+          <div className="relative flex items-center justify-center gap-4">
+            
+            {/* Left: End call (only when active) */}
+            {(isActive || isLoading) && (
+              <button
+                onClick={() => cleanup(true)}
+                className="w-12 h-12 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400 hover:bg-red-500/20 active:scale-95 transition-all shadow-lg animate-[fadeIn_0.3s]"
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                  <path d="M3 12h18M12 3v18" transform="rotate(45 12 12)" />
+                </svg>
+              </button>
             )}
+
+            {/* Center: Main mic button */}
+            <div className="relative">
+              {isActive && (
+                <>
+                  <div className="absolute -inset-4 rounded-full animate-[ripple_3s_ease-out_infinite] pointer-events-none"
+                    style={{ border: `1.5px solid rgba(${theme.rgb}, 0.15)` }} />
+                  <div className="absolute -inset-4 rounded-full animate-[ripple_3s_ease-out_infinite_1s] pointer-events-none"
+                    style={{ border: `1px solid rgba(${theme.rgb}, 0.1)` }} />
+                </>
+              )}
+              <button
+                onClick={handleToggle}
+                className={clsx(
+                  'relative w-16 h-16 rounded-full flex items-center justify-center transition-all duration-300 active:scale-90 shadow-xl',
+                  status === 'idle' || status === 'error'
+                    ? 'bg-gradient-to-br from-violet-500/25 to-violet-900/40 border-2 border-violet-400/30 text-violet-300 hover:border-violet-400/50'
+                    : isLoading
+                    ? 'bg-amber-500/15 border-2 border-amber-400/30 text-amber-300'
+                    : 'border-2 transition-colors duration-500'
+                )}
+                style={isActive ? {
+                  background: `rgba(${theme.rgb}, 0.12)`,
+                  borderColor: `rgba(${theme.rgb}, 0.35)`,
+                  color: theme.hex,
+                  boxShadow: `0 0 40px rgba(${theme.rgb}, 0.15)`,
+                } : undefined}
+              >
+                <div className="absolute inset-0 rounded-full bg-gradient-to-t from-black/30 to-transparent pointer-events-none" />
+                {status === 'idle' || status === 'error' ? (
+                  <Mic size={26} className="relative z-10" strokeWidth={2} />
+                ) : isLoading ? (
+                  <RefreshCw size={24} className="relative z-10 animate-spin" strokeWidth={2} />
+                ) : (
+                  <Activity size={26} className="relative z-10" strokeWidth={2} style={{ filter: `drop-shadow(0 0 8px ${theme.hex})` }} />
+                )}
+              </button>
+            </div>
+
+            {/* Right: Transcript toggle */}
+            <button
+              onClick={() => setShowTranscripts(!showTranscripts)}
+              className="relative w-12 h-12 rounded-2xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center text-white/40 hover:text-white/70 hover:bg-white/[0.08] active:scale-95 transition-all shadow-lg"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+              </svg>
+              {transcripts.length > 0 && (
+                <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-violet-500 flex items-center justify-center">
+                  <span className="text-[7px] font-bold text-white">{Math.min(transcripts.length, 99)}</span>
+                </div>
+              )}
+            </button>
           </div>
         </div>
       </div>
 
+      {/* ═══ STYLES ═══ */}
       <style>{`
-        @keyframes slideUpFade {
-          from {
-            opacity: 0;
-            transform: translateY(24px) scale(0.96);
-            filter: blur(6px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0) scale(1);
-            filter: blur(0);
-          }
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        @keyframes msgIn {
+          from { opacity: 0; transform: translateY(16px) scale(0.97); }
+          to { opacity: 1; transform: translateY(0) scale(1); }
         }
         @keyframes slideDown {
-          from {
-            opacity: 0;
-            transform: translateY(-30px) translateX(-50%) scale(0.92);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0) translateX(-50%) scale(1);
-          }
+          from { opacity: 0; transform: translateY(-20px) translateX(-50%) scale(0.95); }
+          to { opacity: 1; transform: translateY(0) translateX(-50%) scale(1); }
         }
-        @keyframes fadeIn {
-          from {
-            opacity: 0;
-            backdrop-filter: blur(0px);
-          }
-          to {
-            opacity: 1;
-            backdrop-filter: blur(12px);
-          }
+        @keyframes slideInRight {
+          from { opacity: 0; transform: translateX(30px) scale(0.9); }
+          to { opacity: 1; transform: translateX(0) scale(1); }
         }
-        @keyframes waveform {
-          0% {
-            height: 2px;
-            opacity: 0.5;
-          }
-          100% {
-            height: 20px;
-            opacity: 1;
-          }
+        @keyframes ripple {
+          0% { transform: scale(1); opacity: 1; }
+          100% { transform: scale(1.8); opacity: 0; }
+        }
+        @keyframes bar {
+          0% { height: 2px; }
+          100% { height: 14px; }
         }
         @keyframes float {
-          0%,
-          100% {
-            transform: translateY(0) rotate(0deg);
-          }
-          50% {
-            transform: translateY(-12px) rotate(0.5deg);
-          }
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-8px); }
         }
-        @keyframes glitch {
-          0% {
-            transform: translate(0);
-          }
-          20% {
-            transform: translate(-3px, 2px);
-            filter: hue-rotate(90deg) drop-shadow(0 0 15px red);
-          }
-          40% {
-            transform: translate(3px, -2px);
-          }
-          60% {
-            transform: translate(-2px, -3px);
-            filter: hue-rotate(-90deg) drop-shadow(0 0 15px red);
-          }
-          80% {
-            transform: translate(2px, 3px);
-          }
-          100% {
-            transform: translate(0);
-          }
-        }
-        .hide-scrollbar::-webkit-scrollbar {
-          display: none;
-        }
-        .hide-scrollbar {
-          -ms-overflow-style: none;
-          scrollbar-width: none;
-        }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
       `}</style>
     </div>
   );
