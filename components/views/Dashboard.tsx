@@ -4,7 +4,7 @@ import { TRANSLATIONS } from '../../constants';
 import { ScanLine, FlaskConical, Map as MapIcon, Landmark, Languages, Leaf, Shield, ShoppingCart, BookOpen } from 'lucide-react';
 import { triggerHaptic } from '../../utils/common';
 
-// Segregated Components
+import { fetchWeather, getPlaceName, DEFAULT_COORDS, MOCK_WEATHER } from '../../services/weatherService';
 import { DASH_TEXT } from '../dashboard/constants';
 import { NewsTicker } from '../dashboard/NewsTicker';
 import { AppHeaderLogo } from '../dashboard/AppHeaderLogo';
@@ -19,60 +19,55 @@ import { FeatureCard, IllustrativeBanner } from '../dashboard/ActionCards';
 const Dashboard = ({ lang, setLang, user, onNavigate }: { lang: Language, setLang: (l: Language) => void, user: UserProfile, onNavigate: (v: ViewState) => void }) => {
     const t = TRANSLATIONS[lang];
     const txt = DASH_TEXT[lang];
-    const [weather, setWeather] = useState<any>(null);
-    const [loadingWeather, setLoadingWeather] = useState(true);
+    const [weather, setWeather] = useState<any>(MOCK_WEATHER);
+    const [loadingWeather, setLoadingWeather] = useState(false);
     const [liveLocation, setLiveLocation] = useState<string>(user.village || "Locating...");
 
     useEffect(() => {
-        // Function to fetch weather based on lat/lng
-        const getWeatherData = async (lat: number, lng: number) => {
-             try {
-                const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,weather_code,is_day,wind_speed_10m`);
-                const data = await res.json();
-                setWeather(data);
-             } catch (e) {
-                 console.error(e);
-             } finally {
-                 setLoadingWeather(false);
-             }
-        };
+        const loadWeather = async () => {
+            let lat = DEFAULT_COORDS.lat;
+            let lng = DEFAULT_COORDS.lng;
 
-        // Function to get place name via Reverse Geocoding
-        const getPlaceName = async (lat: number, lng: number) => {
+            const getCoords = (): Promise<{lat: number, lng: number}> => {
+                return new Promise((resolve) => {
+                    if (!navigator.geolocation) return resolve(DEFAULT_COORDS);
+                    navigator.geolocation.getCurrentPosition(
+                        (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+                        () => resolve(DEFAULT_COORDS),
+                        { timeout: 5000 }
+                    );
+                });
+            };
+
             try {
-                const res = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=en`);
-                const data = await res.json();
-                // Prioritize locality, then city, then village, then fallback to user profile
-                const name = data.locality || data.city || data.town || data.village || user.village;
+                const coords = await getCoords();
+                lat = coords.lat;
+                lng = coords.lng;
+
+                // Parallel fetch for speed
+                const [weatherData, name] = await Promise.all([
+                    fetchWeather(lat, lng),
+                    getPlaceName(lat, lng, lang)
+                ]);
+
+                setWeather(weatherData);
                 setLiveLocation(name);
             } catch (e) {
-                console.error("Geocoding error", e);
-                setLiveLocation(user.village);
+                console.error("Weather load error", e);
+                // Fallback to default if everything fails
+                try {
+                    const fallback = await fetchWeather(DEFAULT_COORDS.lat, DEFAULT_COORDS.lng);
+                    setWeather(fallback);
+                } catch (err) {
+                    console.error("Critical weather failure");
+                }
+            } finally {
+                setLoadingWeather(false);
             }
         };
 
-        // Get Live Position
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(
-                (pos) => {
-                    const { latitude, longitude } = pos.coords;
-                    getWeatherData(latitude, longitude);
-                    getPlaceName(latitude, longitude);
-                },
-                (err) => {
-                    console.warn("Location access denied, using default");
-                    // Default to Satara if denied
-                    getWeatherData(19.75, 75.71); 
-                    setLiveLocation(user.village); 
-                },
-                { enableHighAccuracy: true, timeout: 5000 }
-            );
-        } else {
-            // Fallback for no geolocation support
-            getWeatherData(19.75, 75.71);
-            setLiveLocation(user.village);
-        }
-    }, [user.village]);
+        loadWeather();
+    }, [lang]);
 
     const toggleLang = () => {
         const next = lang === 'mr' ? 'hi' : lang === 'hi' ? 'en' : 'mr';
