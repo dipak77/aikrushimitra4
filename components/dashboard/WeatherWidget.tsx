@@ -1,5 +1,4 @@
-
-import React, { useCallback, useMemo, useRef, useState, useId } from "react";
+import React, { useCallback, useMemo, useRef, useState } from "react";
 import clsx from "clsx";
 import {
   MapPin,
@@ -10,337 +9,17 @@ import {
   ArrowDownRight,
   ChevronRight,
   Eye,
+  CloudLightning,
+  CloudRain,
+  Cloud,
+  Sun,
+  CloudFog,
+  Snowflake,
 } from "lucide-react";
 import { GlassTile } from './GlassTile';
-import { Language } from '../../types';
-
-type IconProps = {
-  size?: number;
-  animated?: boolean;
-  className?: string;
-};
-
-type Weather3DIconKind =
-  | "clearDay"
-  | "clearNight"
-  | "cloudy"
-  | "partlyCloudyDay"
-  | "partlyCloudyNight"
-  | "rain"
-  | "storm"
-  | "snow"
-  | "fog"
-  | "windyDay"
-  | "windyNight"
-  | "rainWind"
-  | "stormWind";
-
-/* ──────────────────────────────────────────────────────────────
-   Text (minimal).
-   ────────────────────────────────────────────────────────────── */
-const DASH_TEXT: any = {
-  en: {
-    weather_desc: {
-      0: "Clear sky",
-      1: "Mainly clear",
-      2: "Partly cloudy",
-      3: "Overcast",
-      45: "Fog",
-      48: "Rime fog",
-      51: "Light drizzle",
-      53: "Drizzle",
-      55: "Heavy drizzle",
-      61: "Light rain",
-      63: "Rain",
-      65: "Heavy rain",
-      71: "Light snow",
-      73: "Snow",
-      75: "Heavy snow",
-      80: "Rain showers",
-      81: "Heavy showers",
-      82: "Violent showers",
-      85: "Snow showers",
-      86: "Heavy snow showers",
-      95: "Thunderstorm",
-      96: "Thunderstorm + hail",
-      99: "Severe thunderstorm",
-    },
-  },
-};
-
-type WxType = "clear" | "cloudy" | "rain" | "storm" | "snow" | "fog" | "windy";
-
-type Pal = {
-  sky: [string, string, string];
-  orb: [string, string];
-  accent: string;
-  glow: string;
-  text: string;
-  temp: string;
-  chip: string;
-  chipBorder: string;
-  bar: string;
-  hoverGlow: string;
-  shimmer: string;
-  highlight: string;
-  aurora: string;
-  depth: string;
-  ring: string;
-};
-
-const clamp = (n: number, a: number, b: number) => Math.max(a, Math.min(b, n));
-
-const wxTypeFrom = (code: number, windKmh?: number): WxType => {
-  if (code >= 95) return "storm";
-  if (code === 45 || code === 48) return "fog";
-  if ((code >= 71 && code <= 77) || code === 85 || code === 86) return "snow";
-  if (code >= 51 && code <= 67) return "rain";
-  if (code >= 80 && code <= 82) return "rain";
-  if (code >= 1 && code <= 3) return "cloudy";
-  if ((windKmh ?? 0) >= 28) return "windy";
-  return "clear";
-};
-
-const PAL: Record<string, Pal> = {
-  "clear-day": {
-    sky: ["rgba(251,191,36,0.18)", "rgba(10,14,30,0.98)", "rgba(234,88,12,0.10)"],
-    orb: ["rgba(251,191,36,0.35)", "rgba(245,158,11,0.18)"],
-    accent: "#FBBF24",
-    glow: "rgba(251,191,36,0.6)",
-    text: "#FDE68A",
-    temp: "from-amber-50 via-yellow-300 to-orange-500",
-    chip: "rgba(251,191,36,0.08)",
-    chipBorder: "rgba(251,191,36,0.16)",
-    bar: "#F59E0B",
-    hoverGlow: "rgba(251,191,36,0.10)",
-    shimmer: "rgba(255,255,255,0.45)",
-    highlight: "rgba(255,251,235,0.65)",
-    aurora: "rgba(251,191,36,0.06)",
-    depth: "rgba(234,88,12,0.04)",
-    ring: "rgba(251,191,36,0.12)",
-  },
-  "clear-night": {
-    sky: ["rgba(99,102,241,0.16)", "rgba(3,3,18,0.99)", "rgba(79,70,229,0.12)"],
-    orb: ["rgba(129,140,248,0.28)", "rgba(99,102,241,0.16)"],
-    accent: "#A5B4FC",
-    glow: "rgba(129,140,248,0.5)",
-    text: "#C7D2FE",
-    temp: "from-slate-50 via-indigo-200 to-violet-400",
-    chip: "rgba(129,140,248,0.09)",
-    chipBorder: "rgba(129,140,248,0.16)",
-    bar: "#6366F1",
-    hoverGlow: "rgba(129,140,248,0.10)",
-    shimmer: "rgba(199,210,254,0.35)",
-    highlight: "rgba(238,242,255,0.55)",
-    aurora: "rgba(99,102,241,0.05)",
-    depth: "rgba(79,70,229,0.04)",
-    ring: "rgba(129,140,248,0.10)",
-  },
-  "cloudy-day": {
-    sky: ["rgba(148,163,184,0.14)", "rgba(10,14,30,0.98)", "rgba(100,116,139,0.10)"],
-    orb: ["rgba(148,163,184,0.26)", "rgba(100,116,139,0.14)"],
-    accent: "#CBD5E1",
-    glow: "rgba(148,163,184,0.48)",
-    text: "#E2E8F0",
-    temp: "from-white via-slate-200 to-blue-300",
-    chip: "rgba(148,163,184,0.09)",
-    chipBorder: "rgba(148,163,184,0.14)",
-    bar: "#94A3B8",
-    hoverGlow: "rgba(148,163,184,0.08)",
-    shimmer: "rgba(241,245,249,0.38)",
-    highlight: "rgba(248,250,252,0.58)",
-    aurora: "rgba(148,163,184,0.04)",
-    depth: "rgba(100,116,139,0.03)",
-    ring: "rgba(148,163,184,0.08)",
-  },
-  "cloudy-night": {
-    sky: ["rgba(71,85,105,0.16)", "rgba(3,4,14,0.99)", "rgba(51,65,85,0.12)"],
-    orb: ["rgba(71,85,105,0.28)", "rgba(51,65,85,0.16)"],
-    accent: "#94A3B8",
-    glow: "rgba(71,85,105,0.48)",
-    text: "#CBD5E1",
-    temp: "from-slate-100 via-slate-300 to-blue-400",
-    chip: "rgba(71,85,105,0.11)",
-    chipBorder: "rgba(71,85,105,0.16)",
-    bar: "#475569",
-    hoverGlow: "rgba(71,85,105,0.08)",
-    shimmer: "rgba(203,213,225,0.28)",
-    highlight: "rgba(226,232,240,0.48)",
-    aurora: "rgba(71,85,105,0.04)",
-    depth: "rgba(51,65,85,0.03)",
-    ring: "rgba(71,85,105,0.08)",
-  },
-  "rain-day": {
-    sky: ["rgba(59,130,246,0.16)", "rgba(6,10,24,0.98)", "rgba(37,99,235,0.11)"],
-    orb: ["rgba(59,130,246,0.30)", "rgba(37,99,235,0.16)"],
-    accent: "#60A5FA",
-    glow: "rgba(59,130,246,0.58)",
-    text: "#BFDBFE",
-    temp: "from-blue-50 via-blue-300 to-cyan-500",
-    chip: "rgba(59,130,246,0.09)",
-    chipBorder: "rgba(59,130,246,0.16)",
-    bar: "#3B82F6",
-    hoverGlow: "rgba(59,130,246,0.10)",
-    shimmer: "rgba(191,219,254,0.38)",
-    highlight: "rgba(239,246,255,0.55)",
-    aurora: "rgba(59,130,246,0.05)",
-    depth: "rgba(37,99,235,0.04)",
-    ring: "rgba(59,130,246,0.10)",
-  },
-  "rain-night": {
-    sky: ["rgba(29,78,216,0.16)", "rgba(2,3,14,0.99)", "rgba(30,58,138,0.13)"],
-    orb: ["rgba(29,78,216,0.28)", "rgba(30,58,138,0.16)"],
-    accent: "#3B82F6",
-    glow: "rgba(29,78,216,0.52)",
-    text: "#93C5FD",
-    temp: "from-blue-100 via-blue-400 to-indigo-500",
-    chip: "rgba(29,78,216,0.11)",
-    chipBorder: "rgba(29,78,216,0.16)",
-    bar: "#1D4ED8",
-    hoverGlow: "rgba(29,78,216,0.10)",
-    shimmer: "rgba(147,197,253,0.32)",
-    highlight: "rgba(219,234,254,0.48)",
-    aurora: "rgba(29,78,216,0.05)",
-    depth: "rgba(30,58,138,0.04)",
-    ring: "rgba(29,78,216,0.10)",
-  },
-  "storm-day": {
-    sky: ["rgba(124,58,237,0.18)", "rgba(5,3,14,0.98)", "rgba(109,40,217,0.13)"],
-    orb: ["rgba(124,58,237,0.34)", "rgba(109,40,217,0.18)"],
-    accent: "#A78BFA",
-    glow: "rgba(124,58,237,0.62)",
-    text: "#DDD6FE",
-    temp: "from-violet-50 via-purple-300 to-fuchsia-500",
-    chip: "rgba(124,58,237,0.09)",
-    chipBorder: "rgba(124,58,237,0.16)",
-    bar: "#7C3AED",
-    hoverGlow: "rgba(124,58,237,0.10)",
-    shimmer: "rgba(221,214,254,0.38)",
-    highlight: "rgba(250,245,255,0.55)",
-    aurora: "rgba(124,58,237,0.06)",
-    depth: "rgba(109,40,217,0.04)",
-    ring: "rgba(124,58,237,0.12)",
-  },
-  "storm-night": {
-    sky: ["rgba(76,29,149,0.18)", "rgba(2,1,12,0.99)", "rgba(49,46,129,0.14)"],
-    orb: ["rgba(76,29,149,0.30)", "rgba(49,46,129,0.18)"],
-    accent: "#8B5CF6",
-    glow: "rgba(76,29,149,0.58)",
-    text: "#C4B5FD",
-    temp: "from-purple-100 via-violet-400 to-indigo-600",
-    chip: "rgba(76,29,149,0.11)",
-    chipBorder: "rgba(76,29,149,0.16)",
-    bar: "#4C1D95",
-    hoverGlow: "rgba(76,29,149,0.10)",
-    shimmer: "rgba(196,181,253,0.32)",
-    highlight: "rgba(237,233,254,0.48)",
-    aurora: "rgba(76,29,149,0.06)",
-    depth: "rgba(49,46,129,0.04)",
-    ring: "rgba(76,29,149,0.12)",
-  },
-  "snow-day": {
-    sky: ["rgba(226,232,240,0.18)", "rgba(8,12,22,0.98)", "rgba(125,211,252,0.10)"],
-    orb: ["rgba(255,255,255,0.28)", "rgba(186,230,253,0.16)"],
-    accent: "#E2E8F0",
-    glow: "rgba(186,230,253,0.55)",
-    text: "#E5E7EB",
-    temp: "from-white via-slate-200 to-sky-300",
-    chip: "rgba(226,232,240,0.08)",
-    chipBorder: "rgba(226,232,240,0.14)",
-    bar: "#BAE6FD",
-    hoverGlow: "rgba(186,230,253,0.10)",
-    shimmer: "rgba(255,255,255,0.40)",
-    highlight: "rgba(255,255,255,0.55)",
-    aurora: "rgba(186,230,253,0.06)",
-    depth: "rgba(148,163,184,0.04)",
-    ring: "rgba(226,232,240,0.10)",
-  },
-  "snow-night": {
-    sky: ["rgba(148,163,184,0.14)", "rgba(2,3,12,0.99)", "rgba(56,189,248,0.10)"],
-    orb: ["rgba(226,232,240,0.18)", "rgba(56,189,248,0.12)"],
-    accent: "#CBD5E1",
-    glow: "rgba(56,189,248,0.45)",
-    text: "#E2E8F0",
-    temp: "from-slate-100 via-slate-300 to-sky-400",
-    chip: "rgba(148,163,184,0.10)",
-    chipBorder: "rgba(148,163,184,0.16)",
-    bar: "#38BDF8",
-    hoverGlow: "rgba(56,189,248,0.10)",
-    shimmer: "rgba(226,232,240,0.32)",
-    highlight: "rgba(241,245,249,0.45)",
-    aurora: "rgba(56,189,248,0.05)",
-    depth: "rgba(51,65,85,0.05)",
-    ring: "rgba(148,163,184,0.10)",
-  },
-  "fog-day": {
-    sky: ["rgba(203,213,225,0.18)", "rgba(10,14,30,0.98)", "rgba(148,163,184,0.10)"],
-    orb: ["rgba(203,213,225,0.26)", "rgba(148,163,184,0.14)"],
-    accent: "#E2E8F0",
-    glow: "rgba(203,213,225,0.45)",
-    text: "#E2E8F0",
-    temp: "from-white via-slate-200 to-slate-300",
-    chip: "rgba(203,213,225,0.08)",
-    chipBorder: "rgba(203,213,225,0.14)",
-    bar: "#CBD5E1",
-    hoverGlow: "rgba(203,213,225,0.10)",
-    shimmer: "rgba(248,250,252,0.36)",
-    highlight: "rgba(248,250,252,0.52)",
-    aurora: "rgba(203,213,225,0.05)",
-    depth: "rgba(100,116,139,0.04)",
-    ring: "rgba(203,213,225,0.10)",
-  },
-  "fog-night": {
-    sky: ["rgba(71,85,105,0.16)", "rgba(2,3,12,0.99)", "rgba(148,163,184,0.10)"],
-    orb: ["rgba(148,163,184,0.22)", "rgba(71,85,105,0.14)"],
-    accent: "#CBD5E1",
-    glow: "rgba(148,163,184,0.45)",
-    text: "#CBD5E1",
-    temp: "from-slate-100 via-slate-300 to-slate-400",
-    chip: "rgba(71,85,105,0.11)",
-    chipBorder: "rgba(71,85,105,0.16)",
-    bar: "#94A3B8",
-    hoverGlow: "rgba(148,163,184,0.10)",
-    shimmer: "rgba(226,232,240,0.28)",
-    highlight: "rgba(241,245,249,0.40)",
-    aurora: "rgba(148,163,184,0.05)",
-    depth: "rgba(30,41,59,0.05)",
-    ring: "rgba(148,163,184,0.10)",
-  },
-  "windy-day": {
-    sky: ["rgba(34,197,94,0.10)", "rgba(10,14,30,0.98)", "rgba(59,130,246,0.08)"],
-    orb: ["rgba(59,130,246,0.20)", "rgba(34,197,94,0.10)"],
-    accent: "#A7F3D0",
-    glow: "rgba(52,211,153,0.55)",
-    text: "#D1FAE5",
-    temp: "from-emerald-50 via-teal-200 to-cyan-400",
-    chip: "rgba(52,211,153,0.08)",
-    chipBorder: "rgba(52,211,153,0.14)",
-    bar: "#34D399",
-    hoverGlow: "rgba(52,211,153,0.10)",
-    shimmer: "rgba(240,253,250,0.32)",
-    highlight: "rgba(236,254,255,0.52)",
-    aurora: "rgba(52,211,153,0.05)",
-    depth: "rgba(59,130,246,0.04)",
-    ring: "rgba(52,211,153,0.10)",
-  },
-  "windy-night": {
-    sky: ["rgba(16,185,129,0.10)", "rgba(2,3,12,0.99)", "rgba(59,130,246,0.08)"],
-    orb: ["rgba(59,130,246,0.18)", "rgba(16,185,129,0.10)"],
-    accent: "#6EE7B7",
-    glow: "rgba(16,185,129,0.50)",
-    text: "#A7F3D0",
-    temp: "from-emerald-100 via-teal-300 to-cyan-500",
-    chip: "rgba(16,185,129,0.10)",
-    chipBorder: "rgba(16,185,129,0.14)",
-    bar: "#10B981",
-    hoverGlow: "rgba(16,185,129,0.10)",
-    shimmer: "rgba(209,250,229,0.26)",
-    highlight: "rgba(240,253,250,0.42)",
-    aurora: "rgba(16,185,129,0.05)",
-    depth: "rgba(30,58,138,0.04)",
-    ring: "rgba(16,185,129,0.10)",
-  },
-};
+import { Language, ViewState } from '../../types';
+import { WeatherAtmosphericIcon } from "./weather/WeatherIcons";
+import { DASH_TEXT, PAL, Pal, WxType, clamp, wxTypeFrom, mapToAtmosphericIconKind } from "./weather/utils";
 
 const WxStatusDot = React.memo(function WxStatusDot({
   color,
@@ -369,279 +48,6 @@ const WxStatusDot = React.memo(function WxStatusDot({
     </span>
   );
 });
-
-// ENHANCED: Clay Gradients & Shadows with more depth
-function ClayDefs({
-  id,
-  base,
-  light,
-  shadow,
-  glow,
-}: {
-  id: string;
-  base: string;
-  light: string;
-  shadow: string;
-  glow?: string;
-}) {
-  return (
-    <defs>
-      <radialGradient id={`${id}-clay`} cx="35%" cy="28%" r="70%">
-        <stop offset="0%" stopColor={light} />
-        <stop offset="40%" stopColor={base} />
-        <stop offset="100%" stopColor={shadow} />
-      </radialGradient>
-
-      <radialGradient id={`${id}-hi`} cx="30%" cy="22%" r="55%">
-        <stop offset="0%" stopColor="rgba(255,255,255,0.92)" />
-        <stop offset="35%" stopColor="rgba(255,255,255,0.32)" />
-        <stop offset="100%" stopColor="rgba(255,255,255,0)" />
-      </radialGradient>
-
-      <filter id={`${id}-shadow`} x="-30%" y="-30%" width="160%" height="170%">
-        <feDropShadow dx="0" dy="10" stdDeviation="10" floodColor="rgba(0,0,0,0.25)" />
-        <feDropShadow dx="0" dy="3" stdDeviation="4" floodColor="rgba(0,0,0,0.16)" />
-      </filter>
-
-      {glow ? (
-        <linearGradient id={`${id}-gl`} x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor={glow} stopOpacity="0.7" />
-          <stop offset="100%" stopColor={glow} stopOpacity="0.0" />
-        </linearGradient>
-      ) : null}
-    </defs>
-  );
-}
-
-// ENHANCED Sun
-const SunClay = React.memo(function SunClay({ size = 120, animated = true, className }: IconProps) {
-  const uid = useId();
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 140 140"
-      className={className}
-      style={{
-        overflow: "visible",
-        filter: "drop-shadow(0 14px 34px rgba(255,186,0,0.30))",
-      }}
-    >
-      <ClayDefs
-        id={uid}
-        base="#F6B01D"
-        light="#FFE59A"
-        shadow="#C97206"
-        glow="rgba(255,198,64,0.9)"
-      />
-      <g style={{ transformOrigin: "70px 70px", animation: animated ? "wx-spin 22s linear infinite" : undefined }}>
-        {Array.from({ length: 12 }, (_, i) => {
-          const a = (i * 360) / 12;
-          return (
-            <g key={i} transform={`rotate(${a} 70 70)`} opacity={0.96}>
-              <rect x="65" y="6" width="10" height="24" rx="5" fill="#F5A524" />
-              <rect x="67" y="8" width="6" height="18" rx="3" fill="rgba(255,255,255,0.35)" />
-            </g>
-          );
-        })}
-      </g>
-      <g filter={`url(#${uid}-shadow)`}>
-        <circle cx="70" cy="74" r="34" fill={`url(#${uid}-clay)`} />
-        <circle cx="70" cy="74" r="34" fill={`url(#${uid}-hi)`} opacity={0.92} />
-        <circle cx="74" cy="80" r="30" fill="none" stroke="rgba(120,54,0,0.18)" strokeWidth="5" />
-      </g>
-      <ellipse cx="70" cy="128" rx="26" ry="7" fill="rgba(0,0,0,0.18)" style={{ filter: "blur(3px)" }} />
-    </svg>
-  );
-});
-
-// ENHANCED Moon
-const MoonClay = React.memo(function MoonClay({ size = 110, animated = true, className }: IconProps) {
-  const uid = useId();
-  return (
-    <svg width={size} height={size} viewBox="0 0 140 140" className={className} style={{ overflow: "visible" }}>
-      <ClayDefs id={uid} base="#B9C3D3" light="#F7FAFF" shadow="#667389" />
-      <g style={{ animation: animated ? "wx-float 6.2s ease-in-out infinite" : undefined, transformOrigin: "70px 70px" }}>
-        <g filter={`url(#${uid}-shadow)`}>
-          <circle cx="72" cy="70" r="34" fill={`url(#${uid}-clay)`} />
-          <circle cx="72" cy="70" r="34" fill={`url(#${uid}-hi)`} opacity={0.9} />
-          <circle cx="90" cy="58" r="34" fill="rgba(10,12,24,0.22)" />
-          <g opacity={0.9}>
-            <circle cx="60" cy="60" r="6.5" fill="rgba(58,71,90,0.20)" />
-            <circle cx="76" cy="78" r="5" fill="rgba(58,71,90,0.18)" />
-            <circle cx="64" cy="84" r="3.4" fill="rgba(58,71,90,0.16)" />
-          </g>
-          <ellipse cx="78" cy="78" rx="26" ry="24" fill="none" stroke="rgba(30,41,59,0.16)" strokeWidth="5" />
-        </g>
-      </g>
-      {[
-        { x: 22, y: 22, s: 3.2 },
-        { x: 112, y: 28, s: 2.6 },
-        { x: 118, y: 92, s: 2.2 },
-      ].map((st, i) => (
-        <circle
-          key={i} cx={st.x} cy={st.y} r={st.s} fill="white" opacity={0.85}
-          style={{ animation: animated ? `wx-twinkle ${2.2 + i * 0.7}s ease-in-out ${i * 0.3}s infinite` : undefined }}
-        />
-      ))}
-    </svg>
-  );
-});
-
-// ENHANCED Cloud
-const CloudClay = React.memo(function CloudClay({
-  size = 160,
-  shade = "light",
-  animated = true,
-  className,
-}: IconProps & { shade?: "light" | "mid" | "dark" }) {
-  const uid = useId();
-  const tone = shade === "dark"
-      ? { base: "#6B778C", light: "#B8C3D2", shadow: "#2E3A4E" }
-      : shade === "mid"
-        ? { base: "#C7D1DF", light: "#F3F6FB", shadow: "#7B879A" }
-        : { base: "#E7EEF7", light: "#FFFFFF", shadow: "#9AA7BC" };
-
-  return (
-    <svg width={size} height={(size * 0.7) | 0} viewBox="0 0 220 150" className={className} style={{ overflow: "visible" }}>
-      <ClayDefs id={uid} base={tone.base} light={tone.light} shadow={tone.shadow} />
-      <g style={{ animation: animated ? "wx-cloud 7.8s ease-in-out infinite" : undefined, transformOrigin: "110px 80px" }}>
-        <g filter={`url(#${uid}-shadow)`}>
-          <circle cx="80" cy="76" r="40" fill={`url(#${uid}-clay)`} />
-          <circle cx="120" cy="58" r="46" fill={`url(#${uid}-clay)`} />
-          <circle cx="160" cy="78" r="36" fill={`url(#${uid}-clay)`} />
-          <rect x="52" y="82" width="132" height="44" rx="22" fill={`url(#${uid}-clay)`} />
-          <ellipse cx="102" cy="44" rx="34" ry="18" fill={`url(#${uid}-hi)`} opacity={0.95} />
-          <ellipse cx="70" cy="60" rx="18" ry="11" fill="rgba(255,255,255,0.55)" />
-          <ellipse cx="154" cy="66" rx="16" ry="10" fill="rgba(255,255,255,0.42)" />
-          <path d="M66,104 Q98,120 126,112 Q152,120 184,104" fill="none" stroke="rgba(30,41,59,0.12)" strokeWidth="4" strokeLinecap="round" />
-        </g>
-      </g>
-      <ellipse cx="110" cy="144" rx="68" ry="8" fill="rgba(0,0,0,0.14)" style={{ filter: "blur(3px)" }} />
-    </svg>
-  );
-});
-
-// ENHANCED Rain drops
-const DropClay = React.memo(function DropClay({ x, y, s, delay, dur, animated = true }: { x: number; y: number; s: number; delay: number; dur: number; animated?: boolean }) {
-  const uid = useId();
-  return (
-    <g style={{ transformOrigin: `${x}px ${y}px`, animation: animated ? `wx-rain ${dur}s ease-in ${delay}s infinite` : undefined }}>
-      <defs>
-        <linearGradient id={`${uid}-drop`} x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#D7ECFF" />
-          <stop offset="45%" stopColor="#6FB3FF" />
-          <stop offset="100%" stopColor="#1B61D1" />
-        </linearGradient>
-      </defs>
-      <path d={`M ${x} ${y} C ${x - 6 * s} ${y + 10 * s}, ${x - 7 * s} ${y + 16 * s}, ${x} ${y + 22 * s} C ${x + 7 * s} ${y + 16 * s}, ${x + 6 * s} ${y + 10 * s}, ${x} ${y} Z`} fill={`url(#${uid}-drop)`} style={{ filter: "drop-shadow(0 3px 6px rgba(59,130,246,0.25))" }} />
-      <ellipse cx={x - 2.2 * s} cy={y + 11 * s} rx={2.2 * s} ry={5 * s} fill="rgba(255,255,255,0.55)" />
-    </g>
-  );
-});
-
-// ENHANCED Lightning bolt
-const BoltClay = React.memo(function BoltClay({ x, y, s, animated = true }: { x: number; y: number; s: number; animated?: boolean }) {
-  const uid = useId();
-  return (
-    <g style={{ animation: animated ? "wx-bolt 3.2s ease-in-out infinite" : undefined }}>
-      <defs>
-        <linearGradient id={`${uid}-bolt`} x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#FFF7C2" />
-          <stop offset="45%" stopColor="#FFE166" />
-          <stop offset="100%" stopColor="#F6B01D" />
-        </linearGradient>
-      </defs>
-      <path d={`M ${x + 10 * s} ${y} L ${x - 8 * s} ${y + 24 * s} H ${x + 2 * s} L ${x - 4 * s} ${y + 44 * s} L ${x + 18 * s} ${y + 18 * s} H ${x + 7 * s} Z`} fill={`url(#${uid}-bolt)`} style={{ filter: "drop-shadow(0 0 16px rgba(255,208,80,0.65)) drop-shadow(0 10px 18px rgba(0,0,0,0.16))" }} />
-      <path d={`M ${x + 6 * s} ${y + 6 * s} L ${x - 2 * s} ${y + 18 * s}`} stroke="rgba(255,255,255,0.6)" strokeWidth={2.8 * s} strokeLinecap="round" opacity={0.8} />
-    </g>
-  );
-});
-
-// ENHANCED Wind strokes
-const WindStrokes = React.memo(function WindStrokes({ x, y, w, animated = true, speed = 1 }: { x: number; y: number; w: number; animated?: boolean; speed?: number }) {
-  const dur = 3.4 / clamp(speed, 0.7, 1.6);
-  return (
-    <g style={{ animation: animated ? `wx-wind ${dur}s ease-in-out infinite` : undefined }}>
-      <path d={`M ${x} ${y} C ${x + w * 0.22} ${y - 10}, ${x + w * 0.44} ${y - 10}, ${x + w * 0.62} ${y} C ${x + w * 0.76} ${y + 8}, ${x + w * 0.88} ${y + 8}, ${x + w} ${y}`} fill="none" stroke="rgba(170, 223, 255, 0.95)" strokeWidth="7" strokeLinecap="round" style={{ filter: "drop-shadow(0 8px 16px rgba(0,0,0,0.16))" }} />
-      <path d={`M ${x + 8} ${y + 18} C ${x + w * 0.24} ${y + 8}, ${x + w * 0.46} ${y + 8}, ${x + w * 0.66} ${y + 18} C ${x + w * 0.80} ${y + 26}, ${x + w * 0.90} ${y + 26}, ${x + w} ${y + 18}`} fill="none" stroke="rgba(255,255,255,0.50)" strokeWidth="6" strokeLinecap="round" />
-    </g>
-  );
-});
-
-export const Weather3DIcon = React.memo(function Weather3DIcon({
-  kind,
-  size = 180,
-  animated = true,
-  intensity = 1,
-  className,
-}: IconProps & { kind: Weather3DIconKind; intensity?: number }) {
-  const k = kind;
-
-  const rainParams = useMemo(() => {
-    const s = clamp(intensity || 1, 0.7, 1.6);
-    return [
-      { x: 86, y: 98, sc: 0.95, d: 0.00, dur: 0.62 / s },
-      { x: 112, y: 102, sc: 1.05, d: 0.10, dur: 0.66 / s },
-      { x: 138, y: 98, sc: 0.90, d: 0.18, dur: 0.58 / s },
-      { x: 162, y: 104, sc: 0.82, d: 0.26, dur: 0.60 / s },
-    ];
-  }, [intensity]);
-
-  const snowParams = useMemo(() => {
-    const s = clamp(intensity || 1, 0.7, 1.6);
-    return [
-      { x: 90, y: 106, r: 3.6, d: 0.00, dur: 1.25 / s },
-      { x: 118, y: 110, r: 3.0, d: 0.18, dur: 1.32 / s },
-      { x: 146, y: 106, r: 3.2, d: 0.28, dur: 1.18 / s },
-      { x: 166, y: 112, r: 2.8, d: 0.38, dur: 1.38 / s },
-    ];
-  }, [intensity]);
-
-  const svg = (children: React.ReactNode) => (
-    <svg width={size} height={size} viewBox="0 0 240 240" className={className} style={{ overflow: "visible" }}>
-      {children}
-    </svg>
-  );
-
-  if (k === "clearDay") return <div style={{ width: size, height: size, display: "grid", placeItems: "center" }}><SunClay size={Math.round(size * 0.92)} animated={animated} /></div>;
-  if (k === "clearNight") return <div style={{ width: size, height: size, display: "grid", placeItems: "center" }}><MoonClay size={Math.round(size * 0.92)} animated={animated} /></div>;
-  if (k === "cloudy") return <div style={{ width: size, height: size, display: "grid", placeItems: "center" }}><CloudClay size={Math.round(size * 1.05)} shade="mid" animated={animated} /></div>;
-
-  if (k === "partlyCloudyDay") return svg(<><g transform="translate(38,26)"><SunClay size={120} animated={animated} /></g><g transform="translate(20,88)"><CloudClay size={190} shade="light" animated={animated} /></g></>);
-  if (k === "partlyCloudyNight") return svg(<><g transform="translate(52,22)"><MoonClay size={120} animated={animated} /></g><g transform="translate(20,90)"><CloudClay size={190} shade="light" animated={animated} /></g></>);
-
-  if (k === "rain") return svg(<><g transform="translate(22,72)"><CloudClay size={196} shade="mid" animated={animated} /></g><g>{rainParams.map((p, i) => <DropClay key={i} x={p.x} y={p.y} s={p.sc} delay={p.d} dur={p.dur} animated={animated} />)}</g></>);
-  if (k === "storm") return svg(<><g transform="translate(18,68)"><CloudClay size={204} shade="dark" animated={animated} /></g><BoltClay x={138} y={98} s={1.05} animated={animated} /><g>{rainParams.slice(0, 3).map((p, i) => <DropClay key={i} x={p.x - 6} y={p.y + 2} s={p.sc * 0.9} delay={p.d} dur={p.dur * 0.9} animated={animated} />)}</g></>);
-  if (k === "snow") return svg(<><g transform="translate(22,72)"><CloudClay size={196} shade="light" animated={animated} /></g><g>{snowParams.map((s, i) => <circle key={i} cx={s.x} cy={s.y} r={s.r} fill="rgba(255,255,255,0.95)" style={{ filter: "drop-shadow(0 2px 5px rgba(0,0,0,0.14))", animation: animated ? `wx-snow ${s.dur}s ease-in-out ${s.d}s infinite` : undefined }} />)}</g></>);
-  if (k === "fog") return svg(<><g transform="translate(22,72)"><CloudClay size={196} shade="mid" animated={animated} /></g><g style={{ opacity: 0.95 }}>{Array.from({ length: 3 }, (_, i) => <rect key={i} x={34} y={140 + i * 18} width={172} height={14} rx={7} fill={`rgba(255,255,255,${0.22 - i * 0.04})`} style={{ filter: "blur(0.3px)", animation: animated ? `wx-fog ${7.2 + i * 1.1}s ease-in-out ${i * 0.4}s infinite` : undefined }} />)}</g></>);
-
-  if (k === "windyDay") return svg(<><g transform="translate(44,20)"><SunClay size={108} animated={animated} /></g><g transform="translate(22,84)"><CloudClay size={196} shade="light" animated={animated} /></g><WindStrokes x={42} y={148} w={160} animated={animated} speed={intensity} /></>);
-  if (k === "windyNight") return svg(<><g transform="translate(58,18)"><MoonClay size={108} animated={animated} /></g><g transform="translate(22,84)"><CloudClay size={196} shade="light" animated={animated} /></g><WindStrokes x={42} y={148} w={160} animated={animated} speed={intensity} /></>);
-  if (k === "rainWind") return svg(<><g transform="translate(22,72)"><CloudClay size={196} shade="mid" animated={animated} /></g><WindStrokes x={44} y={142} w={160} animated={animated} speed={intensity} /><g>{rainParams.slice(0, 3).map((p, i) => <DropClay key={i} x={p.x} y={p.y} s={p.sc} delay={p.d} dur={p.dur} animated={animated} />)}</g></>);
-  if (k === "stormWind") return svg(<><g transform="translate(18,68)"><CloudClay size={204} shade="dark" animated={animated} /></g><WindStrokes x={44} y={142} w={160} animated={animated} speed={intensity} /><BoltClay x={138} y={98} s={1.05} animated={animated} /></>);
-
-  return <div style={{ width: size, height: size, display: "grid", placeItems: "center" }}><CloudClay size={Math.round(size * 1.05)} shade="mid" animated={animated} /></div>;
-});
-
-export function mapTo3DIconKind(opts: { code: number; isDay: boolean; windKmh?: number }): Weather3DIconKind {
-  const { code, isDay, windKmh = 0 } = opts;
-  const windy = windKmh >= 28;
-
-  if (code >= 95) return windy ? "stormWind" : "storm";
-  if (code === 45 || code === 48) return "fog";
-  if ((code >= 71 && code <= 77) || code === 85 || code === 86) return "snow";
-
-  if ((code >= 51 && code <= 67) || (code >= 80 && code <= 82)) {
-    if (windy) return "rainWind";
-    return "rain";
-  }
-
-  if (code >= 1 && code <= 3) return isDay ? "partlyCloudyDay" : "partlyCloudyNight";
-  if (windy) return isDay ? "windyDay" : "windyNight";
-
-  return isDay ? "clearDay" : "clearNight";
-}
 
 const WEATHER_3D_ICON_CSS = `
 @keyframes wx-float { 0%,100%{ transform: translateY(0) } 50%{ transform: translateY(-10px) } }
@@ -809,7 +215,7 @@ type WeatherWidgetProps = {
   loading?: boolean;
   location?: string;
   lang?: Language;
-  onNavigate?: (route: string) => void;
+  onNavigate?: (route: ViewState) => void;
   intensity?: number;
 };
 
@@ -856,12 +262,22 @@ export const WeatherWidget = ({
   const lo = weather?.daily?.temperature_2m_min?.[0];
   const vis = weather?.current?.visibility;
 
+  const forecast = useMemo(() => {
+    if (!weather?.daily) return [];
+    return weather.daily.time.slice(1, 3).map((time: string, i: number) => ({
+      time,
+      max: weather.daily.temperature_2m_max[i + 1],
+      min: weather.daily.temperature_2m_min[i + 1],
+      code: weather.daily.weather_code[i + 1],
+    }));
+  }, [weather]);
+
   const type = wxTypeFrom(code, wind);
   const pk = `${type}-${isDay ? "day" : "night"}`;
   const p: Pal = (PAL as any)[pk] || PAL[isDay ? "clear-day" : "clear-night"];
   const txt = DASH_TEXT[lang];
 
-  const iconKind = mapTo3DIconKind({ code, isDay, windKmh: wind });
+  const iconKind = mapToAtmosphericIconKind({ code, isDay, windKmh: wind });
 
   // CSS variables for static optimization
   const cssVars = useMemo(() => ({
@@ -1105,6 +521,33 @@ export const WeatherWidget = ({
                   </div>
                 )}
               </div>
+
+              {/* 2-Day Forecast */}
+              {forecast.length > 0 && (
+                <div className="flex gap-3 mt-4 pt-4 border-t border-white/5" style={{ animation: "WW-fade-in 0.8s ease-out 0.5s both" }}>
+                  {forecast.map((day: any, i: number) => {
+                    const dayType = wxTypeFrom(day.code);
+                    const dayName = new Date(day.time).toLocaleDateString(lang === 'mr' ? 'mr-IN' : lang === 'hi' ? 'hi-IN' : 'en-US', { weekday: 'short' });
+                    return (
+                      <div key={day.time} className="flex items-center gap-2.5 px-3 py-1.5 rounded-xl bg-white/5 border border-white/5">
+                        <span className="text-[10px] font-bold text-white/40 uppercase tracking-wider">{dayName}</span>
+                        <div className="flex items-center gap-1.5">
+                          {dayType === 'storm' && <CloudLightning size={12} className="text-purple-400" />}
+                          {dayType === 'rain' && <CloudRain size={12} className="text-blue-400" />}
+                          {dayType === 'cloudy' && <Cloud size={12} className="text-slate-400" />}
+                          {dayType === 'clear' && <Sun size={12} className="text-amber-400" />}
+                          {dayType === 'fog' && <CloudFog size={12} className="text-slate-300" />}
+                          {dayType === 'snow' && <Snowflake size={12} className="text-cyan-200" />}
+                          <div className="flex items-baseline gap-1">
+                            <span className="text-[11px] font-black text-white/90">{Math.round(day.max)}°</span>
+                            <span className="text-[9px] font-bold text-white/30">{Math.round(day.min)}°</span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
             {/* Right */}
@@ -1124,7 +567,7 @@ export const WeatherWidget = ({
                   transition: "transform 420ms cubic-bezier(.2,.8,.2,1)",
                 }}
               >
-                <Weather3DIcon kind={iconKind} intensity={intensity} size={188} animated={true} />
+                <WeatherAtmosphericIcon kind={iconKind} intensity={intensity} size={188} animated={true} />
               </div>
             </div>
           </>
