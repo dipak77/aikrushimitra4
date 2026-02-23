@@ -24,7 +24,7 @@ const MAX_RETRIES = 5;
 const RECONNECT_BASE_DELAY = 1000;
 const uid = () => crypto.randomUUID().slice(0, 8);
 
-const TOOLS = [
+const TOOLS: any[] = [
   {
     functionDeclarations: [
       {
@@ -441,7 +441,7 @@ const VoiceAssistant = ({
       const ai = new GoogleGenAI({ apiKey });
       const systemPrompt = `You are KRUSHI MITRA AI, a highly advanced agricultural robotic assistant. ROLE: Friendly, expert agronomist speaking ${lang === 'mr' ? 'Marathi' : lang === 'hi' ? 'Hindi' : 'English'}. STYLE: Concise, natural spoken voice.`;
       const session = await ai.live.connect({
-        model: 'gemini-2.5-flash-native-audio-preview-12-2025',
+        model: 'gemini-2.5-flash-native-audio-preview-09-2025',
         config: {
           responseModalities: [Modality.AUDIO],
           speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Puck' } } },
@@ -464,7 +464,7 @@ const VoiceAssistant = ({
           },
           onmessage: async (msg: LiveServerMessage) => {
             if (msg.toolCall) {
-              const r = await handleToolCall(msg.toolCall.functionCalls);
+              const r = await handleToolCall(msg.toolCall.functionCalls || []);
               if (r.length > 0 && sessionRef.current) sessionRef.current.sendToolResponse({ functionResponses: r });
             }
             const ad = msg.serverContent?.modelTurn?.parts?.[0]?.inlineData?.data;
@@ -554,16 +554,16 @@ const VoiceAssistant = ({
         style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E")` }} />
 
       {/* Ambient orbs */}
-      <div className="absolute top-[15%] left-[10%] w-[400px] h-[400px] rounded-full opacity-[0.07] blur-[120px] pointer-events-none transition-colors duration-1000"
+      <div className="absolute top-[10%] left-[5%] w-[500px] h-[500px] rounded-full opacity-[0.12] blur-[140px] pointer-events-none transition-colors duration-1000 animate-[pulse_8s_ease-in-out_infinite]"
         style={{ background: `rgb(${theme.rgb})` }} />
-      <div className="absolute bottom-[20%] right-[5%] w-[300px] h-[300px] rounded-full opacity-[0.05] blur-[100px] pointer-events-none transition-colors duration-1000"
+      <div className="absolute bottom-[15%] right-[0%] w-[400px] h-[400px] rounded-full opacity-[0.08] blur-[120px] pointer-events-none transition-colors duration-1000 animate-[pulse_12s_ease-in-out_infinite_reverse]"
         style={{ background: `rgb(${theme.rgb})` }} />
 
       {/* Subtle grid */}
-      <div className="absolute inset-0 opacity-[0.025] pointer-events-none"
+      <div className="absolute inset-0 opacity-[0.04] pointer-events-none"
         style={{
-          backgroundImage: `linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)`,
-          backgroundSize: '60px 60px',
+          backgroundImage: `linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px)`,
+          backgroundSize: '40px 40px',
         }} />
 
       <video ref={hiddenVideoRef} className="hidden" muted playsInline autoPlay width={640} height={480} />
@@ -572,90 +572,104 @@ const VoiceAssistant = ({
       <ParticleField active={isActive} color={theme.rgb} />
 
       {/* ═══ HEADER ═══ */}
-      <header className="relative z-50 shrink-0 px-4 sm:px-6 pt-3 pb-2">
+      <header className="relative z-50 shrink-0 px-4 sm:px-8 pt-4 pb-2">
         <div className="flex items-center justify-between">
           {/* Back */}
           <button
             onClick={() => { cleanup(true); onBack(); }}
-            className="group w-10 h-10 rounded-xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center text-white/60 hover:text-white hover:bg-white/[0.08] active:scale-95 transition-all"
+            className="group w-11 h-11 rounded-2xl bg-white/[0.03] border border-white/[0.08] flex items-center justify-center text-white/50 hover:text-white hover:bg-white/[0.08] hover:border-white/[0.15] active:scale-95 transition-all backdrop-blur-md"
           >
-            <ArrowLeft size={18} className="group-hover:-translate-x-0.5 transition-transform" />
+            <ArrowLeft size={20} className="group-hover:-translate-x-0.5 transition-transform" />
           </button>
 
           {/* Center branding */}
-          <div className="flex items-center gap-2.5">
-            <div className="relative">
-              <Hexagon size={20} className="text-white/20" strokeWidth={1.5} />
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="w-1.5 h-1.5 rounded-full transition-colors duration-500" style={{ background: theme.hex, boxShadow: `0 0 8px ${theme.hex}` }} />
+          <div className="flex flex-col items-center">
+            <div className="flex items-center gap-3">
+              <div className="relative">
+                <Hexagon size={24} className="text-white/10" strokeWidth={1} />
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="w-2 h-2 rounded-full transition-colors duration-500 animate-pulse" style={{ background: theme.hex, boxShadow: `0 0 12px ${theme.hex}` }} />
+                </div>
               </div>
-            </div>
-            <div className="flex flex-col">
-              <span className="text-[10px] font-bold text-white/80 tracking-[0.15em] leading-none">KRUSHI MITRA</span>
-              <span className="text-[8px] font-medium tracking-[0.2em] leading-none mt-0.5 transition-colors duration-500" style={{ color: theme.hex }}>
-                {theme.label}
-              </span>
+              <div className="flex flex-col">
+                <span className="text-[11px] font-black text-white tracking-[0.3em] leading-none uppercase">KRUSHI MITRA</span>
+                <div className="flex items-center gap-1.5 mt-1">
+                  <div className="w-1 h-1 rounded-full animate-pulse" style={{ background: theme.hex }} />
+                  <span className="text-[9px] font-bold tracking-[0.2em] leading-none transition-colors duration-500" style={{ color: theme.hex }}>
+                    {theme.label}
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
 
           {/* Right controls */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             {isActive && (
-              <div className="px-2.5 py-1 rounded-lg bg-white/[0.04] border border-white/[0.06] flex items-center gap-1.5 animate-[fadeIn_0.5s]">
-                <div className="w-1 h-1 rounded-full bg-red-500 animate-pulse" />
-                <span className="text-[9px] font-mono font-bold text-white/50 tabular-nums">{formatTime(elapsed)}</span>
+              <div className="px-3 py-1.5 rounded-xl bg-white/[0.03] border border-white/[0.08] flex items-center gap-2 animate-[fadeIn_0.5s] backdrop-blur-md">
+                <div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+                <span className="text-[10px] font-mono font-bold text-white/60 tabular-nums tracking-wider">{formatTime(elapsed)}</span>
               </div>
             )}
             <button
               onClick={toggleCamera}
               className={clsx(
-                'w-10 h-10 rounded-xl border flex items-center justify-center transition-all active:scale-95',
+                'w-11 h-11 rounded-2xl border flex items-center justify-center transition-all active:scale-95 backdrop-blur-md',
                 cameraEnabled
-                  ? 'bg-white/[0.06] border-white/[0.12] text-white/70'
-                  : 'bg-white/[0.03] border-white/[0.06] text-white/30'
+                  ? 'bg-white/[0.06] border-white/[0.15] text-white shadow-[0_0_15px_rgba(255,255,255,0.05)]'
+                  : 'bg-white/[0.02] border-white/[0.05] text-white/30'
               )}
             >
-              {cameraEnabled ? <Eye size={16} /> : <VideoOff size={16} />}
+              {cameraEnabled ? <Eye size={18} /> : <VideoOff size={18} />}
             </button>
           </div>
         </div>
       </header>
 
       {/* ═══ MAIN SCENE ═══ */}
-      <div className="flex-1 relative z-10 min-h-0 flex flex-col items-center justify-center">
+      <div className="flex-1 relative z-10 min-h-0 flex flex-col items-center justify-center px-4">
         
         {/* Camera feed pip */}
         {cameraEnabled && isActive && videoStream && (
-          <div className="absolute top-3 right-3 sm:top-4 sm:right-4 w-24 h-32 sm:w-28 sm:h-36 rounded-2xl overflow-hidden border border-white/[0.12] shadow-2xl z-20 animate-[slideInRight_0.5s_ease-out]">
+          <div className="absolute top-4 right-4 sm:top-6 sm:right-8 w-28 h-40 sm:w-32 sm:h-44 rounded-[2rem] overflow-hidden border border-white/[0.15] shadow-2xl z-20 animate-[slideInRight_0.6s_cubic-bezier(0.23,1,0.32,1)] group">
             <video
               autoPlay playsInline muted
               className="w-full h-full object-cover"
               ref={v => { if (v) v.srcObject = videoStream; }}
             />
-            <div className="absolute inset-0 border border-white/[0.06] rounded-2xl pointer-events-none" />
-            <div className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_6px_#34d399] animate-pulse" />
-            <div className="absolute bottom-0 inset-x-0 h-8 bg-gradient-to-t from-black/60 to-transparent flex items-end justify-center pb-1">
-              <span className="text-[7px] font-bold text-white/60 tracking-wider">LIVE</span>
+            {/* Scanning line effect */}
+            <div className="absolute inset-x-0 h-[2px] bg-emerald-400/50 shadow-[0_0_10px_#34d399] animate-[scan_3s_linear_infinite] z-30" />
+            
+            <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-black/20 pointer-events-none" />
+            <div className="absolute top-3 right-3 w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-[0_0_10px_#34d399] animate-pulse" />
+            <div className="absolute bottom-3 inset-x-0 flex flex-col items-center gap-1">
+              <div className="px-2 py-0.5 rounded-full bg-black/40 backdrop-blur-md border border-white/10">
+                <span className="text-[8px] font-black text-white/90 tracking-[0.2em]">VISION LIVE</span>
+              </div>
             </div>
           </div>
         )}
 
         {/* ─── CORE AVATAR AREA ─── */}
-        <div className="relative flex items-center justify-center"
-          style={{ width: 'clamp(260px, 65vw, 420px)', height: 'clamp(260px, 65vw, 420px)' }}
+        <div className="relative flex items-center justify-center transition-transform duration-700"
+          style={{ 
+            width: 'clamp(280px, 75vw, 480px)', 
+            height: 'clamp(280px, 75vw, 480px)',
+            transform: showTranscripts ? 'translateY(-10%) scale(0.85)' : 'translateY(0) scale(1)'
+          }}
         >
           {/* Waveform rings */}
-          <WaveformRing analyser={inputAnalyserState} color="255,255,255" radius={100} lineWidth={1} />
-          <WaveformRing analyser={outputAnalyserState} color={theme.rgb} radius={130} lineWidth={2} />
+          <WaveformRing analyser={inputAnalyserState} color="255,255,255" radius={110} lineWidth={1} />
+          <WaveformRing analyser={outputAnalyserState} color={theme.rgb} radius={145} lineWidth={2.5} />
 
           {/* Rotating dashed orbit */}
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
             <div
-              className="rounded-full border border-dashed animate-[spin_30s_linear_infinite] transition-all duration-500"
+              className="rounded-full border border-dashed animate-[spin_40s_linear_infinite] transition-all duration-700"
               style={{
-                width: 'clamp(220px, 55vw, 360px)',
-                height: 'clamp(220px, 55vw, 360px)',
-                borderColor: `rgba(${theme.rgb}, 0.15)`,
+                width: 'clamp(240px, 65vw, 400px)',
+                height: 'clamp(240px, 65vw, 400px)',
+                borderColor: `rgba(${theme.rgb}, 0.2)`,
               }}
             />
           </div>
@@ -663,33 +677,33 @@ const VoiceAssistant = ({
           {/* Secondary orbit */}
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
             <div
-              className="rounded-full border animate-[spin_45s_linear_infinite_reverse] transition-all duration-500"
+              className="rounded-full border animate-[spin_60s_linear_infinite_reverse] transition-all duration-700"
               style={{
-                width: 'clamp(270px, 68vw, 440px)',
-                height: 'clamp(270px, 68vw, 440px)',
-                borderColor: `rgba(${theme.rgb}, 0.06)`,
+                width: 'clamp(300px, 80vw, 500px)',
+                height: 'clamp(300px, 80vw, 500px)',
+                borderColor: `rgba(${theme.rgb}, 0.08)`,
               }}
             >
               {/* Orbiting dot */}
-              <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 rounded-full transition-colors duration-500"
-                style={{ background: theme.hex, boxShadow: `0 0 10px ${theme.hex}` }} />
+              <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-3 h-3 rounded-full transition-colors duration-500"
+                style={{ background: theme.hex, boxShadow: `0 0 15px ${theme.hex}` }} />
             </div>
           </div>
 
           {/* Center Avatar Core */}
           <div className={clsx(
-            "relative z-10 flex items-center justify-center transition-all duration-700",
-            status === 'idle' && 'opacity-40 scale-90',
+            "relative z-10 flex items-center justify-center transition-all duration-1000",
+            status === 'idle' && 'opacity-30 scale-90',
             isLoading && 'animate-pulse',
             isActive && 'opacity-100 scale-100',
             status === 'error' && 'opacity-80'
           )}>
             {/* Glow backdrop */}
             <div
-              className="absolute rounded-full blur-[60px] transition-all duration-700 pointer-events-none"
+              className="absolute rounded-full blur-[80px] transition-all duration-1000 pointer-events-none"
               style={{
-                width: '160px', height: '160px',
-                background: `rgba(${theme.rgb}, ${isActive ? 0.2 : 0.08})`,
+                width: '200px', height: '200px',
+                background: `rgba(${theme.rgb}, ${isActive ? 0.25 : 0.1})`,
               }}
             />
 
@@ -697,57 +711,57 @@ const VoiceAssistant = ({
             <div className="relative">
               {/* Outer ring */}
               <div
-                className="absolute -inset-6 rounded-full border-2 transition-all duration-500"
+                className="absolute -inset-8 rounded-full border-2 transition-all duration-700"
                 style={{
-                  borderColor: `rgba(${theme.rgb}, 0.25)`,
-                  transform: `scale(calc(1 + var(--a) * 0.15))`,
-                  boxShadow: `0 0 30px rgba(${theme.rgb}, 0.08), inset 0 0 30px rgba(${theme.rgb}, 0.05)`,
+                  borderColor: `rgba(${theme.rgb}, 0.3)`,
+                  transform: `scale(calc(1 + var(--a) * 0.2))`,
+                  boxShadow: `0 0 40px rgba(${theme.rgb}, 0.1), inset 0 0 40px rgba(${theme.rgb}, 0.08)`,
                 }}
               />
 
               {/* Glass sphere */}
               <div
-                className="relative w-28 h-28 sm:w-32 sm:h-32 rounded-full overflow-hidden transition-all duration-300"
+                className="relative w-32 h-32 sm:w-40 sm:h-40 rounded-full overflow-hidden transition-all duration-500"
                 style={{
-                  background: `radial-gradient(circle at 35% 30%, rgba(${theme.rgb}, 0.15), rgba(${theme.rgb}, 0.03) 50%, rgba(0,0,0,0.4))`,
-                  boxShadow: `0 0 60px rgba(${theme.rgb}, 0.12), inset 0 1px 0 rgba(255,255,255,0.1), inset 0 -2px 10px rgba(0,0,0,0.3)`,
-                  border: `1.5px solid rgba(${theme.rgb}, 0.2)`,
-                  transform: `scale(calc(1 + var(--a) * 0.08 + var(--u) * 0.04))`,
+                  background: `radial-gradient(circle at 35% 30%, rgba(${theme.rgb}, 0.2), rgba(${theme.rgb}, 0.05) 50%, rgba(0,0,0,0.6))`,
+                  boxShadow: `0 0 80px rgba(${theme.rgb}, 0.15), inset 0 1px 0 rgba(255,255,255,0.15), inset 0 -4px 15px rgba(0,0,0,0.5)`,
+                  border: `2px solid rgba(${theme.rgb}, 0.3)`,
+                  transform: `scale(calc(1 + var(--a) * 0.1 + var(--u) * 0.05))`,
                 }}
               >
                 {/* Inner glow & pattern */}
                 <div className="absolute inset-0 flex items-center justify-center">
                   {/* Animated inner rings */}
-                  <div className="absolute w-16 h-16 sm:w-20 sm:h-20 rounded-full border border-white/[0.08] animate-[spin_8s_linear_infinite]" />
-                  <div className="absolute w-10 h-10 sm:w-12 sm:h-12 rounded-full border border-white/[0.06] animate-[spin_5s_linear_infinite_reverse]" />
+                  <div className="absolute w-20 h-20 sm:w-24 sm:h-24 rounded-full border border-white/[0.1] animate-[spin_10s_linear_infinite]" />
+                  <div className="absolute w-12 h-12 sm:w-16 sm:h-16 rounded-full border border-white/[0.08] animate-[spin_6s_linear_infinite_reverse]" />
 
                   {/* Core icon */}
-                  <div className="relative z-10 transition-all duration-300" style={{
-                    transform: `scale(calc(1 + var(--a) * 0.3))`,
-                    filter: `drop-shadow(0 0 12px rgba(${theme.rgb}, 0.6))`,
+                  <div className="relative z-10 transition-all duration-500" style={{
+                    transform: `scale(calc(1 + var(--a) * 0.4))`,
+                    filter: `drop-shadow(0 0 15px rgba(${theme.rgb}, 0.8))`,
                   }}>
                     {status === 'error' ? (
-                      <AlertTriangle size={32} className="text-red-400" strokeWidth={1.5} />
+                      <AlertTriangle size={40} className="text-red-400" strokeWidth={1} />
                     ) : isLoading ? (
-                      <Signal size={28} className="text-amber-300 animate-pulse" strokeWidth={1.5} />
+                      <Signal size={36} className="text-amber-300 animate-pulse" strokeWidth={1} />
                     ) : isSpeaking ? (
-                      <Waves size={30} className="text-sky-300" strokeWidth={1.5} />
+                      <Waves size={38} className="text-sky-300" strokeWidth={1} />
                     ) : (
-                      <CircuitBoard size={28} className="text-emerald-300" strokeWidth={1.5} />
+                      <CircuitBoard size={36} className="text-emerald-300" strokeWidth={1} />
                     )}
                   </div>
                 </div>
 
                 {/* Highlight reflection */}
-                <div className="absolute top-0 left-1/4 w-1/2 h-1/3 bg-gradient-to-b from-white/[0.08] to-transparent rounded-full blur-sm" />
+                <div className="absolute top-0 left-1/4 w-1/2 h-1/3 bg-gradient-to-b from-white/[0.12] to-transparent rounded-full blur-md" />
               </div>
 
               {/* Pulse waves (when speaking) */}
               {isSpeaking && (
                 <>
-                  <div className="absolute -inset-2 rounded-full border border-sky-400/20 animate-[ripple_2s_ease-out_infinite]" />
-                  <div className="absolute -inset-2 rounded-full border border-sky-400/15 animate-[ripple_2s_ease-out_infinite_0.6s]" />
-                  <div className="absolute -inset-2 rounded-full border border-sky-400/10 animate-[ripple_2s_ease-out_infinite_1.2s]" />
+                  <div className="absolute -inset-4 rounded-full border border-sky-400/30 animate-[ripple_2.5s_ease-out_infinite]" />
+                  <div className="absolute -inset-4 rounded-full border border-sky-400/20 animate-[ripple_2.5s_ease-out_infinite_0.8s]" />
+                  <div className="absolute -inset-4 rounded-full border border-sky-400/10 animate-[ripple_2.5s_ease-out_infinite_1.6s]" />
                 </>
               )}
             </div>
@@ -755,26 +769,30 @@ const VoiceAssistant = ({
         </div>
 
         {/* Status label below avatar */}
-        <div className="mt-6 flex flex-col items-center gap-2 animate-[fadeIn_0.5s]">
+        <div className={clsx(
+          "mt-8 flex flex-col items-center gap-3 transition-all duration-700",
+          showTranscripts ? "opacity-0 scale-90" : "opacity-100 scale-100"
+        )}>
           {isActive && (
             <>
-              <div className="flex items-center gap-2">
-                <div className="w-1.5 h-1.5 rounded-full animate-pulse transition-colors duration-500" style={{ background: theme.hex, boxShadow: `0 0 8px ${theme.hex}` }} />
-                <span className="text-xs font-semibold tracking-[0.2em] uppercase transition-colors duration-500" style={{ color: theme.hex }}>
+              <div className="flex items-center gap-3 px-4 py-1.5 rounded-full bg-white/[0.03] border border-white/[0.08] backdrop-blur-md">
+                <div className="w-2 h-2 rounded-full animate-pulse transition-colors duration-500 shadow-[0_0_8px_currentColor]" style={{ background: theme.hex, color: theme.hex }} />
+                <span className="text-[10px] font-black tracking-[0.3em] uppercase transition-colors duration-500" style={{ color: theme.hex }}>
                   {isSpeaking ? 'AI Speaking' : 'Listening'}
                 </span>
               </div>
               {/* Mini waveform bars */}
-              <div className="flex items-end justify-center gap-[3px] h-4">
-                {Array.from({ length: 7 }).map((_, i) => (
+              <div className="flex items-end justify-center gap-[4px] h-6">
+                {Array.from({ length: 9 }).map((_, i) => (
                   <div
                     key={i}
-                    className="w-[3px] rounded-full transition-colors duration-500 animate-[bar_0.6s_ease-in-out_infinite_alternate]"
+                    className="w-[4px] rounded-full transition-all duration-500 animate-[bar_0.8s_ease-in-out_infinite_alternate]"
                     style={{
                       background: theme.hex,
-                      animationDelay: `${i * 0.08}s`,
-                      height: isActive ? undefined : '2px',
-                      opacity: isActive ? 0.6 : 0.2,
+                      animationDelay: `${i * 0.1}s`,
+                      height: isActive ? undefined : '3px',
+                      opacity: isActive ? 0.7 : 0.2,
+                      boxShadow: `0 0 10px rgba(${theme.rgb}, 0.3)`
                     }}
                   />
                 ))}
@@ -1007,6 +1025,12 @@ const VoiceAssistant = ({
         @keyframes slideInRight {
           from { opacity: 0; transform: translateX(30px) scale(0.9); }
           to { opacity: 1; transform: translateX(0) scale(1); }
+        }
+        @keyframes scan {
+          0% { top: 0; opacity: 0; }
+          10% { opacity: 1; }
+          90% { opacity: 1; }
+          100% { top: 100%; opacity: 0; }
         }
         @keyframes ripple {
           0% { transform: scale(1); opacity: 1; }
