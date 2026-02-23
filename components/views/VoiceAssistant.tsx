@@ -651,117 +651,129 @@ const VoiceAssistant = ({
         )}
 
         {/* ─── CORE AVATAR AREA ─── */}
-        <div className="relative flex items-center justify-center transition-transform duration-700"
+        <div className="relative flex items-center justify-center transition-all duration-1000 ease-[cubic-bezier(0.23,1,0.32,1)]"
           style={{ 
-            width: 'clamp(280px, 75vw, 480px)', 
-            height: 'clamp(280px, 75vw, 480px)',
-            transform: showTranscripts ? 'translateY(-10%) scale(0.85)' : 'translateY(0) scale(1)'
+            width: 'clamp(300px, 80vw, 520px)', 
+            height: 'clamp(300px, 80vw, 520px)',
+            transform: showTranscripts ? 'scale(0.8) translateY(-40px)' : 'scale(1) translateY(0)'
           }}
         >
+          {/* Advanced Glow Layers */}
+          <div className="absolute inset-0 rounded-full opacity-[0.03] border border-white/20 animate-[spin_100s_linear_infinite]" />
+          <div className="absolute inset-[-20px] rounded-full opacity-[0.02] border border-white/10 animate-[spin_150s_linear_infinite_reverse]" />
+
           {/* Waveform rings */}
-          <WaveformRing analyser={inputAnalyserState} color="255,255,255" radius={110} lineWidth={1} />
-          <WaveformRing analyser={outputAnalyserState} color={theme.rgb} radius={145} lineWidth={2.5} />
+          <WaveformRing analyser={inputAnalyserState} color="255,255,255" radius={120} lineWidth={1} />
+          <WaveformRing analyser={outputAnalyserState} color={theme.rgb} radius={160} lineWidth={3} />
 
           {/* Rotating dashed orbit */}
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
             <div
-              className="rounded-full border border-dashed animate-[spin_40s_linear_infinite] transition-all duration-700"
+              className="rounded-full border border-dashed animate-[spin_40s_linear_infinite] transition-all duration-1000"
               style={{
-                width: 'clamp(240px, 65vw, 400px)',
-                height: 'clamp(240px, 65vw, 400px)',
-                borderColor: `rgba(${theme.rgb}, 0.2)`,
+                width: 'clamp(260px, 70vw, 440px)',
+                height: 'clamp(260px, 70vw, 440px)',
+                borderColor: `rgba(${theme.rgb}, 0.25)`,
               }}
             />
           </div>
 
-          {/* Secondary orbit */}
+          {/* Secondary orbit with glass nodes */}
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
             <div
-              className="rounded-full border animate-[spin_60s_linear_infinite_reverse] transition-all duration-700"
+              className="rounded-full border animate-[spin_80s_linear_infinite_reverse] transition-all duration-1000"
               style={{
-                width: 'clamp(300px, 80vw, 500px)',
-                height: 'clamp(300px, 80vw, 500px)',
-                borderColor: `rgba(${theme.rgb}, 0.08)`,
+                width: 'clamp(320px, 85vw, 540px)',
+                height: 'clamp(320px, 85vw, 540px)',
+                borderColor: `rgba(${theme.rgb}, 0.1)`,
               }}
             >
-              {/* Orbiting dot */}
-              <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-3 h-3 rounded-full transition-colors duration-500"
-                style={{ background: theme.hex, boxShadow: `0 0 15px ${theme.hex}` }} />
+              {/* Orbiting nodes */}
+              <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-black border border-white/20 flex items-center justify-center shadow-2xl">
+                <div className="w-1.5 h-1.5 rounded-full transition-colors duration-500" style={{ background: theme.hex, boxShadow: `0 0 10px ${theme.hex}` }} />
+              </div>
+              <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-3 h-3 rounded-full bg-black border border-white/10 opacity-40" />
             </div>
           </div>
 
           {/* Center Avatar Core */}
           <div className={clsx(
             "relative z-10 flex items-center justify-center transition-all duration-1000",
-            status === 'idle' && 'opacity-30 scale-90',
+            status === 'idle' && 'opacity-30 scale-90 grayscale-[0.5]',
             isLoading && 'animate-pulse',
             isActive && 'opacity-100 scale-100',
             status === 'error' && 'opacity-80'
           )}>
-            {/* Glow backdrop */}
+            {/* Multi-layered Glow */}
             <div
-              className="absolute rounded-full blur-[80px] transition-all duration-1000 pointer-events-none"
+              className="absolute rounded-full blur-[100px] transition-all duration-1000 pointer-events-none"
               style={{
-                width: '200px', height: '200px',
-                background: `rgba(${theme.rgb}, ${isActive ? 0.25 : 0.1})`,
+                width: '240px', height: '240px',
+                background: `radial-gradient(circle, rgba(${theme.rgb}, 0.3) 0%, transparent 70%)`,
               }}
             />
 
-            {/* Main orb */}
+            {/* Main orb structure */}
             <div className="relative">
-              {/* Outer ring */}
+              {/* Outer energy ring */}
               <div
-                className="absolute -inset-8 rounded-full border-2 transition-all duration-700"
+                className="absolute -inset-10 rounded-full border-[1.5px] transition-all duration-700"
                 style={{
-                  borderColor: `rgba(${theme.rgb}, 0.3)`,
-                  transform: `scale(calc(1 + var(--a) * 0.2))`,
-                  boxShadow: `0 0 40px rgba(${theme.rgb}, 0.1), inset 0 0 40px rgba(${theme.rgb}, 0.08)`,
+                  borderColor: `rgba(${theme.rgb}, 0.35)`,
+                  transform: `scale(calc(1 + var(--a) * 0.25))`,
+                  boxShadow: `0 0 50px rgba(${theme.rgb}, 0.15), inset 0 0 50px rgba(${theme.rgb}, 0.1) `,
                 }}
               />
 
-              {/* Glass sphere */}
+              {/* Glass sphere with internal depth */}
               <div
-                className="relative w-32 h-32 sm:w-40 sm:h-40 rounded-full overflow-hidden transition-all duration-500"
+                className="relative w-36 h-36 sm:w-44 sm:h-44 rounded-full overflow-hidden transition-all duration-500"
                 style={{
-                  background: `radial-gradient(circle at 35% 30%, rgba(${theme.rgb}, 0.2), rgba(${theme.rgb}, 0.05) 50%, rgba(0,0,0,0.6))`,
-                  boxShadow: `0 0 80px rgba(${theme.rgb}, 0.15), inset 0 1px 0 rgba(255,255,255,0.15), inset 0 -4px 15px rgba(0,0,0,0.5)`,
-                  border: `2px solid rgba(${theme.rgb}, 0.3)`,
-                  transform: `scale(calc(1 + var(--a) * 0.1 + var(--u) * 0.05))`,
+                  background: `radial-gradient(circle at 35% 30%, rgba(${theme.rgb}, 0.25), rgba(${theme.rgb}, 0.05) 50%, rgba(0,0,0,0.7))`,
+                  boxShadow: `0 0 100px rgba(${theme.rgb}, 0.2), inset 0 2px 0 rgba(255,255,255,0.2), inset 0 -6px 20px rgba(0,0,0,0.6)`,
+                  border: `2.5px solid rgba(${theme.rgb}, 0.4)`,
+                  transform: `scale(calc(1 + var(--a) * 0.12 + var(--u) * 0.06))`,
                 }}
               >
+                {/* Internal holographic grid */}
+                <div className="absolute inset-0 opacity-[0.1] pointer-events-none" style={{
+                  backgroundImage: `linear-gradient(rgba(${theme.rgb}, 0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(${theme.rgb}, 0.5) 1px, transparent 1px)`,
+                  backgroundSize: '10px 10px'
+                }} />
+
                 {/* Inner glow & pattern */}
                 <div className="absolute inset-0 flex items-center justify-center">
                   {/* Animated inner rings */}
-                  <div className="absolute w-20 h-20 sm:w-24 sm:h-24 rounded-full border border-white/[0.1] animate-[spin_10s_linear_infinite]" />
-                  <div className="absolute w-12 h-12 sm:w-16 sm:h-16 rounded-full border border-white/[0.08] animate-[spin_6s_linear_infinite_reverse]" />
+                  <div className="absolute w-24 h-24 sm:w-28 sm:h-28 rounded-full border border-white/[0.12] animate-[spin_12s_linear_infinite]" />
+                  <div className="absolute w-14 h-14 sm:w-18 sm:h-18 rounded-full border border-white/[0.1] animate-[spin_8s_linear_infinite_reverse]" />
 
                   {/* Core icon */}
                   <div className="relative z-10 transition-all duration-500" style={{
-                    transform: `scale(calc(1 + var(--a) * 0.4))`,
-                    filter: `drop-shadow(0 0 15px rgba(${theme.rgb}, 0.8))`,
+                    transform: `scale(calc(1 + var(--a) * 0.5))`,
+                    filter: `drop-shadow(0 0 20px rgba(${theme.rgb}, 0.9))`,
                   }}>
                     {status === 'error' ? (
-                      <AlertTriangle size={40} className="text-red-400" strokeWidth={1} />
+                      <AlertTriangle size={44} className="text-red-400" strokeWidth={1} />
                     ) : isLoading ? (
-                      <Signal size={36} className="text-amber-300 animate-pulse" strokeWidth={1} />
+                      <Signal size={40} className="text-amber-300 animate-pulse" strokeWidth={1} />
                     ) : isSpeaking ? (
-                      <Waves size={38} className="text-sky-300" strokeWidth={1} />
+                      <Waves size={42} className="text-sky-300" strokeWidth={1} />
                     ) : (
-                      <CircuitBoard size={36} className="text-emerald-300" strokeWidth={1} />
+                      <CircuitBoard size={40} className="text-emerald-300" strokeWidth={1} />
                     )}
                   </div>
                 </div>
 
                 {/* Highlight reflection */}
-                <div className="absolute top-0 left-1/4 w-1/2 h-1/3 bg-gradient-to-b from-white/[0.12] to-transparent rounded-full blur-md" />
+                <div className="absolute top-0 left-1/4 w-1/2 h-1/3 bg-gradient-to-b from-white/[0.15] to-transparent rounded-full blur-md" />
               </div>
 
               {/* Pulse waves (when speaking) */}
               {isSpeaking && (
                 <>
-                  <div className="absolute -inset-4 rounded-full border border-sky-400/30 animate-[ripple_2.5s_ease-out_infinite]" />
-                  <div className="absolute -inset-4 rounded-full border border-sky-400/20 animate-[ripple_2.5s_ease-out_infinite_0.8s]" />
-                  <div className="absolute -inset-4 rounded-full border border-sky-400/10 animate-[ripple_2.5s_ease-out_infinite_1.6s]" />
+                  <div className="absolute -inset-6 rounded-full border border-sky-400/40 animate-[ripple_2.5s_ease-out_infinite]" />
+                  <div className="absolute -inset-6 rounded-full border border-sky-400/25 animate-[ripple_2.5s_ease-out_infinite_0.8s]" />
+                  <div className="absolute -inset-6 rounded-full border border-sky-400/15 animate-[ripple_2.5s_ease-out_infinite_1.6s]" />
                 </>
               )}
             </div>
@@ -770,29 +782,29 @@ const VoiceAssistant = ({
 
         {/* Status label below avatar */}
         <div className={clsx(
-          "mt-8 flex flex-col items-center gap-3 transition-all duration-700",
-          showTranscripts ? "opacity-0 scale-90" : "opacity-100 scale-100"
+          "mt-10 flex flex-col items-center gap-4 transition-all duration-1000 ease-[cubic-bezier(0.23,1,0.32,1)]",
+          showTranscripts ? "opacity-0 -translate-y-10 scale-90" : "opacity-100 translate-y-0 scale-100"
         )}>
           {isActive && (
             <>
-              <div className="flex items-center gap-3 px-4 py-1.5 rounded-full bg-white/[0.03] border border-white/[0.08] backdrop-blur-md">
-                <div className="w-2 h-2 rounded-full animate-pulse transition-colors duration-500 shadow-[0_0_8px_currentColor]" style={{ background: theme.hex, color: theme.hex }} />
-                <span className="text-[10px] font-black tracking-[0.3em] uppercase transition-colors duration-500" style={{ color: theme.hex }}>
+              <div className="flex items-center gap-4 px-5 py-2 rounded-full bg-white/[0.04] border border-white/[0.1] backdrop-blur-xl shadow-2xl">
+                <div className="w-2.5 h-2.5 rounded-full animate-pulse transition-colors duration-500 shadow-[0_0_12px_currentColor]" style={{ background: theme.hex, color: theme.hex }} />
+                <span className="text-[11px] font-black tracking-[0.4em] uppercase transition-colors duration-500" style={{ color: theme.hex }}>
                   {isSpeaking ? 'AI Speaking' : 'Listening'}
                 </span>
               </div>
               {/* Mini waveform bars */}
-              <div className="flex items-end justify-center gap-[4px] h-6">
-                {Array.from({ length: 9 }).map((_, i) => (
+              <div className="flex items-end justify-center gap-[5px] h-8">
+                {Array.from({ length: 11 }).map((_, i) => (
                   <div
                     key={i}
-                    className="w-[4px] rounded-full transition-all duration-500 animate-[bar_0.8s_ease-in-out_infinite_alternate]"
+                    className="w-[5px] rounded-full transition-all duration-500 animate-[bar_0.8s_ease-in-out_infinite_alternate]"
                     style={{
                       background: theme.hex,
                       animationDelay: `${i * 0.1}s`,
-                      height: isActive ? undefined : '3px',
-                      opacity: isActive ? 0.7 : 0.2,
-                      boxShadow: `0 0 10px rgba(${theme.rgb}, 0.3)`
+                      height: isActive ? undefined : '4px',
+                      opacity: isActive ? 0.8 : 0.2,
+                      boxShadow: `0 0 15px rgba(${theme.rgb}, 0.4)`
                     }}
                   />
                 ))}
